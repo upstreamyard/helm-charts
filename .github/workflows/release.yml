@@ -51,22 +51,42 @@ jobs:
           git add artifacthub-repo.yml
           git diff --cached --quiet || { git commit -m "Update artifacthub-repo.yml"; git push origin gh-pages; }
 
-      - name: Log in to GHCR
-        if: steps.cr.outputs.changed_charts != ''
+      # Docker login is what cosign reads; helm keeps its own registry login.
+      - name: Log in to GHCR (cosign)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Log in to GHCR (helm)
         run: echo "${{ github.token }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - uses: sigstore/cosign-installer@v3
-        if: steps.cr.outputs.changed_charts != ''
 
+      # Idempotent, so a failed or re-run release catches up: push each chart version
+      # that is not on GHCR yet, and sign each one that has no valid signature yet.
       - name: Push to GHCR (OCI) and sign
-        if: steps.cr.outputs.changed_charts != ''
         env:
-          REGISTRY: oci://ghcr.io/${{ github.repository_owner }}/charts
+          OWNER: ${{ github.repository_owner }}
+          IDENTITY: ^https://github.com/${{ github.repository }}/
         run: |
           set -euo pipefail
-          for pkg in .cr-release-packages/*.tgz; do
-            out=$(helm push "$pkg" "${REGISTRY,,}" 2>&1); echo "$out"
-            ref=$(echo "$out" | awk '/^Pushed:/ {print $2}')
-            digest=$(echo "$out" | awk '/^Digest:/ {print $2}')
-            cosign sign --yes "${ref%:*}@${digest}"
+          repo="ghcr.io/${OWNER,,}/charts"
+          for dir in charts/*/; do
+            name=$(yq .name "$dir/Chart.yaml"); version=$(yq .version "$dir/Chart.yaml")
+            ref="$repo/$name:$version"
+            if helm show chart "oci://$repo/$name" --version "$version" >/dev/null 2>&1; then
+              echo "$ref already on GHCR"
+            else
+              helm package "$dir" -d /tmp/oci-packages
+              helm push "/tmp/oci-packages/$name-$version.tgz" "oci://$repo"
+            fi
+            digest=$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"')
+            if cosign verify "$repo/$name@$digest" --certificate-identity-regexp "$IDENTITY" \
+                 --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null 2>&1; then
+              echo "$ref already signed"
+            else
+              cosign sign --yes "$repo/$name@$digest"
+            fi
           done
