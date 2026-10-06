@@ -1,0 +1,10 @@
+# Artifact Hub repository metadata, served at
+# https://upstreamyard.github.io/helm-charts/artifacthub-repo.yml (copied to gh-pages by release.yml).
+# https://artifacthub.io/docs/topics/repositories/helm-charts/
+#
+# TODO after registering the repository on artifacthub.io: uncomment and fill in
+# repositoryID to get the "Verified publisher" badge.
+# repositoryID: 00000000-0000-0000-0000-000000000000
+owners:
+  - name: upstreamyard
+    email: benedikt.augenstein@googlemail.com
