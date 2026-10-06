@@ -30,15 +30,6 @@ cosign verify ghcr.io/upstreamyard/charts/aegra:<chart-version> \
 3. Bot PRs **merge themselves** once `lint-test` passes. If it fails, the PR stays open for a human.
 4. **On merge to `main`** ([`release.yml`](.github/workflows/release.yml)): a GitHub Release, the `index.yaml` on GitHub Pages, the OCI chart on GHCR (cosign-signed) and Artifact Hub metadata. Artifact Hub re-scans the repository on its own.
 
-## One-time setup (maintainers)
-
-- An empty `gh-pages` branch, with GitHub Pages serving from it.
-- Settings → General: enable **Allow auto-merge**.
-- A ruleset on `main`: require a pull request and the status check `lint-test`.
-- Secret `CHARTS_BOT_TOKEN`: a GitHub App or fine-grained PAT with contents and pull requests write on this repo.
-- After the first release, set the GHCR package `charts/aegra` to public.
-- Artifact Hub: register `https://upstreamyard.github.io/helm-charts` as a Helm repository under the `upstreamyard` organization, then put the repository ID into [`artifacthub-repo.yml`](artifacthub-repo.yml).
-
 ## Contributing
 
 Open a PR against `main`. Bump the chart `version` for every chart change, and regenerate the chart README with [helm-docs](https://github.com/norwoodj/helm-docs): `helm-docs --chart-search-root charts`.
