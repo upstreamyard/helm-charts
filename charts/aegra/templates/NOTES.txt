@@ -1,0 +1,22 @@
+Aegra {{ .Chart.AppVersion }} is deployed as "{{ include "aegra.fullname" . }}" ({{ .Values.replicaCount }} replica(s)).
+
+Check that it is ready:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "aegra.fullname" . }} 2026:{{ .Values.service.port }}
+  curl http://localhost:2026/ready
+
+Point any LangGraph SDK client at http://localhost:2026 (API docs: /docs).
+{{- if .Values.migrations.enabled }}
+
+Database migrations ran as a Job before this release ("aegra db upgrade").
+{{- end }}
+{{- if eq .Values.image.repository "upstreamyard/aegra" }}
+
+NOTE: this serves the example agents bundled in the image, with NO authentication.
+Anyone who can reach the service can use it. To run your own agents with an auth
+handler, build an image FROM upstreamyard/aegra and set image.repository:
+https://github.com/upstreamyard/helm-charts/tree/main/charts/aegra#running-your-own-agents
+{{- else }}
+
+Authentication is only on if your aegra.json defines an "auth" handler.
+{{- end }}

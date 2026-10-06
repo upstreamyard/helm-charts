@@ -1,0 +1,64 @@
+name: Bump charts to new upstream releases
+
+on:
+  schedule:
+    - cron: "47 5 * * *"   # daily, after the image repos' daily build
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - chart: aegra
+            upstream: aegra/aegra
+            image: ghcr.io/upstreamyard/aegra
+    env:
+      # A GitHub App or fine-grained PAT (contents + pull requests: write).
+      # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,
+      # so auto-merge would never get its required check.
+      GH_TOKEN: ${{ secrets.CHARTS_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.CHARTS_BOT_TOKEN }}
+
+      - name: Check for a new release
+        id: bump
+        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}"
+
+      - name: Skip if a PR for this version already exists
+        if: steps.bump.outputs.changed == 'true'
+        id: branch
+        run: |
+          branch="bump/${{ matrix.chart }}-${{ steps.bump.outputs.version }}"
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
+            echo "Branch $branch already exists, nothing to do."; echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerate chart README
+        if: steps.bump.outputs.changed == 'true' && steps.branch.outputs.exists != 'true'
+        run: docker run --rm -v "$PWD:/helm-docs" -u "$(id -u)" jnorwood/helm-docs:latest --chart-search-root charts
+
+      - name: Open PR and enable auto-merge
+        if: steps.bump.outputs.changed == 'true' && steps.branch.outputs.exists != 'true'
+        env:
+          BRANCH: ${{ steps.branch.outputs.name }}
+          CHART: ${{ matrix.chart }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name "upstreamyard-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -am "Update $CHART to $VERSION"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "Update $CHART to $VERSION" \
+            --body "Automated: upstream released $VERSION and the image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
+          gh pr merge "$BRANCH" --auto --squash

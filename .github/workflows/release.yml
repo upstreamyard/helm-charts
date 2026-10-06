@@ -1,0 +1,72 @@
+name: Release charts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - "artifacthub-repo.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # GitHub Releases and the gh-pages index
+  packages: write   # OCI charts on GHCR
+  id-token: write   # keyless cosign signing
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - uses: azure/setup-helm@v4
+
+      # Packages changed charts, creates a GitHub Release per chart version and
+      # updates index.yaml on gh-pages (https://upstreamyard.github.io/helm-charts).
+      - name: Release to GitHub Pages
+        id: cr
+        uses: helm/chart-releaser-action@v1
+        with:
+          skip_existing: true
+        env:
+          CR_TOKEN: ${{ github.token }}
+
+      - name: Publish Artifact Hub metadata to gh-pages
+        run: |
+          git fetch origin gh-pages
+          git worktree add /tmp/gh-pages gh-pages
+          cp artifacthub-repo.yml /tmp/gh-pages/artifacthub-repo.yml
+          cd /tmp/gh-pages
+          git add artifacthub-repo.yml
+          git diff --cached --quiet || { git commit -m "Update artifacthub-repo.yml"; git push origin gh-pages; }
+
+      - name: Log in to GHCR
+        if: steps.cr.outputs.changed_charts != ''
+        run: echo "${{ github.token }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - uses: sigstore/cosign-installer@v3
+        if: steps.cr.outputs.changed_charts != ''
+
+      - name: Push to GHCR (OCI) and sign
+        if: steps.cr.outputs.changed_charts != ''
+        env:
+          REGISTRY: oci://ghcr.io/${{ github.repository_owner }}/charts
+        run: |
+          set -euo pipefail
+          for pkg in .cr-release-packages/*.tgz; do
+            out=$(helm push "$pkg" "${REGISTRY,,}" 2>&1); echo "$out"
+            ref=$(echo "$out" | awk '/^Pushed:/ {print $2}')
+            digest=$(echo "$out" | awk '/^Digest:/ {print $2}')
+            cosign sign --yes "${ref%:*}@${digest}"
+          done

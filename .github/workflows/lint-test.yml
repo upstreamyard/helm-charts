@@ -1,0 +1,57 @@
+name: Lint and test charts
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Job name is the required status check for auto-merge; keep it stable.
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - uses: helm/chart-testing-action@v2
+
+      - name: Changed charts
+        id: changed
+        run: |
+          changed=$(ct list-changed --config ct.yaml)
+          echo "$changed"
+          if [ -n "$changed" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Chart READMEs are up to date (helm-docs)
+        run: |
+          docker run --rm -v "$PWD:/helm-docs" -u "$(id -u)" jnorwood/helm-docs:latest --chart-search-root charts
+          git diff --exit-code -- 'charts/*/README.md' || {
+            echo "::error::Chart README out of date. Run helm-docs --chart-search-root charts and commit."; exit 1; }
+
+      - name: Lint
+        if: steps.changed.outputs.changed == 'true'
+        run: ct lint --config ct.yaml
+
+      - name: Create kind cluster
+        if: steps.changed.outputs.changed == 'true'
+        uses: helm/kind-action@v1
+
+      - name: Deploy test dependencies (PostgreSQL with pgvector, Redis)
+        if: steps.changed.outputs.changed == 'true'
+        run: |
+          kubectl apply -f .github/ci/deps.yaml
+          kubectl -n deps rollout status deploy/postgres deploy/redis --timeout=300s
+
+      # Installs each changed chart once per ci/*-values.yaml file, waits until it is
+      # ready (incl. the migration hook) and runs `helm test`.
+      - name: Install and test
+        if: steps.changed.outputs.changed == 'true'
+        run: ct install --config ct.yaml
