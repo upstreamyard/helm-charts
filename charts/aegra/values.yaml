@@ -2,7 +2,7 @@
 replicaCount: 1
 
 image:
-  # -- Image repository. Use your own image built `FROM upstreamyard/aegra` to serve your own graphs.
+  # -- Image repository. To serve your own agents, use your own image built `FROM upstreamyard/aegra` (see "Running your own agents").
   repository: upstreamyard/aegra
   # -- Image tag. Defaults to the chart's appVersion.
   tag: ""
@@ -45,12 +45,12 @@ migrations:
   # -- Resources for the migration Job.
   resources: {}
 
-# -- Extra environment variables for Aegra, e.g. `AUTH_TYPE`, `ENV_MODE`, OTEL settings. See https://github.com/aegra/aegra/blob/main/.env.example
+# -- Extra environment variables for Aegra, e.g. `ENV_MODE`, `LOG_LEVEL`, OTEL settings. See https://github.com/aegra/aegra/blob/main/.env.example
 extraEnv: []
-# - name: AUTH_TYPE
-#   value: custom
+# - name: LOG_LEVEL
+#   value: DEBUG
 
-# -- Extra environment variables from Secrets or ConfigMaps, e.g. a Secret with `OPENAI_API_KEY`.
+# -- Extra environment variables from Secrets or ConfigMaps, e.g. a Secret with LLM keys or credentials your agents use.
 extraEnvFrom: []
 # - secretRef:
 #     name: llm-api-keys

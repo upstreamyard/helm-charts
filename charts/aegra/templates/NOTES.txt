@@ -10,11 +10,13 @@ Point any LangGraph SDK client at http://localhost:2026 (API docs: /docs).
 
 Database migrations ran as a Job before this release ("aegra db upgrade").
 {{- end }}
-{{- $authNoop := true }}
-{{- range .Values.extraEnv }}{{ if and (eq .name "AUTH_TYPE") (ne (toString .value) "noop") }}{{ $authNoop = false }}{{ end }}{{ end }}
-{{- if $authNoop }}
+{{- if eq .Values.image.repository "upstreamyard/aegra" }}
 
-WARNING: authentication is off (AUTH_TYPE=noop, Aegra's default). Anyone who can
-reach the service can use it. Configure auth before exposing it publicly:
-https://github.com/aegra/aegra/blob/main/docs/guides/authentication.mdx
+NOTE: this serves the example agents bundled in the image, with NO authentication.
+Anyone who can reach the service can use it. To run your own agents with an auth
+handler, build an image FROM upstreamyard/aegra and set image.repository:
+https://github.com/upstreamyard/helm-charts/tree/main/charts/aegra#running-your-own-agents
+{{- else }}
+
+Authentication is only on if your aegra.json defines an "auth" handler.
 {{- end }}

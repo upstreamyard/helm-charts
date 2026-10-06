@@ -36,24 +36,48 @@ Follows [Aegra's deployment guide](https://github.com/aegra/aegra/blob/main/docs
 - **Graceful shutdown:** `terminationGracePeriodSeconds: 35`, a few seconds above Aegra's `WORKER_DRAIN_TIMEOUT` (30).
 - **Security:** runs as non-root UID 10001, drops all capabilities, and doesn't mount a ServiceAccount token.
 
+## Running your own agents
+
+Out of the box the chart serves the example agents bundled in the image, with **no authentication**. For real use you bring your own `aegra.json`, agent code and auth handler. The chart can't mount files yet, so you ship them in your own image built on top of `upstreamyard/aegra`:
+
+```
+my-agents/
+├── aegra.json      # {"graphs": {"agent": "./graph.py:graph"}, "auth": {"path": "./my_auth.py:auth"}}
+├── graph.py
+└── my_auth.py
+```
+
+```dockerfile
+FROM upstreamyard/aegra:0.10
+USER root
+RUN pip install --no-cache-dir simple-salesforce   # only if your code needs extra packages
+USER 10001:10001
+COPY my-agents/ /app/agents/
+ENV AEGRA_CONFIG=/app/agents/aegra.json
+```
+
+Keep the folder under `/app`: `aegra serve` ignores an `AEGRA_CONFIG` outside its working directory `/app` and silently falls back to the bundled examples. Then push the image to your registry and point the chart at it. More detail is in the [image docs](https://github.com/upstreamyard/aegra#running-your-own-agents).
+
+**Authentication** is on when your `aegra.json` has an `"auth"` entry pointing to a handler (see [Aegra's authentication guide](https://github.com/aegra/aegra/blob/main/docs/guides/authentication.mdx)). In Aegra 0.10.8 the `AUTH_TYPE` environment variable does not change this.
+
+**Credentials** for your agents (LLM keys, Salesforce, Teams, …) go into a Kubernetes Secret and reach the pods as environment variables through `extraEnvFrom`, never into the image.
+
 ## Production example
 
 ```yaml
 # values-prod.yaml
+image:
+  repository: registry.example.com/my-agents   # your image built FROM upstreamyard/aegra
+  tag: "1.0"
 replicaCount: 3
 database:
   existingSecret: aegra-db          # key: database-url
 redis:
   existingSecret: aegra-redis       # key: redis-url
-extraEnv:
-  - name: AUTH_TYPE
-    value: custom
 extraEnvFrom:
   - secretRef:
-      name: llm-api-keys            # e.g. OPENAI_API_KEY
+      name: agent-credentials       # e.g. OPENAI_API_KEY, SALESFORCE_TOKEN
 ```
-
-Authentication is off by default (`AUTH_TYPE=noop`). See [Aegra's authentication guide](https://github.com/aegra/aegra/blob/main/docs/guides/authentication.mdx) before exposing the service.
 
 ## Known issue: first install with several replicas
 
@@ -67,11 +91,11 @@ On the very first install against an empty database, all pods create LangGraph's
 | database.existingSecret | string | `""` | Name of an existing Secret that holds the connection string (recommended for production). |
 | database.existingSecretKey | string | `"database-url"` | Key in `existingSecret` that holds the connection string. |
 | database.url | string | `""` | Connection string `postgresql://user:password@host:5432/db`. URL-encode special characters in the password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set. |
-| extraEnv | list | `[]` | Extra environment variables for Aegra, e.g. `AUTH_TYPE`, `ENV_MODE`, OTEL settings. See https://github.com/aegra/aegra/blob/main/.env.example |
-| extraEnvFrom | list | `[]` | Extra environment variables from Secrets or ConfigMaps, e.g. a Secret with `OPENAI_API_KEY`. |
+| extraEnv | list | `[]` | Extra environment variables for Aegra, e.g. `ENV_MODE`, `LOG_LEVEL`, OTEL settings. See https://github.com/aegra/aegra/blob/main/.env.example |
+| extraEnvFrom | list | `[]` | Extra environment variables from Secrets or ConfigMaps, e.g. a Secret with LLM keys or credentials your agents use. |
 | fullnameOverride | string | `""` | Override the full resource name. |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
-| image.repository | string | `"upstreamyard/aegra"` | Image repository. Use your own image built `FROM upstreamyard/aegra` to serve your own graphs. |
+| image.repository | string | `"upstreamyard/aegra"` | Image repository. To serve your own agents, use your own image built `FROM upstreamyard/aegra` (see "Running your own agents"). |
 | image.tag | string | `""` | Image tag. Defaults to the chart's appVersion. |
 | imagePullSecrets | list | `[]` | Secrets for pulling from a private registry. |
 | ingress.annotations | object | `{}` | Ingress annotations. |
