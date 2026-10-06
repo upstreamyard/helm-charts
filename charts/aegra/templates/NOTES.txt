@@ -1,0 +1,20 @@
+Aegra {{ .Chart.AppVersion }} is deployed as "{{ include "aegra.fullname" . }}" ({{ .Values.replicaCount }} replica(s)).
+
+Check that it is ready:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "aegra.fullname" . }} 2026:{{ .Values.service.port }}
+  curl http://localhost:2026/ready
+
+Point any LangGraph SDK client at http://localhost:2026 (API docs: /docs).
+{{- if .Values.migrations.enabled }}
+
+Database migrations ran as a Job before this release ("aegra db upgrade").
+{{- end }}
+{{- $authNoop := true }}
+{{- range .Values.extraEnv }}{{ if and (eq .name "AUTH_TYPE") (ne (toString .value) "noop") }}{{ $authNoop = false }}{{ end }}{{ end }}
+{{- if $authNoop }}
+
+WARNING: authentication is off (AUTH_TYPE=noop, Aegra's default). Anyone who can
+reach the service can use it. Configure auth before exposing it publicly:
+https://github.com/aegra/aegra/blob/main/docs/guides/authentication.mdx
+{{- end }}

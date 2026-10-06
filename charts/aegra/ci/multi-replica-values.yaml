@@ -1,0 +1,14 @@
+# Used by chart-testing (ct install) in CI. PostgreSQL (pgvector) and Redis are
+# deployed into the "deps" namespace by the workflow before the chart is installed.
+replicaCount: 2
+database:
+  url: postgresql://aegra:aegra@postgres.deps.svc:5432/aegra
+redis:
+  url: redis://redis.deps.svc:6379/0
+extraEnv:
+  - name: OPENAI_API_KEY
+    value: sk-ci-placeholder
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi

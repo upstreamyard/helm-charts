@@ -1,0 +1,74 @@
+# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind.
+# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deps
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg18
+          env:
+            - { name: POSTGRES_USER, value: aegra }
+            - { name: POSTGRES_PASSWORD, value: aegra }
+            - { name: POSTGRES_DB, value: aegra }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "aegra", "-d", "aegra"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: deps
+spec:
+  selector: { app: postgres }
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: redis }
+  template:
+    metadata:
+      labels: { app: redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: deps
+spec:
+  selector: { app: redis }
+  ports:
+    - port: 6379

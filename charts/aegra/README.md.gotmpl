@@ -1,0 +1,62 @@
+# Aegra Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for [Aegra](https://github.com/aegra/aegra), the open-source, self-hosted alternative to LangGraph Platform. It uses the [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) image.
+
+> Community chart by **upstreamyard**, not an official Aegra chart. Aegra is © its authors, licensed under Apache-2.0.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install aegra upstreamyard/aegra \
+  --set database.url='postgresql://user:password@your-postgres:5432/aegra'
+```
+
+Or from the OCI registry:
+
+```bash
+helm install aegra oci://ghcr.io/upstreamyard/charts/aegra \
+  --set database.url='postgresql://user:password@your-postgres:5432/aegra'
+```
+
+## Requirements
+
+- **PostgreSQL with the pgvector extension** (required, per [Aegra's docs](https://github.com/aegra/aegra/blob/main/docs/installation.mdx)). The `pgvector/pgvector:pg18` image is Postgres 18 with pgvector included; managed services (RDS, Cloud SQL, Azure) support it too. This chart does not deploy a database.
+- **Redis** only when `replicaCount` is greater than 1.
+
+## What the chart does
+
+Follows [Aegra's deployment guide](https://github.com/aegra/aegra/blob/main/docs/guides/deployment.mdx):
+
+- **Migrations:** before every install and upgrade, a Job runs `aegra db upgrade`, and the pods start with `RUN_MIGRATIONS_ON_STARTUP=false`, which the guide recommends for Kubernetes. Set `migrations.enabled=false` to let a single pod migrate on startup instead.
+- **Probes:** `/live` for startup and liveness, `/ready` for readiness.
+- **Several replicas:** setting `redis.url` (or `redis.existingSecret`) turns on `REDIS_BROKER_ENABLED`. Installing with more than one replica and no Redis fails with an error.
+- **Graceful shutdown:** `terminationGracePeriodSeconds: 35`, a few seconds above Aegra's `WORKER_DRAIN_TIMEOUT` (30).
+- **Security:** runs as non-root UID 10001, drops all capabilities, and doesn't mount a ServiceAccount token.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+replicaCount: 3
+database:
+  existingSecret: aegra-db          # key: database-url
+redis:
+  existingSecret: aegra-redis       # key: redis-url
+extraEnv:
+  - name: AUTH_TYPE
+    value: custom
+extraEnvFrom:
+  - secretRef:
+      name: llm-api-keys            # e.g. OPENAI_API_KEY
+```
+
+Authentication is off by default (`AUTH_TYPE=noop`). See [Aegra's authentication guide](https://github.com/aegra/aegra/blob/main/docs/guides/authentication.mdx) before exposing the service.
+
+## Known issue: first install with several replicas
+
+On the very first install against an empty database, all pods create LangGraph's internal tables at the same moment, and one may fail and get restarted by the startup probe (about 1–2 minutes). It recovers on its own, and later upgrades are not affected. To avoid it, do the first install with `replicaCount: 1` and scale up afterwards.
+
+{{ template "chart.valuesSection" . }}

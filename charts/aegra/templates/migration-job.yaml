@@ -1,0 +1,82 @@
+{{- if .Values.migrations.enabled }}
+{{- /*
+Helm hooks run before the release's normal resources exist, so the migration Job
+cannot use the regular Secret on first install. A short-lived hook copy of the
+Secret is created first (weight -10) and deleted together with the Job once
+migrations succeeded.
+*/}}
+{{- $hookSecret := printf "%s-migrate" (include "aegra.fullname" .) }}
+{{- if include "aegra.createSecret" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookSecret }}
+  labels:
+    {{- include "aegra.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- include "aegra.secretData" . | nindent 2 }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "aegra.fullname" . }}-migrate
+  labels:
+    {{- include "aegra.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "aegra.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "aegra.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["aegra", "db", "upgrade"]
+          env:
+            {{- include "aegra.connectionEnv" (list . $hookSecret) | nindent 12 }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.migrations.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
