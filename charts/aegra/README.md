@@ -1,6 +1,6 @@
 # Aegra Helm chart
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 0.10.8](https://img.shields.io/badge/AppVersion-0.10.8-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 0.10.8](https://img.shields.io/badge/AppVersion-0.10.8-informational?style=flat-square)
 
 Helm chart for [Aegra](https://github.com/aegra/aegra), the open-source, self-hosted alternative to LangGraph Platform. It uses the [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) image.
 
@@ -39,9 +39,7 @@ The OCI copy on GHCR is signed with cosign instead (see the [repository README](
 
 ## What the chart does
 
-Follows [Aegra's deployment guide](https://github.com/aegra/aegra/blob/main/docs/guides/deployment.mdx):
-
-- **Migrations:** before every install and upgrade, a Job runs `aegra db upgrade`, and the pods start with `RUN_MIGRATIONS_ON_STARTUP=false`, which the guide recommends for Kubernetes. Set `migrations.enabled=false` to let a single pod migrate on startup instead.
+- **Migrations:** before every install and upgrade, a Job runs `aegra db upgrade`, and the pods start with `RUN_MIGRATIONS_ON_STARTUP=false`, as Aegra recommends for Kubernetes. Set `migrations.enabled=false` to let a single pod migrate on startup instead.
 - **Probes:** `/live` for startup and liveness, `/ready` for readiness.
 - **Several replicas:** setting `redis.url` (or `redis.existingSecret`) turns on `REDIS_BROKER_ENABLED`. Installing with more than one replica and no Redis fails with an error.
 - **Graceful shutdown:** `terminationGracePeriodSeconds: 35`, a few seconds above Aegra's `WORKER_DRAIN_TIMEOUT` (30).
