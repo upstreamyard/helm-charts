@@ -21,6 +21,17 @@ helm install aegra oci://ghcr.io/upstreamyard/charts/aegra \
   --set database.url='postgresql://user:password@your-postgres:5432/aegra'
 ```
 
+### Verifying the chart
+
+Chart packages from version 0.1.1 are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install aegra upstreamyard/aegra --verify --keyring upstreamyard.gpg --set database.url='...'
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
 ## Requirements
 
 - **PostgreSQL with the pgvector extension** (required, per [Aegra's docs](https://github.com/aegra/aegra/blob/main/docs/installation.mdx)). The `pgvector/pgvector:pg18` image is Postgres 18 with pgvector included; managed services (RDS, Cloud SQL, Azure) support it too. This chart does not deploy a database.

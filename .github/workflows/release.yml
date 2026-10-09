@@ -6,6 +6,7 @@ on:
     paths:
       - "charts/**"
       - "artifacthub-repo.yml"
+      - "pgp_keys.asc"
   workflow_dispatch:
 
 concurrency:
@@ -32,8 +33,21 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
-      # Packages changed charts, creates a GitHub Release per chart version and
-      # updates index.yaml on gh-pages (https://upstreamyard.github.io/helm-charts).
+      # Unpack the PGP signing key (Helm provenance, shown as "signed" on Artifact Hub).
+      # Public key: pgp_keys.asc in this repo, served at upstreamyard.github.io/helm-charts.
+      - name: Prepare chart signing key
+        env:
+          GPG_KEYRING_BASE64: ${{ secrets.GPG_KEYRING_BASE64 }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          dir="$RUNNER_TEMP/cr-gpg"; mkdir -p "$dir"; chmod 700 "$dir"
+          base64 -d <<< "$GPG_KEYRING_BASE64" > "$dir/secring.gpg"
+          printf '%s' "$GPG_PASSPHRASE" > "$dir/passphrase"
+          echo "CR_KEYRING=$dir/secring.gpg" >> "$GITHUB_ENV"
+          echo "CR_PASSPHRASE_FILE=$dir/passphrase" >> "$GITHUB_ENV"
+
+      # Packages and signs changed charts (.prov files), creates a GitHub Release per
+      # chart version and updates index.yaml on gh-pages (https://upstreamyard.github.io/helm-charts).
       - name: Release to GitHub Pages
         id: cr
         uses: helm/chart-releaser-action@v1
@@ -41,15 +55,17 @@ jobs:
           skip_existing: true
         env:
           CR_TOKEN: ${{ github.token }}
+          CR_SIGN: "true"
+          CR_KEY: upstreamyard Helm charts
 
-      - name: Publish Artifact Hub metadata to gh-pages
+      - name: Publish Artifact Hub metadata and public key to gh-pages
         run: |
           git fetch origin gh-pages
           git worktree add /tmp/gh-pages gh-pages
-          cp artifacthub-repo.yml /tmp/gh-pages/artifacthub-repo.yml
+          cp artifacthub-repo.yml pgp_keys.asc /tmp/gh-pages/
           cd /tmp/gh-pages
-          git add artifacthub-repo.yml
-          git diff --cached --quiet || { git commit -m "Update artifacthub-repo.yml"; git push origin gh-pages; }
+          git add artifacthub-repo.yml pgp_keys.asc
+          git diff --cached --quiet || { git commit -m "Update Artifact Hub metadata and public key"; git push origin gh-pages; }
 
       # Docker login is what cosign reads; helm keeps its own registry login.
       - name: Log in to GHCR (cosign)
