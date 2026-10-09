@@ -3,6 +3,49 @@ entries:
   aegra:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Updated package links
+      artifacthub.io/images: |
+        - name: aegra
+          image: upstreamyard/aegra:0.10.8
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Aegra (upstream project)
+          url: https://github.com/aegra/aegra
+        - name: Container image
+          url: https://github.com/upstreamyard/aegra
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.10.8
+    created: "2026-10-09T07:13:32.855570625Z"
+    description: Aegra, the open-source self-hosted alternative to LangGraph Platform.
+      Community chart by upstreamyard, not an official Aegra chart.
+    digest: c7432ffd2f5442333b436c1e96216cef2b83eddd1d1edee9a0ca5f522fb897c3
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - aegra
+    - langgraph
+    - agents
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: aegra
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/aegra
+    - https://github.com/aegra/aegra
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/aegra-0.1.2/aegra-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: PGP-signed chart packages (Helm provenance). Verify with helm install --verify
       artifacthub.io/images: |
@@ -88,4 +131,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/aegra-0.1.0/aegra-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-09T06:40:15.031635979Z"
+generated: "2026-10-09T07:13:32.855578296Z"
