@@ -1,6 +1,6 @@
 # Aegra Helm chart
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 0.10.8](https://img.shields.io/badge/AppVersion-0.10.8-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 0.10.8](https://img.shields.io/badge/AppVersion-0.10.8-informational?style=flat-square)
 
 Helm chart for [Aegra](https://github.com/aegra/aegra), the open-source, self-hosted alternative to LangGraph Platform. It uses the [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) image.
 
@@ -20,6 +20,17 @@ Or from the OCI registry:
 helm install aegra oci://ghcr.io/upstreamyard/charts/aegra \
   --set database.url='postgresql://user:password@your-postgres:5432/aegra'
 ```
+
+### Verifying the chart
+
+Chart packages from version 0.1.1 are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `E3903BCA99331A4B288D4AB2CEE08EC2B874DF19`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install aegra upstreamyard/aegra --verify --keyring upstreamyard.gpg --set database.url='...'
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
 
 ## Requirements
 
