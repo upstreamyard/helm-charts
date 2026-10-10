@@ -22,7 +22,7 @@ Rules:
 - Never push to `main`. Create a branch and open a pull request into `main`.
 - Bump the chart `version` on every change to a chart; CI enforces this.
 - Regenerate chart READMEs after changing `values.yaml` or `README.md.gotmpl`: `helm-docs --chart-search-root charts`. Write a `# --` comment above every value.
-- Follow the upstream project's documentation for deployment behaviour (probes, migrations, required services), and link to it rather than restating it.
+- Follow the app's own project documentation for deployment behaviour (probes, migrations, required services), and link to it rather than restating it.
 - Charts never bundle databases or other stateful services; users bring their own.
 
 Checks before opening a PR:

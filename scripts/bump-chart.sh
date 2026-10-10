@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Bump a chart to the latest upstream release, if our image for it is already published.
+# Bump a chart to the latest release of the packaged project, if our image for it is already published.
 #
-# Usage: scripts/bump-chart.sh <chart> <upstream-repo> <image>
+# Usage: scripts/bump-chart.sh <chart> <project-repo> <image>
 #   e.g. scripts/bump-chart.sh aegra aegra/aegra ghcr.io/upstreamyard/aegra
 #
 # Prints "version=<x>" and "changed=true|false" (also to $GITHUB_OUTPUT when set).
@@ -29,7 +29,7 @@ if [ "$latest" = "$current" ] || [ "$(printf '%s\n%s\n' "$current" "$latest" | s
 fi
 
 if [ "${SKIP_IMAGE_CHECK:-}" != "1" ] && ! docker buildx imagetools inspect "$image:$latest" >/dev/null 2>&1; then
-  echo "Upstream released $latest, but $image:$latest is not published yet. Will retry next run."
+  echo "$upstream released $latest, but $image:$latest is not published yet. Will retry next run."
   out "changed=false"; exit 0
 fi
 

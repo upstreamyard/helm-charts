@@ -1,4 +1,4 @@
-name: Bump charts to new upstream releases
+name: Bump charts to new app releases
 
 on:
   schedule:
@@ -60,5 +60,5 @@ jobs:
           git push origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
             --title "Update $CHART to $VERSION" \
-            --body "Automated: upstream released $VERSION and the image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
+            --body "Automated: the $CHART project released $VERSION and the image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
           gh pr merge "$BRANCH" --auto --squash
