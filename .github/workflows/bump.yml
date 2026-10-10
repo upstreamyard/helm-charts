@@ -24,7 +24,7 @@ jobs:
       # so auto-merge would never get its required check.
       GH_TOKEN: ${{ secrets.CHARTS_BOT_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           token: ${{ secrets.CHARTS_BOT_TOKEN }}
 
