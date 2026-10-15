@@ -29,6 +29,8 @@ Then create the first admin account (it asks for email and password):
 kubectl exec -it deploy/discourse -- rake admin:create
 ```
 
+Served over HTTPS (Ingress with TLS)? Turn on Admin > Settings > Security > "force https", or run `kubectl exec deploy/discourse -- rails runner 'SiteSetting.force_https = true'`. Without it Discourse generates `http://` links.
+
 ### Verifying the chart
 
 Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
@@ -57,7 +59,7 @@ This chart does not deploy a database or Redis.
 - **Probes:** `/srv/status` for startup, liveness and readiness.
 - **Graceful shutdown:** on `SIGTERM` the web server finishes requests in flight; `terminationGracePeriodSeconds: 40` is above its 30 s request timeout.
 - **Security:** runs as non-root UID 10001 with `fsGroup` 10001 for the volumes, drops all capabilities, and doesn't mount a ServiceAccount token. Discourse writes to its app directory, so the root filesystem stays writable.
-- **`helm test`** checks `/srv/status` and `/about.json` through the Service.
+- **`helm test`** checks `/srv/status` and that the home page answers (it needs the database) through the Service.
 
 ## Configuration
 

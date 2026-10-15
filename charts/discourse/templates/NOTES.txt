@@ -13,6 +13,12 @@ Create the first admin account (asks for email and password):
   kubectl -n {{ .Release.Namespace }} exec -it deploy/{{ include "discourse.fullname" . }} -- rake admin:create
 
 Then open https://{{ .Values.discourse.hostname }}{{ if not .Values.ingress.enabled }} (no Ingress is created by this release; route that hostname to the Service){{ end }}.
+When the forum is served over HTTPS, turn on Admin > Settings > Security > "force https",
+or run:
+
+  kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "discourse.fullname" . }} -- rails runner 'SiteSetting.force_https = true'
+
+Without it Discourse generates http:// links.
 {{- if not .Values.smtp.address }}
 
 NOTE: smtp.address is not set, so Discourse can't send sign-up, password reset

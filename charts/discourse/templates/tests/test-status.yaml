@@ -23,7 +23,9 @@ spec:
           set -e
           base="http://{{ include "discourse.fullname" . }}:{{ .Values.service.port }}"
           test "$(curl -sf --retry 10 --retry-all-errors --retry-delay 3 "$base/srv/status")" = ok
-          curl -sf -o /dev/null "$base/about.json"
+          # The home page needs the database; on login-required forums it shows the login page.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: text/html' "$base/")
+          case "$code" in 200|302) ;; *) echo "Home page returned $code"; exit 1 ;; esac
           echo "Discourse is up"
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
