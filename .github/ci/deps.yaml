@@ -1,4 +1,4 @@
-# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind.
+# Throwaway PostgreSQL (with pgvector), Redis and MariaDB for chart tests in kind.
 # Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc.
 apiVersion: v1
 kind: Namespace
@@ -72,3 +72,58 @@ spec:
   selector: { app: redis }
   ports:
     - port: 6379
+---
+# MariaDB for Postal. The postal user gets only the privileges Postal needs: all on the database
+# `postal` (not created here; the chart's migration Job creates it) and on `postal-*`, the
+# per-mail-server databases.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-init
+  namespace: deps
+data:
+  postal.sql: |
+    CREATE USER 'postal'@'%' IDENTIFIED BY 'postal';
+    GRANT ALL PRIVILEGES ON `postal`.* TO 'postal'@'%';
+    GRANT ALL PRIVILEGES ON `postal-%`.* TO 'postal'@'%';
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: mariadb }
+  template:
+    metadata:
+      labels: { app: mariadb }
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:11.8
+          env:
+            - { name: MARIADB_ROOT_PASSWORD, value: root }
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            periodSeconds: 2
+      volumes:
+        - name: init
+          configMap:
+            name: mariadb-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: deps
+spec:
+  selector: { app: mariadb }
+  ports:
+    - port: 3306
