@@ -1,0 +1,16 @@
+Cube {{ .Chart.AppVersion }} is deployed as "{{ include "cube.fullname" . }}":
+  API: {{ .Values.api.replicaCount }} pod(s){{ if .Values.refreshWorker.enabled }}, refresh worker: 1 pod{{ end }}
+{{- if .Values.cubestore.enabled }}
+  Cube Store: 1 router, {{ .Values.cubestore.workers }} worker(s), storage: {{ .Values.cubestore.storage.type }}
+{{- else }}
+  Cube Store: external ({{ .Values.cubestore.external.host }})
+{{- end }}
+
+Reach the API:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "cube.fullname" . }} 4000:{{ .Values.service.port }}
+  curl http://localhost:4000/readyz
+
+Every API request needs a JWT signed with your API secret (HS256), sent in the
+Authorization header. Keep the API secret private: anyone who has it can query all
+data your model exposes.

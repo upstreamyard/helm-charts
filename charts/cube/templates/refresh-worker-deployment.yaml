@@ -1,0 +1,18 @@
+{{- if .Values.refreshWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cube.fullname" . }}-refresh-worker
+  labels:
+    {{- include "cube.labels" . | nindent 4 }}
+    app.kubernetes.io/component: refresh-worker
+spec:
+  # Cube's production setup runs exactly one refresh worker.
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "cube.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: refresh-worker
+  template:
+    {{- include "cube.cubePod" (list . "refresh-worker") | nindent 4 }}
+{{- end }}

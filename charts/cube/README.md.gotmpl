@@ -1,0 +1,119 @@
+# Cube Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for [Cube](https://github.com/cube-js/cube), the open-source semantic layer and data API for BI and AI. It runs Cube's production setup on Kubernetes with Cube's official images [`cubejs/cube`](https://hub.docker.com/r/cubejs/cube) and [`cubejs/cubestore`](https://hub.docker.com/r/cubejs/cubestore): API pods, a refresh worker, and a Cube Store cluster (router and workers) for pre-aggregations.
+
+> Community chart by **upstreamyard**, not an official Cube chart. Cube is © its authors, licensed under Apache-2.0 and MIT.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install cube upstreamyard/cube -f values.yaml
+```
+
+A minimal `values.yaml` with PostgreSQL as the data source and S3 for Cube Store:
+
+```yaml
+apiSecret:
+  existingSecret: cube-api          # key: api-secret, e.g. from `openssl rand -hex 32`
+datasource:
+  type: postgres
+  host: warehouse.example.internal
+  name: analytics
+  user: cube
+  existingSecret: cube-db           # key: password
+model:
+  existingConfigMap: cube-model     # your model files, e.g. kubectl create configmap cube-model --from-file=model/
+cubestore:
+  storage:
+    type: s3
+    s3:
+      bucket: my-cube-store
+      region: eu-central-1
+  extraEnvFrom:
+    - secretRef:
+        name: cube-store-s3         # CUBESTORE_AWS_ACCESS_KEY_ID, CUBESTORE_AWS_SECRET_ACCESS_KEY
+```
+
+Or from the OCI registry: `helm install cube oci://ghcr.io/upstreamyard/charts/cube -f values.yaml`.
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install cube upstreamyard/cube --verify --keyring upstreamyard.gpg -f values.yaml
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Requirements
+
+- **A data source** that Cube supports (PostgreSQL, Snowflake, BigQuery, ClickHouse, …). This chart does not deploy one.
+- **Shared storage for Cube Store:** an S3 or GCS bucket, or any S3-compatible store (`minio`). The router and all workers read and write it. A shared volume (`sharedVolume`) also works, but Cube doesn't recommend it for production, and it must be `ReadWriteMany` when Cube Store pods run on several nodes.
+- **An API secret**, which signs the tokens your apps send.
+- **Your data model** (YAML or JS files).
+
+## What the chart does
+
+- **API** (`<release>-cube-api`): any number of pods behind the Service on port 4000 (REST, GraphQL and SQL-over-HTTP APIs).
+- **Refresh worker** (`<release>-cube-refresh-worker`): one pod that builds and refreshes pre-aggregations in Cube Store, as in Cube's production setup.
+- **Cube Store**: a router StatefulSet and a worker StatefulSet. Workers get stable names through a headless Service, and the chart wires `CUBESTORE_WORKERS`, `CUBESTORE_SERVER_NAME` and `CUBESTORE_META_ADDR` for you. Change `cubestore.workers` to scale. The router writes a snapshot of its metadata to the shared storage every 5 minutes and restores it after a restart.
+- **Data model**: copied into `/cube/conf/model` of the API and refresh worker when a pod starts, from `model.files` or your own ConfigMap. (Mounting a ConfigMap folder directly doesn't work: Kubernetes adds hidden links to it, and Cube reads every model file twice.) Pods restart when `model.files` changes; after changing your own ConfigMap, run `kubectl rollout restart` for the API and refresh worker.
+- **Probes:** the API is ready when `/readyz` passes (it tests the data source and Cube Store); liveness only checks that the port is open, so a data source outage doesn't restart pods. The Cube Store router uses its `/livez` and `/readyz` endpoints on port 3031; workers have none, so a TCP check is used.
+- **Security:** all pods run as non-root UID 10001 (the images default to root), drop all capabilities, and don't mount a ServiceAccount token. Cube Store keeps its local data in an `emptyDir` at `/cube/data`.
+
+**Authentication:** every API request needs a JWT signed with the API secret (HS256) in the `Authorization` header; requests without a valid token get `403`. For tokens from your identity provider, set `CUBEJS_JWK_URL` and the related variables through `extraEnv`. See Cube's [authentication guide](https://docs.cube.dev/api-reference/authentication).
+
+## Configuration
+
+**Other data sources:** set `datasource.type` and pass the driver's variables through `extraEnv` / `extraEnvFrom`, e.g. for BigQuery:
+
+```yaml
+datasource:
+  type: bigquery
+extraEnv:
+  - name: CUBEJS_DB_BQ_PROJECT_ID
+    value: my-project
+extraEnvFrom:
+  - secretRef:
+      name: cube-bigquery           # CUBEJS_DB_BQ_CREDENTIALS
+```
+
+All variables are listed in Cube's [environment variable reference](https://docs.cube.dev/reference/configuration/environment-variables).
+
+**`cube.js` configuration file:** mount it next to the model:
+
+```yaml
+extraVolumes:
+  - name: cube-config
+    configMap:
+      name: cube-config             # key: cube.js
+extraVolumeMounts:
+  - name: cube-config
+    mountPath: /cube/conf/cube.js
+    subPath: cube.js
+```
+
+**Cube Store storage credentials** go into a Secret referenced by `cubestore.extraEnvFrom`:
+
+| Storage | Variables |
+|---|---|
+| `s3` | `CUBESTORE_AWS_ACCESS_KEY_ID`, `CUBESTORE_AWS_SECRET_ACCESS_KEY` (or workload identity through `serviceAccount.annotations`) |
+| `gcs` | `CUBESTORE_GCP_CREDENTIALS` (base64-encoded service account key) |
+| `minio` | `CUBESTORE_MINIO_ACCESS_KEY_ID`, `CUBESTORE_MINIO_SECRET_ACCESS_KEY` |
+
+**arm64 nodes:** Cube Store has no multi-arch images. Set `cubestore.image.variant: arm64v8` on arm64 nodes, or `non-avx` on amd64 CPUs without AVX. The `cubejs/cube` image is multi-arch.
+
+**An existing Cube Store:** set `cubestore.enabled: false` and `cubestore.external.host`.
+
+## Known issues
+
+- **S3-compatible storage needs a sub-path.** With `cubestore.storage.type: minio` and no `subPath`, Cube Store 1.8 can't find its own uploads ("can't be listed after upload"), so pre-aggregations never build. The chart therefore sets `subPath: cubestore` and rejects an empty value. Tested with RustFS; MinIO itself no longer publishes images.
+- **Router restart in the first minutes.** Until the router has written its first metadata snapshot (5 minutes after a new installation), a router restart starts with empty metadata, and the refresh worker rebuilds all pre-aggregations.
+- **`helm test`** calls `/cubejs-api/v1/meta`; it fails if your `cube.js` sets a different `basePath`.
+
+{{ template "chart.valuesSection" . }}

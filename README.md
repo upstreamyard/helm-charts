@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`cube`](charts/cube) | [Cube](https://github.com/cube-js/cube), semantic layer and data API for BI and AI, with Cube Store | [`cubejs/cube`](https://hub.docker.com/r/cubejs/cube), [`cubejs/cubestore`](https://hub.docker.com/r/cubejs/cubestore) (official Cube images) |
 
 ## Usage
 
