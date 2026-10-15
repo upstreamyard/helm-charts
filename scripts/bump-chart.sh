@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Bump a chart to the latest release of the packaged project, if our image for it is already published.
+# Bump a chart to the latest release of the packaged project, if the image for it is already published.
 #
 # Usage: scripts/bump-chart.sh <chart> <project-repo> <image>
 #   e.g. scripts/bump-chart.sh aegra aegra/aegra ghcr.io/upstreamyard/aegra
+#        scripts/bump-chart.sh tigerbeetle tigerbeetle/tigerbeetle ghcr.io/tigerbeetle/tigerbeetle
+#   Our images are listed on Artifact Hub as upstreamyard/<name> (Docker Hub),
+#   images of the project itself with the full reference given here.
 #
 # Prints "version=<x>" and "changed=true|false" (also to $GITHUB_OUTPUT when set).
 # Edits charts/<chart>/Chart.yaml in place: appVersion, patch-bumped chart version,
@@ -43,10 +46,14 @@ if [ "${DRY_RUN:-}" = "1" ]; then
 fi
 
 image_name=${image##*/}
-VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name yq -i '
+case $image in
+  ghcr.io/upstreamyard/*) image_ref=upstreamyard/$image_name ;;
+  *) image_ref=$image ;;
+esac
+VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name IMAGE_REF=$image_ref yq -i '
   .appVersion = strenv(VERSION) |
   .version = strenv(CHART_VERSION) |
-  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: upstreamyard/" + strenv(IMAGE_NAME) + ":" + strenv(VERSION) + "\n" |
+  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: " + strenv(IMAGE_REF) + ":" + strenv(VERSION) + "\n" |
   .annotations."artifacthub.io/changes" = "- kind: changed\n  description: Update " + strenv(IMAGE_NAME) + " to " + strenv(VERSION) + "\n"
 ' "$chart_yaml"
 out "changed=true"

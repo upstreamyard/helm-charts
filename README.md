@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`plano`](charts/plano) | [Plano](https://github.com/katanemo/plano) AI gateway and LLM proxy: one OpenAI-compatible API for many providers, starts without internet access, non-root, API keys kept from the Envoy admin API, PostgreSQL state and Redis cache for several replicas, zero-downtime upgrades | official [`katanemo/plano`](https://hub.docker.com/r/katanemo/plano) |
 
 ## Usage
 
