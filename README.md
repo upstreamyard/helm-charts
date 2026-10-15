@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`activemq`](charts/activemq) | [Apache ActiveMQ Classic](https://github.com/apache/activemq) message broker (JMS, AMQP, STOMP, MQTT): single broker or high-availability master/slave, metrics | [`upstreamyard/activemq`](https://github.com/upstreamyard/activemq) |
 
 ## Usage
 
