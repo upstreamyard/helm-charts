@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`automq`](charts/automq) | [AutoMQ](https://github.com/AutoMQ/automq), Kafka-compatible streaming with messages stored in S3 (diskless Kafka) | [`automqinc/automq`](https://hub.docker.com/r/automqinc/automq) (official) |
 
 ## Usage
 
@@ -26,7 +27,7 @@ cosign verify ghcr.io/upstreamyard/charts/aegra:<chart-version> \
 ## How releases work
 
 1. **Daily** ([`bump.yml`](.github/workflows/bump.yml)): if the packaged project (e.g. `aegra/aegra`) released a new version and our image for it is published, a bot opens a PR that updates `appVersion` and bumps the chart's patch version.
-2. **On every PR** ([`lint-test.yml`](.github/workflows/lint-test.yml)): lint, README check, then a real install in a kind cluster against PostgreSQL (pgvector) and Redis, with `helm test`.
+2. **On every PR** ([`lint-test.yml`](.github/workflows/lint-test.yml)): lint, README check, then a real install in a kind cluster against PostgreSQL (pgvector), Redis and S3-compatible storage, with `helm test`.
 3. Bot PRs **merge themselves** once `lint-test` passes. If it fails, the PR stays open for a human.
 4. **On merge to `main`** ([`release.yml`](.github/workflows/release.yml)): a GitHub Release, the `index.yaml` on GitHub Pages, the OCI chart on GHCR (cosign-signed) and Artifact Hub metadata. Artifact Hub re-scans the repository on its own.
 

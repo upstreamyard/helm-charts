@@ -1,0 +1,41 @@
+apiVersion: v2
+name: automq
+description: AutoMQ Helm chart for Kubernetes. Kafka-compatible streaming with messages stored in S3 (diskless Kafka) on the open-source AutoMQ edition, with combined or separate KRaft controllers, scalable stateless brokers, SASL authentication by default and Prometheus metrics. Replaces the Bitnami Kafka chart setup for AutoMQ. Community chart by upstreamyard, not an official AutoMQ chart.
+type: application
+version: 0.1.0
+appVersion: "1.7.4"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/upstreamyard/helm-charts/tree/main/charts/automq
+sources:
+  - https://github.com/upstreamyard/helm-charts
+  - https://github.com/AutoMQ/automq
+keywords:
+  - automq
+  - kafka
+  - apache-kafka
+  - diskless-kafka
+  - kafka-on-s3
+  - s3
+  - streaming
+  - message-broker
+  - kraft
+  - event-streaming
+maintainers:
+  - name: upstreamyard
+    url: https://github.com/upstreamyard
+annotations:
+  artifacthub.io/category: streaming-messaging
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/images: |
+    - name: automq
+      image: automqinc/automq:1.7.4-kafka
+  artifacthub.io/links: |
+    - name: AutoMQ
+      url: https://github.com/AutoMQ/automq
+  artifacthub.io/signKey: |
+    fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+    url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+  artifacthub.io/changes: |
+    - kind: added
+      description: AutoMQ chart with combined or separate controllers, broker-only nodes, SASL/PLAIN authentication and Prometheus metrics

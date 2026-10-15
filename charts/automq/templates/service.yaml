@@ -1,0 +1,61 @@
+# Bootstrap address for clients: any broker answers with the full cluster layout.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "automq.fullname" . }}
+  labels:
+    {{- include "automq.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "automq.selectorLabels" . | nindent 4 }}
+    automq.upstreamyard.io/broker: "true"
+  ports:
+    - name: client
+      port: {{ .Values.service.port }}
+      targetPort: client
+---
+# Stable DNS names per node (<pod>.<this service>), which brokers advertise and the quorum uses.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "automq.headlessName" . }}
+  labels:
+    {{- include "automq.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  # Nodes must find each other before they are ready.
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "automq.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: client
+      port: 9092
+      targetPort: 9092
+    - name: controller
+      port: 9093
+      targetPort: 9093
+    - name: internal
+      port: 9094
+      targetPort: 9094
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "automq.fullname" . }}-metrics
+  labels:
+    {{- include "automq.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+spec:
+  selector:
+    {{- include "automq.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+{{- end }}
