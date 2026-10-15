@@ -1,0 +1,65 @@
+{{- if has "openwire" .Values.transports }}
+{{- $secret := default (include "activemq.secretName" .) .Values.auth.existingSecret }}
+{{- $user := default .Values.auth.adminUser .Values.auth.appUser }}
+{{- $key := "" }}
+{{- if .Values.auth.appUser }}
+{{- $key = ternary .Values.auth.appPasswordKey "app-password" (not (empty .Values.auth.existingSecret)) }}
+{{- else }}
+{{- $key = ternary .Values.auth.adminPasswordKey "admin-password" (not (empty .Values.auth.existingSecret)) }}
+{{- end }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "activemq.fullname" . }}-test-messaging
+  labels:
+    {{- include "activemq.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    # Sends and receives 5 messages with ActiveMQ's own command line tools from the image.
+    - name: messaging
+      image: {{ include "activemq.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: URL
+          value: {{ include "activemq.clientUrl" . | quote }}
+        - name: USER
+          value: {{ $user | quote }}
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secret }}
+              key: {{ $key }}
+        # The tools write temporary files; the root filesystem is read-only.
+        - name: ACTIVEMQ_TMP
+          value: /tmp
+        - name: ACTIVEMQ_DATA
+          value: /tmp
+      command:
+        - bash
+        - -c
+        # ActiveMQ's start script pastes arguments into "sh -c", hence the inner quotes.
+        - |
+          set -u
+          q=queue://helm-test-$RANDOM
+          out=$(activemq producer --brokerUrl "'$URL'" --user "'$USER'" --password "'$PASSWORD'" --destination "$q" --messageCount 5 2>&1)
+          echo "$out" | grep -E "Produced|ERROR|Exception" || true
+          grep -q "Produced: 5 messages" <<< "$out" || exit 1
+          out=$(activemq consumer --brokerUrl "'$URL'" --user "'$USER'" --password "'$PASSWORD'" --destination "$q" --messageCount 5 2>&1)
+          echo "$out" | grep -E "Consumed|ERROR|Exception" || true
+          grep -q "Consumed: 5 messages" <<< "$out"
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}
+{{- end }}

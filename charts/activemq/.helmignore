@@ -1,0 +1,5 @@
+.DS_Store
+.git/
+*.tgz
+README.md.gotmpl
+ci/

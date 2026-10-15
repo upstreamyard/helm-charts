@@ -3,6 +3,10 @@
 #
 # Usage: scripts/bump-chart.sh <chart> <upstream-repo> <image>
 #   e.g. scripts/bump-chart.sh aegra aegra/aegra ghcr.io/upstreamyard/aegra
+# <upstream-repo> can also be a download folder URL listing one folder per version, for
+# projects whose newest version isn't GitHub's "latest" release (e.g. Apache projects that
+# patch several release lines):
+#        scripts/bump-chart.sh activemq https://downloads.apache.org/activemq/ ghcr.io/upstreamyard/activemq
 #
 # Prints "version=<x>" and "changed=true|false" (also to $GITHUB_OUTPUT when set).
 # Edits charts/<chart>/Chart.yaml in place: appVersion, patch-bumped chart version,
@@ -19,7 +23,12 @@ chart_yaml="charts/$chart/Chart.yaml"
 out() { echo "$1"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; return 0; }
 
 current=$(yq '.appVersion' "$chart_yaml")
-latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
+if [[ $upstream == https://* ]]; then
+  latest=$(curl -fsSL "$upstream" | grep -oE 'href="v?[0-9]+\.[0-9]+\.[0-9]+/"' \
+    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)
+else
+  latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
+fi
 latest=${latest#v}
 out "version=$latest"
 
