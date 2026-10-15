@@ -19,8 +19,10 @@ chart_yaml="charts/$chart/Chart.yaml"
 out() { echo "$1"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; return 0; }
 
 current=$(yq '.appVersion' "$chart_yaml")
-latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
-latest=${latest#v}
+# Highest stable release (vX.Y.Z), not GitHub's "latest release": some projects publish
+# release candidates without flagging them as prereleases.
+latest=$(gh api --paginate "repos/$upstream/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name' \
+  | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -1)
 out "version=$latest"
 
 if [ "$latest" = "$current" ] || [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -1)" != "$latest" ]; then

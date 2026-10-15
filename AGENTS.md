@@ -7,6 +7,7 @@ Instructions for AI agents and coding assistants working with this repository or
 - Repository: `helm repo add upstreamyard https://upstreamyard.github.io/helm-charts`, or OCI `oci://ghcr.io/upstreamyard/charts/<chart>`.
 - Every chart documents all of its values in `charts/<chart>/README.md`, and `values.schema.json` validates them.
 - `aegra`: requires PostgreSQL with pgvector (`database.url` or `database.existingSecret`). More than 1 replica requires Redis (`redis.url` or `redis.existingSecret`). Own agents and authentication ship in a user image built `FROM upstreamyard/aegra` (files under `/app`, `AEGRA_CONFIG=/app/agents/aegra.json`), set via `image.repository`. Auth is on only if that `aegra.json` has an `"auth"` entry; `AUTH_TYPE` has no effect in Aegra 0.10.8. Verify with `helm test <release>`.
+- `conductor`: requires PostgreSQL (`database.url` as a JDBC URL `jdbc:postgresql://...`, `database.username`, and `database.password` or `database.existingSecret`); nothing else. Any `replicaCount` works, because the chart always uses Conductor's PostgreSQL workflow lock. Conductor has no authentication; never expose the Service or Ingress without auth in front. Other settings go through `extraEnv` as Spring properties (`CONDUCTOR_...`). Verify with `helm test <release>`.
 
 ## Working on this repository
 
