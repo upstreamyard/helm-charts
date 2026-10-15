@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "discourse.fullname" . }}-test-status
+  labels:
+    {{- include "discourse.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: curl
+      # The Discourse image already contains curl, so no extra image is pulled.
+      image: {{ include "discourse.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+          base="http://{{ include "discourse.fullname" . }}:{{ .Values.service.port }}"
+          test "$(curl -sf --retry 10 --retry-all-errors --retry-delay 3 "$base/srv/status")" = ok
+          curl -sf -o /dev/null "$base/about.json"
+          echo "Discourse is up"
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

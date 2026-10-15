@@ -5,6 +5,16 @@ kind: Namespace
 metadata:
   name: deps
 ---
+# One database per chart (POSTGRES_DB creates the first one).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: deps
+data:
+  databases.sql: |
+    CREATE DATABASE discourse;
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,10 +36,17 @@ spec:
             - { name: POSTGRES_DB, value: aegra }
           ports:
             - containerPort: 5432
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "aegra", "-d", "aegra"]
             periodSeconds: 2
+      volumes:
+        - name: init
+          configMap:
+            name: postgres-init
 ---
 apiVersion: v1
 kind: Service

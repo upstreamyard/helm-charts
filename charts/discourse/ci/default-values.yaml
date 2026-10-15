@@ -1,0 +1,29 @@
+# Used by chart-testing (ct install) in CI. PostgreSQL (pgvector) and Redis are
+# deployed into the "deps" namespace by the workflow before the chart is installed.
+discourse:
+  hostname: discourse.example.com
+  secretKeyBase: 38f094d79282ec06819b7c1641d6ba8029aa6dfad18ef5b1789d4a842ab957812122c7c3b836c3ed3c1f3e50374a7294fa171a5931aae4fba80a9ad530bb8c2b
+database:
+  host: postgres.deps.svc
+  name: discourse
+  username: aegra
+  password: aegra
+redis:
+  host: redis.deps.svc
+  db: 2
+web:
+  workers: 1
+resources:
+  requests:
+    cpu: 100m
+    memory: 768Mi
+migrations:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+persistence:
+  uploads:
+    size: 1Gi
+  backups:
+    size: 1Gi

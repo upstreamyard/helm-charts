@@ -19,7 +19,13 @@ chart_yaml="charts/$chart/Chart.yaml"
 out() { echo "$1"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; return 0; }
 
 current=$(yq '.appVersion' "$chart_yaml")
-latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
+latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name 2>/dev/null || true)
+# Some projects (e.g. Discourse) publish releases only as git tags (vX.Y.Z).
+if [ -z "$latest" ]; then
+  latest=$(git ls-remote --tags --refs "https://github.com/$upstream.git" | sed 's#.*refs/tags/##' \
+    | { grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -1)
+fi
+[ -n "$latest" ] || { echo "No release found for $upstream" >&2; exit 1; }
 latest=${latest#v}
 out "version=$latest"
 
