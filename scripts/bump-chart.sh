@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Bump a chart to the latest release of the packaged project, if our image for it is already published.
+# Bump a chart to the latest release of the packaged project, if the image for it is already published.
 #
 # Usage: scripts/bump-chart.sh <chart> <project-repo> <image>
 #   e.g. scripts/bump-chart.sh aegra aegra/aegra ghcr.io/upstreamyard/aegra
+#        scripts/bump-chart.sh tigerbeetle tigerbeetle/tigerbeetle ghcr.io/tigerbeetle/tigerbeetle
+#   Our images are listed on Artifact Hub as upstreamyard/<name> (Docker Hub),
+#   images of the project itself with the full reference given here.
 #
 # Prints "version=<x>" and "changed=true|false" (also to $GITHUB_OUTPUT when set).
 # Edits charts/<chart>/Chart.yaml in place: appVersion, patch-bumped chart version,
-# Artifact Hub image and changes annotations. Does not commit.
+# the image's entry in the Artifact Hub images annotation and the changes annotation. Does not commit.
 #
 # Env: DRY_RUN=1          only report, do not edit
 #      SKIP_IMAGE_CHECK=1 do not require the image to exist (local testing only)
@@ -43,10 +46,22 @@ if [ "${DRY_RUN:-}" = "1" ]; then
 fi
 
 image_name=${image##*/}
-VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name yq -i '
+case $image in
+  ghcr.io/upstreamyard/*) image_ref=upstreamyard/$image_name ;;
+  *) image_ref=$image ;;
+esac
+# Update this image's entry and keep the chart's other images (e.g. sidecars).
+images=$(yq '.annotations."artifacthub.io/images" // "[]"' "$chart_yaml")
+export IMAGE_NAME=$image_name IMAGE=$image_ref:$latest
+if [ "$(echo "$images" | yq 'map(select(.name == strenv(IMAGE_NAME))) | length')" -gt 0 ]; then
+  images=$(echo "$images" | yq '(.[] | select(.name == strenv(IMAGE_NAME)) | .image) = strenv(IMAGE)')
+else
+  images=$(echo "$images" | yq '. + [{"name": strenv(IMAGE_NAME), "image": strenv(IMAGE)}]')
+fi
+VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name IMAGES=$images yq -i '
   .appVersion = strenv(VERSION) |
   .version = strenv(CHART_VERSION) |
-  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: upstreamyard/" + strenv(IMAGE_NAME) + ":" + strenv(VERSION) + "\n" |
+  .annotations."artifacthub.io/images" = strenv(IMAGES) + "\n" |
   .annotations."artifacthub.io/changes" = "- kind: changed\n  description: Update " + strenv(IMAGE_NAME) + " to " + strenv(VERSION) + "\n"
 ' "$chart_yaml"
 out "changed=true"

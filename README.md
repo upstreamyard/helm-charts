@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`kvrocks`](charts/kvrocks) | [Apache Kvrocks](https://github.com/apache/kvrocks), Redis-compatible key-value database on RocksDB, with Sentinel high availability | [`apache/kvrocks`](https://hub.docker.com/r/apache/kvrocks) (official) |
 
 ## Usage
 

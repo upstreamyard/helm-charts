@@ -1,0 +1,81 @@
+# Stable DNS names for the members (<release>-kvrocks-N.<release>-kvrocks-headless), also while
+# a member isn't ready, so that replicas and Sentinel can always resolve each other.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kvrocks.headless" . }}
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "kvrocks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: kvrocks
+  ports:
+    - name: kvrocks
+      port: {{ .Values.port }}
+      targetPort: kvrocks
+    {{- if .Values.sentinel.enabled }}
+    - name: sentinel
+      port: {{ .Values.sentinel.port }}
+      targetPort: sentinel
+    {{- end }}
+{{- if or (not .Values.sentinel.enabled) .Values.proxy.enabled }}
+---
+# The write endpoint: the single instance, or HAProxy, which forwards to the current master.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kvrocks.fullname" . }}
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "kvrocks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ if .Values.sentinel.enabled }}proxy{{ else }}kvrocks{{ end }}
+  ports:
+    - name: kvrocks
+      port: {{ .Values.port }}
+      targetPort: kvrocks
+{{- end }}
+{{- if .Values.sentinel.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-sentinel
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "kvrocks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: kvrocks
+  ports:
+    - name: sentinel
+      port: {{ .Values.sentinel.port }}
+      targetPort: sentinel
+{{- end }}
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-metrics
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+spec:
+  selector:
+    {{- include "kvrocks.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: kvrocks
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+{{- end }}

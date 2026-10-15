@@ -18,6 +18,10 @@ jobs:
           - chart: aegra
             upstream: aegra/aegra
             image: ghcr.io/upstreamyard/aegra
+          # Uses the official image published by the Apache Kvrocks project.
+          - chart: kvrocks
+            upstream: apache/kvrocks
+            image: apache/kvrocks
     env:
       # A GitHub App or fine-grained PAT (contents + pull requests: write).
       # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,

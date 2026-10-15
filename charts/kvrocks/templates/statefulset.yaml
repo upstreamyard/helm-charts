@@ -1,0 +1,237 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "kvrocks.fullname" . }}
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ include "kvrocks.headless" . }}
+  # Members find the current master through each other's Sentinels, so they start together.
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "kvrocks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kvrocks
+  template:
+    metadata:
+      labels:
+        {{- include "kvrocks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: kvrocks
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/scripts: {{ include (print $.Template.BasePath "/scripts-configmap.yaml") . | sha256sum }}
+        {{- if and .Values.auth.enabled (not .Values.auth.existingSecret) }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: kvrocks
+          image: {{ include "kvrocks.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "/scripts/kvrocks.sh"]
+          env:
+            {{- include "kvrocks.scriptEnv" . | nindent 12 }}
+            - name: FAILOVER_ON_SHUTDOWN
+              value: {{ .Values.sentinel.failoverOnShutdown | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: kvrocks
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          startupProbe:
+            exec:
+              command: ["/bin/sh", "/scripts/alive.sh"]
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          livenessProbe:
+            exec:
+              command: ["/bin/sh", "/scripts/alive.sh"]
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "/scripts/ready.sh"]
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- if .Values.sentinel.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "/scripts/prestop.sh"]
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/kvrocks
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: etc
+              mountPath: /etc/kvrocks
+            - name: run
+              mountPath: /var/run/kvrocks
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- if .Values.sentinel.enabled }}
+        - name: sentinel
+          image: "{{ .Values.sentinel.image.repository }}:{{ .Values.sentinel.image.tag }}"
+          imagePullPolicy: {{ .Values.sentinel.image.pullPolicy }}
+          command: ["/bin/sh", "/scripts/sentinel.sh"]
+          env:
+            {{- include "kvrocks.scriptEnv" . | nindent 12 }}
+            - name: QUORUM
+              value: {{ include "kvrocks.quorum" . | quote }}
+            - name: DOWN_AFTER
+              value: {{ .Values.sentinel.downAfterMilliseconds | quote }}
+            - name: FAILOVER_TIMEOUT
+              value: {{ .Values.sentinel.failoverTimeout | quote }}
+            - name: PARALLEL_SYNCS
+              value: {{ .Values.sentinel.parallelSyncs | quote }}
+          ports:
+            - name: sentinel
+              containerPort: {{ .Values.sentinel.port }}
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: sentinel
+            periodSeconds: 10
+            timeoutSeconds: 5
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.sentinel.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/kvrocks
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+        {{- end }}
+        {{- if .Values.metrics.enabled }}
+        - name: metrics
+          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          env:
+            - name: KVROCKS_ADDR
+              value: "kvrocks://127.0.0.1:{{ .Values.port }}"
+            - name: KVROCKS_EXPORTER_WEB_LISTEN_ADDRESS
+              value: ":{{ .Values.metrics.port }}"
+            {{- include "kvrocks.passwordEnv" . | nindent 12 }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: metrics
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.metrics.resources | nindent 12 }}
+        {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "kvrocks.fullname" . }}
+        - name: scripts
+          configMap:
+            name: {{ include "kvrocks.fullname" . }}-scripts
+        - name: etc
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
+        {{- if not .Values.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if eq .Values.podAntiAffinityPreset "soft" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "kvrocks.selectorLabels" . | nindent 20 }}
+                    app.kubernetes.io/component: kvrocks
+      {{- else if eq .Values.podAntiAffinityPreset "hard" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "kvrocks.selectorLabels" . | nindent 18 }}
+                  app.kubernetes.io/component: kvrocks
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "kvrocks.selectorLabels" . | nindent 10 }}
+        {{- with .Values.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- with .Values.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}
