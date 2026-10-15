@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`falkordb`](charts/falkordb) | [FalkorDB](https://github.com/FalkorDB/FalkorDB) graph database for knowledge graphs and GraphRAG, single instance or HA with Sentinel failover | official [`falkordb/falkordb-server`](https://hub.docker.com/r/falkordb/falkordb-server) |
 
 ## Usage
 
