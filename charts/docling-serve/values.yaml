@@ -1,0 +1,244 @@
+# -- Number of API pods. More than 1 requires `engine.kind: rq`: the local engine keeps tasks in the pod's memory, so a status request that reaches another pod fails.
+replicaCount: 1
+
+image:
+  # -- Image repository. One of Docling Serve's official images: `ghcr.io/docling-project/docling-serve-cpu` (CPU), `-cu128` or `-cu130` (NVIDIA GPU), or `ghcr.io/docling-project/docling-serve` (PyPI build). See "Choosing the image".
+  repository: ghcr.io/docling-project/docling-serve-cpu
+  # -- Image tag. Defaults to `v` + the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# API key. Clients send it in the `X-Api-Key` header.
+apiKey:
+  # -- Require an API key (`DOCLING_SERVE_API_KEY`). Without it, anyone who reaches the service can convert documents and make the server fetch any URL.
+  enabled: true
+  # -- The API key. If empty and no `existingSecret` is set, the chart generates one and keeps it across upgrades.
+  value: ""
+  # -- Name of an existing Secret that holds the API key.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the API key.
+  existingSecretKey: api-key
+
+engine:
+  # -- Compute engine for conversions: `local` (in the API pod) or `rq` (separate worker pods with a job queue in Redis; required for more than 1 API pod).
+  kind: local
+  local:
+    # -- Conversions that run at the same time in each API pod (`DOCLING_SERVE_ENG_LOC_NUM_WORKERS`).
+    numWorkers: 2
+  rq:
+    # -- Redis URL for the `rq` engine, e.g. `redis://:password@redis:6379/0`. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+    redisUrl: ""
+    # -- Name of an existing Secret that holds the Redis URL.
+    existingSecret: ""
+    # -- Key in `existingSecret` that holds the Redis URL.
+    existingSecretKey: redis-url
+    # -- RQ queue name (`DOCLING_SERVE_ENG_RQ_QUEUE_NAME`). Change it when several installations share one Redis.
+    queueName: convert
+
+# RQ worker pods. Used only with `engine.kind: rq`.
+worker:
+  # -- Number of worker pods. Each converts one document at a time. Ignored when `worker.autoscaling.enabled`.
+  replicaCount: 2
+  image:
+    # -- Worker image repository, e.g. a CUDA image for GPU workers. Defaults to `image.repository`.
+    repository: ""
+    # -- Worker image tag. Defaults to `image.tag`.
+    tag: ""
+  # -- Seconds Kubernetes waits after SIGTERM. A worker finishes the document it is converting before it exits; if that takes longer, the conversion fails.
+  terminationGracePeriodSeconds: 300
+  # -- Resources for a worker. For GPU workers add e.g. `nvidia.com/gpu: 1` to limits.
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      memory: 6Gi
+  # -- Extra environment variables for the workers only.
+  extraEnv: []
+  # -- Node selector for the workers, e.g. GPU nodes.
+  nodeSelector: {}
+  # -- Tolerations for the workers.
+  tolerations: []
+  # -- Affinity for the workers.
+  affinity: {}
+  # -- Extra worker pod annotations.
+  podAnnotations: {}
+  autoscaling:
+    # -- Scale workers on the Redis queue length with a KEDA ScaledObject. Needs KEDA installed in the cluster.
+    enabled: false
+    # -- Minimum workers. 0 stops all workers while the queue is empty.
+    minReplicaCount: 1
+    # -- Maximum workers.
+    maxReplicaCount: 10
+    # -- Waiting jobs per worker that trigger a scale-up.
+    listLength: 2
+    # -- Seconds without jobs before KEDA scales down.
+    cooldownPeriod: 300
+    # -- Seconds between queue checks.
+    pollingInterval: 15
+    # -- Redis host:port for KEDA, e.g. `redis.example.svc:6379`. KEDA can't read the Redis URL, so set it here.
+    redisAddress: ""
+    # -- Redis database number, as in the Redis URL (`redis://host:6379/<n>`).
+    redisDatabase: 0
+    # -- Name of a Secret with the Redis password for KEDA (empty: no password).
+    redisPasswordSecret: ""
+    # -- Key in `redisPasswordSecret` that holds the password.
+    redisPasswordSecretKey: redis-password
+    # -- Connect to Redis over TLS.
+    redisTLS: false
+
+# Extra models. The image already contains the layout, table structure, picture classifier, RapidOCR and EasyOCR models.
+models:
+  # -- Extra models to download before the pods start, e.g. `[granitedocling, smolvlm]` for formula/code enrichment and picture descriptions. The names are the arguments of `docling-tools models download`. Empty: use the models in the image.
+  download: []
+  # -- Existing PersistentVolumeClaim for the models (ReadWriteMany for several pods). Downloads happen once and survive restarts. Empty: an emptyDir per pod, downloaded at every pod start.
+  existingClaim: ""
+  # -- Resources for the model download init container.
+  resources: {}
+
+# -- Serve the web UI at `/ui` (`DOCLING_SERVE_ENABLE_UI`). It uses the same API key.
+ui:
+  enabled: false
+
+# -- Settings as environment variables, e.g. `DOCLING_SERVE_MAX_NUM_PAGES`, `DOCLING_SERVE_LOG_FORMAT`, `DOCLING_SERVE_ENABLE_REMOTE_SERVICES`. Applies to API and worker pods. See https://github.com/docling-project/docling-serve/blob/main/docs/configuration.md
+extraEnv: []
+# - name: DOCLING_SERVE_MAX_NUM_PAGES
+#   value: "500"
+
+# -- Extra environment variables from Secrets or ConfigMaps, e.g. S3 credentials for artifact storage. Applies to API and worker pods.
+extraEnvFrom: []
+
+# -- Extra volumes for API and worker pods, e.g. a ConfigMap with a config file for `DOCLING_SERVE_CONFIG_FILE`.
+extraVolumes: []
+# -- Extra volume mounts for the docling-serve containers.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port. Docling Serve listens on 5001 inside the container.
+  port: 5001
+
+ingress:
+  # -- Create an Ingress.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. Large uploads may need e.g. `nginx.ingress.kubernetes.io/proxy-body-size` and longer read timeouts for synchronous conversions.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: docling.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler for the API pods. Requires `engine.kind: rq`.
+  enabled: false
+  # -- Minimum API pods.
+  minReplicas: 2
+  # -- Maximum API pods.
+  maxReplicas: 5
+  # -- Target CPU utilisation in percent.
+  targetCPUUtilizationPercentage: 80
+
+pdb:
+  # -- Create a PodDisruptionBudget for the API pods (only with more than 1 replica or autoscaling).
+  enabled: true
+  # -- Maximum API pods that may be unavailable during voluntary disruptions.
+  maxUnavailable: 1
+
+metrics:
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor for `/metrics` on the API pods (request, conversion and RQ queue metrics).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects on.
+    labels: {}
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Docling Serve does not use the Kubernetes API with the local and rq engines.
+  automount: false
+  # -- ServiceAccount annotations, e.g. for cloud IAM roles used by S3 artifact storage.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM for an API pod.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe. `/livez` answers as soon as the server runs; models load in the background.
+startupProbe:
+  httpGet:
+    path: /livez
+    port: http
+  periodSeconds: 5
+  failureThreshold: 60
+# -- Liveness probe on `/livez`. It fails when the task queue processor has died.
+livenessProbe:
+  httpGet:
+    path: /livez
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+# -- Readiness probe on `/readyz`: 503 until the models are loaded and, with `rq`, Redis answers.
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Resources for an API pod. With the local engine it converts documents itself; with `rq` it needs much less.
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    memory: 6Gi
+
+# -- Pod security context. The image runs as non-root UID 1001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The root filesystem is read-only; `/tmp` is an emptyDir.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Size limit of the `/tmp` emptyDir (uploads, results and caches).
+tmpSizeLimit: 10Gi
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector for the API pods.
+nodeSelector: {}
+# -- Tolerations for the API pods.
+tolerations: []
+# -- Affinity for the API pods.
+affinity: {}

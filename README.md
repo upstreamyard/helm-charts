@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`docling-serve`](charts/docling-serve) | [Docling Serve](https://github.com/docling-project/docling-serve), the Docling document conversion API (PDF, DOCX, PPTX to Markdown/JSON for RAG), with RQ workers and KEDA autoscaling | official [`ghcr.io/docling-project/docling-serve-cpu`](https://github.com/docling-project/docling-serve) and CUDA images |
 
 ## Usage
 

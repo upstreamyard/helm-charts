@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "docling-serve.fullname" . }}-test-convert
+  labels:
+    {{- include "docling-serve.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: convert
+      # Uses the Docling Serve image's Python, so no extra image is pulled.
+      image: {{ include "docling-serve.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: URL
+          value: "http://{{ include "docling-serve.fullname" . }}:{{ .Values.service.port }}"
+        {{- if .Values.apiKey.enabled }}
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "docling-serve.apiKeySecretName" . }}
+              key: {{ include "docling-serve.apiKeySecretKey" . }}
+        {{- end }}
+      command:
+        - python
+        - -c
+        - |
+          # Converts a generated one-page PDF and checks that its text comes back as Markdown.
+          import base64, json, os, time, urllib.request
+
+          def pdf(text):
+              stream = b"BT /F1 24 Tf 72 700 Td (" + text + b") Tj ET"
+              objs = [
+                  b"<< /Type /Catalog /Pages 2 0 R >>",
+                  b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                  b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
+                  b" /Resources << /Font << /F1 5 0 R >> >> >>",
+                  b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+                  b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+              ]
+              out, offsets = b"%PDF-1.4\n", []
+              for i, obj in enumerate(objs, 1):
+                  offsets.append(len(out))
+                  out += b"%d 0 obj\n" % i + obj + b"\nendobj\n"
+              xref = len(out)
+              out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+              out += b"".join(b"%010d 00000 n \n" % o for o in offsets)
+              out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+              return out
+
+          url, key = os.environ["URL"], os.environ.get("API_KEY", "")
+          headers = {"Content-Type": "application/json"}
+          if key:
+              headers["X-Api-Key"] = key
+          body = json.dumps({
+              "options": {"to_formats": ["md"], "do_ocr": False},
+              "sources": [{"kind": "file", "filename": "helm-test.pdf",
+                           "base64_string": base64.b64encode(pdf(b"Hello from helm test")).decode()}],
+          }).encode()
+
+          for attempt in range(30):
+              try:
+                  req = urllib.request.Request(url + "/v1/convert/source", data=body, headers=headers)
+                  with urllib.request.urlopen(req, timeout=300) as resp:
+                      result = json.load(resp)
+                  break
+              except urllib.error.HTTPError as exc:
+                  if exc.code < 500:
+                      raise SystemExit(f"{exc}: {exc.read().decode()[:1000]}")
+                  print(f"attempt {attempt + 1}: {exc}", flush=True)
+                  time.sleep(5)
+              except Exception as exc:
+                  print(f"attempt {attempt + 1}: {exc}", flush=True)
+                  time.sleep(5)
+          else:
+              raise SystemExit("conversion request failed")
+
+          md = (result.get("document") or {}).get("md_content") or ""
+          print("status:", result.get("status"), "markdown:", repr(md))
+          if "Hello from helm test" not in md:
+              raise SystemExit("converted text not found")
+          {{- if .Values.apiKey.enabled }}
+
+          # Without the key the API must refuse the request.
+          req = urllib.request.Request(url + "/v1/convert/source", data=body, headers={"Content-Type": "application/json"})
+          try:
+              urllib.request.urlopen(req, timeout=60)
+              raise SystemExit("request without API key was accepted")
+          except urllib.error.HTTPError as exc:
+              print("without API key:", exc.code)
+              if exc.code not in (401, 403):
+                  raise
+          {{- end }}
+          print("OK")
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

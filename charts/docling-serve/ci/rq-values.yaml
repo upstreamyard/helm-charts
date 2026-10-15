@@ -1,0 +1,17 @@
+# Used by chart-testing (ct install) in CI. Redis is deployed into the "deps"
+# namespace by the workflow before the chart is installed.
+replicaCount: 2
+engine:
+  kind: rq
+  rq:
+    redisUrl: redis://redis.deps.svc:6379/1
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
