@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Bump a chart to the latest release of the packaged project, if our image for it is already published.
 #
-# Usage: scripts/bump-chart.sh <chart> <project-repo> <image>
+# Usage: scripts/bump-chart.sh <chart> <project-repo> <image> [<tag-prefix>]
 #   e.g. scripts/bump-chart.sh aegra aegra/aegra ghcr.io/upstreamyard/aegra
+#        scripts/bump-chart.sh electric electric-sql/electric docker.io/electricsql/electric @core/sync-service@
+#
+# <tag-prefix>: for repos that release several packages, only releases whose tag starts with
+# it count, and the version is the rest of the tag. Without it, the repo's latest release counts.
 #
 # Prints "version=<x>" and "changed=true|false" (also to $GITHUB_OUTPUT when set).
 # Edits charts/<chart>/Chart.yaml in place: appVersion, patch-bumped chart version,
@@ -13,13 +17,21 @@
 # Needs: gh, yq (mikefarah v4), docker buildx (for the image check)
 set -euo pipefail
 
-chart=$1 upstream=$2 image=$3
+chart=$1 upstream=$2 image=$3 tag_prefix=${4:-}
 chart_yaml="charts/$chart/Chart.yaml"
 
 out() { echo "$1"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; return 0; }
 
 current=$(yq '.appVersion' "$chart_yaml")
-latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
+if [ -n "$tag_prefix" ]; then
+  # Releases are listed newest first; skip drafts and pre-releases like releases/latest does.
+  latest=$(gh api "repos/$upstream/releases?per_page=100" \
+    --jq "[.[] | select((.draft or .prerelease | not) and (.tag_name | startswith(\"$tag_prefix\")))][0].tag_name // empty")
+  [ -n "$latest" ] || { echo "No release of $upstream with a tag starting with $tag_prefix."; exit 1; }
+  latest=${latest#"$tag_prefix"}
+else
+  latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
+fi
 latest=${latest#v}
 out "version=$latest"
 
@@ -43,10 +55,14 @@ if [ "${DRY_RUN:-}" = "1" ]; then
 fi
 
 image_name=${image##*/}
-VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name yq -i '
+# The image as the chart's values reference it: our images by their Docker Hub name,
+# other projects' official images without the docker.io/ prefix.
+image_ref=${image#docker.io/}
+image_ref=${image_ref/#ghcr.io\/upstreamyard\//upstreamyard/}
+VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name IMAGE_REF=$image_ref yq -i '
   .appVersion = strenv(VERSION) |
   .version = strenv(CHART_VERSION) |
-  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: upstreamyard/" + strenv(IMAGE_NAME) + ":" + strenv(VERSION) + "\n" |
+  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: " + strenv(IMAGE_REF) + ":" + strenv(VERSION) + "\n" |
   .annotations."artifacthub.io/changes" = "- kind: changed\n  description: Update " + strenv(IMAGE_NAME) + " to " + strenv(VERSION) + "\n"
 ' "$chart_yaml"
 out "changed=true"

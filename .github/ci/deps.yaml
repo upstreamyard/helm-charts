@@ -20,6 +20,8 @@ spec:
       containers:
         - name: postgres
           image: pgvector/pgvector:pg18
+          # Logical replication, needed by Electric.
+          args: ["-c", "wal_level=logical"]
           env:
             - { name: POSTGRES_USER, value: aegra }
             - { name: POSTGRES_PASSWORD, value: aegra }

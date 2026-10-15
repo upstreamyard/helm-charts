@@ -18,6 +18,11 @@ jobs:
           - chart: aegra
             upstream: aegra/aegra
             image: ghcr.io/upstreamyard/aegra
+          - chart: electric
+            upstream: electric-sql/electric
+            image: docker.io/electricsql/electric
+            # The repo releases many packages; the image follows the sync service's releases.
+            tag_prefix: "@core/sync-service@"
     env:
       # A GitHub App or fine-grained PAT (contents + pull requests: write).
       # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,
@@ -30,7 +35,7 @@ jobs:
 
       - name: Check for a new release
         id: bump
-        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}"
+        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}" "${{ matrix.tag_prefix }}"
 
       - name: Skip if a PR for this version already exists
         if: steps.bump.outputs.changed == 'true'
