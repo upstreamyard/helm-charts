@@ -43,10 +43,17 @@ if [ "${DRY_RUN:-}" = "1" ]; then
 fi
 
 image_name=${image##*/}
-VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name yq -i '
+# Image reference shown on Artifact Hub: our images by their Docker Hub name,
+# other images (e.g. a project's official one) as given, without "docker.io/".
+case "$image" in
+  ghcr.io/upstreamyard/*) image_ref=upstreamyard/$image_name ;;
+  docker.io/*) image_ref=${image#docker.io/} ;;
+  *) image_ref=$image ;;
+esac
+VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name IMAGE_REF=$image_ref yq -i '
   .appVersion = strenv(VERSION) |
   .version = strenv(CHART_VERSION) |
-  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: upstreamyard/" + strenv(IMAGE_NAME) + ":" + strenv(VERSION) + "\n" |
+  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: " + strenv(IMAGE_REF) + ":" + strenv(VERSION) + "\n" |
   .annotations."artifacthub.io/changes" = "- kind: changed\n  description: Update " + strenv(IMAGE_NAME) + " to " + strenv(VERSION) + "\n"
 ' "$chart_yaml"
 out "changed=true"

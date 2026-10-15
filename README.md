@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`logto`](charts/logto) | [Logto](https://github.com/logto-io/logto), identity and access management (OIDC, SSO) for apps and SaaS | [`svhd/logto`](https://hub.docker.com/r/svhd/logto) (official Logto image) |
 
 ## Usage
 

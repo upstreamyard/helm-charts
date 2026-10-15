@@ -7,6 +7,7 @@ Instructions for AI agents and coding assistants working with this repository or
 - Repository: `helm repo add upstreamyard https://upstreamyard.github.io/helm-charts`, or OCI `oci://ghcr.io/upstreamyard/charts/<chart>`.
 - Every chart documents all of its values in `charts/<chart>/README.md`, and `values.schema.json` validates them.
 - `aegra`: requires PostgreSQL with pgvector (`database.url` or `database.existingSecret`). More than 1 replica requires Redis (`redis.url` or `redis.existingSecret`). Own agents and authentication ship in a user image built `FROM upstreamyard/aegra` (files under `/app`, `AEGRA_CONFIG=/app/agents/aegra.json`), set via `image.repository`. Auth is on only if that `aegra.json` has an `"auth"` entry; `AUTH_TYPE` has no effect in Aegra 0.10.8. Verify with `helm test <release>`.
+- `logto`: uses the official Logto image `svhd/logto`. Requires PostgreSQL 14+ (`database.url` `postgres://...` or `database.existingSecret`) whose user may create roles (`CREATEROLE` or superuser). Redis is optional. A pre-install/pre-upgrade Job seeds the database and deploys Logto's database alterations; Logto does not start without them. Set `endpoint` and `adminConsole.endpoint` to the public URLs. The first visitor of a new Admin Console creates the admin account. Verify with `helm test <release>`.
 
 ## Working on this repository
 
