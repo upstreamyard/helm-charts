@@ -45,7 +45,7 @@ The OCI copy on GHCR is signed with cosign instead (see the [repository README](
 ## Requirements
 
 - **PostgreSQL 18 with the pgvector extension** (required). The `pgvector/pgvector:pg18` image is Postgres 18 with pgvector included; managed services (RDS, Cloud SQL, Azure) offer it too. Without pgvector the migrations fail with `extension "vector" is not available`, because the bundled Discourse AI plugin needs it. The user needs the right to create extensions on first install.
-- **Redis 7** (required), with persistence and no key eviction (`maxmemory-policy noeviction`).
+- **Redis 7** (required), with persistence and no key eviction (`maxmemory-policy noeviction`). Discourse uses database `redis.db` and the next one.
 - **An SMTP server** for sign-up, password reset and notification emails.
 - A default StorageClass, or `persistence.*.storageClass`, for the uploads and backups volumes.
 
@@ -53,10 +53,10 @@ This chart does not deploy a database or Redis.
 
 ## What the chart does
 
-- **Migrations:** before every install and upgrade, a Job runs `db:migrate`, and the web pods start with `MIGRATE_ON_BOOT=0`. Set `migrations.enabled=false` to migrate on pod startup instead.
+- **Migrations:** in two Jobs, as Discourse splits them. Before every install and upgrade, a Job runs the regular migrations, which only add to the schema, so pods of the old version keep working. After the new pods are ready, a second Job runs the post-deployment migrations, which remove what the old version still used. The web pods start with `MIGRATE_ON_BOOT=0`. Set `migrations.enabled=false` to run all migrations on pod startup instead.
 - **Background jobs:** by default every web pod also runs one Sidekiq process (emails, notifications, scheduled tasks). Set `sidekiq.enabled=true` for a separate Sidekiq Deployment that scales on its own.
 - **Storage:** PersistentVolumeClaims for uploads and backups, kept when the release is uninstalled. With the default ReadWriteOnce volumes the chart runs one web pod and replaces it on upgrades (`Recreate`, brief downtime); more pods or a separate Sidekiq need ReadWriteMany volumes (or S3), and installing without them fails with an error.
-- **Probes:** `/srv/status` for startup, liveness and readiness.
+- **Probes:** `/srv/status` for startup, liveness and readiness of the web pods. The Sidekiq pods are restarted when Sidekiq stops sending its heartbeat to Redis (`sidekiq-alive` in the image; it fails about 60 s into a hang, then after 3 failed checks).
 - **Graceful shutdown:** on `SIGTERM` the web server finishes requests in flight; `terminationGracePeriodSeconds: 40` is above its 30 s request timeout.
 - **Security:** runs as non-root UID 10001 with `fsGroup` 10001 for the volumes, drops all capabilities, and doesn't mount a ServiceAccount token. Discourse writes to its app directory, so the root filesystem stays writable.
 - **`helm test`** checks `/srv/status` and that the home page answers (it needs the database) through the Service.
@@ -145,10 +145,10 @@ persistence:
 | ingress.hosts | list | `[{"host":"forum.example.com","paths":[{"path":"/","pathType":"Prefix"}]}]` | Ingress hosts and paths. The host should match `discourse.hostname`. |
 | ingress.tls | list | `[]` | Ingress TLS configuration. |
 | livenessProbe | object | `{"failureThreshold":6,"httpGet":{"path":"/srv/status","port":"http"},"periodSeconds":10,"timeoutSeconds":5}` | Liveness probe on `/srv/status`. |
-| migrations.activeDeadlineSeconds | int | `1800` | Maximum runtime of the migration Job in seconds. |
-| migrations.backoffLimit | int | `3` | Retries of the migration Job before the install/upgrade fails. |
-| migrations.enabled | bool | `true` | Run `db:migrate` in a Job before every install and upgrade (Helm hook), and disable migrations on pod startup. If false, every web pod migrates on startup (safe, Discourse uses advisory locks). |
-| migrations.resources | object | `{"limits":{"memory":"1536Mi"},"requests":{"cpu":"100m","memory":"768Mi"}}` | Resources for the migration Job. |
+| migrations.activeDeadlineSeconds | int | `1800` | Maximum runtime of each migration Job in seconds. |
+| migrations.backoffLimit | int | `3` | Retries of each migration Job before the install/upgrade fails. |
+| migrations.enabled | bool | `true` | Run migrations in Jobs (Helm hooks) and disable migrations on pod startup: regular migrations before every install and upgrade, post-deployment migrations (which remove old columns) after it. If false, every web pod runs all migrations on startup (safe for concurrent pods, Discourse locks them). |
+| migrations.resources | object | `{"limits":{"memory":"1536Mi"},"requests":{"cpu":"100m","memory":"768Mi"}}` | Resources for the migration Jobs. |
 | nameOverride | string | `""` | Override the chart name in resource names. |
 | nodeSelector | object | `{}` | Node selector. |
 | persistence.backups.accessModes | list | `["ReadWriteOnce"]` | Access modes. Use `[ReadWriteMany]` for more than one pod. |
@@ -165,7 +165,7 @@ persistence:
 | podLabels | object | `{}` | Extra pod labels. |
 | podSecurityContext | object | `{"fsGroup":10001,"fsGroupChangePolicy":"OnRootMismatch","runAsGroup":10001,"runAsNonRoot":true,"runAsUser":10001,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod security context. The image runs as non-root UID 10001; `fsGroup` makes the volumes writable. |
 | readinessProbe | object | `{"failureThreshold":3,"httpGet":{"path":"/srv/status","port":"http"},"periodSeconds":5,"timeoutSeconds":3}` | Readiness probe on `/srv/status`. |
-| redis.db | int | `0` | Redis database number. |
+| redis.db | int | `0` | Redis database number. Discourse uses this one and the next one (for Sidekiq). |
 | redis.existingSecret | string | `""` | Name of an existing Secret that holds the Redis password. |
 | redis.existingSecretKey | string | `"redis-password"` | Key in `existingSecret` that holds the Redis password. |
 | redis.host | string | `""` | Redis host. Required. |
@@ -182,8 +182,10 @@ persistence:
 | serviceAccount.name | string | `""` | ServiceAccount name. Generated from the full name if empty. |
 | sidekiq.concurrency | int | `5` | Threads per Sidekiq process (`DISCOURSE_SIDEKIQ_WORKERS`). |
 | sidekiq.enabled | bool | `false` | Run Sidekiq (background jobs, emails, scheduled tasks) in its own Deployment. If false, every web pod runs one Sidekiq process (`UNICORN_SIDEKIQS=1`). True needs ReadWriteMany volumes or S3, since Sidekiq also writes uploads and backups. |
+| sidekiq.livenessProbe | object | `{"exec":{"command":["sidekiq-alive"]},"failureThreshold":3,"periodSeconds":30,"timeoutSeconds":10}` | Liveness probe: fails when Sidekiq stopped sending its heartbeat to Redis (after about 60 s), so a hung Sidekiq is restarted after 3 failed checks. |
 | sidekiq.replicaCount | int | `1` | Sidekiq pods. |
 | sidekiq.resources | object | `{"limits":{"memory":"1536Mi"},"requests":{"cpu":"100m","memory":"768Mi"}}` | Resources for the Sidekiq container. |
+| sidekiq.startupProbe | object | `{"exec":{"command":["sidekiq-alive"]},"failureThreshold":18,"periodSeconds":10,"timeoutSeconds":10}` | Startup probe: waits for Sidekiq's first heartbeat in Redis (`sidekiq-alive` in the image). |
 | smtp.address | string | `""` | SMTP server. Leave empty to not configure email. |
 | smtp.enableStartTls | bool | `true` | Use STARTTLS. |
 | smtp.existingSecret | string | `""` | Name of an existing Secret that holds the SMTP password. |
@@ -191,7 +193,7 @@ persistence:
 | smtp.password | string | `""` | SMTP password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set. |
 | smtp.port | int | `587` | SMTP port. |
 | smtp.username | string | `""` | SMTP user name. |
-| startupProbe | object | `{"failureThreshold":60,"httpGet":{"path":"/srv/status","port":"http"},"periodSeconds":5}` | Startup probe on `/srv/status`. Boot takes about 20 s without migrations. |
+| startupProbe | object | `{"failureThreshold":60,"httpGet":{"path":"/srv/status","port":"http"},"periodSeconds":5,"timeoutSeconds":5}` | Startup probe on `/srv/status`. Boot takes about 20 s without migrations. |
 | terminationGracePeriodSeconds | int | `40` | Seconds Kubernetes waits after SIGTERM. The web server finishes requests in flight (request timeout 30 s). |
 | tolerations | list | `[]` | Tolerations. |
 | web.workers | int | `2` | Web worker processes per pod (`UNICORN_WORKERS`). Each needs roughly 250-300 MiB of memory. |

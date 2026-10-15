@@ -1,6 +1,7 @@
 Discourse {{ .Chart.AppVersion }} is deployed as "{{ include "discourse.fullname" . }}" ({{ .Values.replicaCount }} web pod(s){{ if .Values.sidekiq.enabled }}, {{ .Values.sidekiq.replicaCount }} Sidekiq pod(s){{ else }}, Sidekiq inside the web pods{{ end }}).
 {{- if .Values.migrations.enabled }}
-Database migrations ran as a Job before this release.
+Regular database migrations ran in a Job before this release, post-deployment
+migrations in a Job after it.
 {{- end }}
 
 Check that it is up:

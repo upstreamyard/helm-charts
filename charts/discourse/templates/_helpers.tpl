@@ -198,3 +198,67 @@ Environment for all Discourse containers. $secretName is the chart-created Secre
 {{ toYaml . }}
 {{- end }}
 {{- end }}
+
+{{/*
+Migration Job. Arguments (dict): root, name (suffix), hook (Helm hook events),
+secret (chart-created Secret to read), skipPost (skip post-deployment migrations).
+*/}}
+{{- define "discourse.migrationJob" -}}
+{{- $ := .root }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "discourse.fullname" $ }}-{{ .name }}
+  labels:
+    {{- include "discourse.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    helm.sh/hook: {{ .hook }}
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ $.Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ $.Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "discourse.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: Never
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "discourse.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args: ["migrate"]
+          env:
+            - name: SKIP_POST_DEPLOYMENT_MIGRATIONS
+              value: {{ ternary "1" "0" .skipPost | quote }}
+            {{- include "discourse.env" (list $ .secret) | trim | nindent 12 }}
+          {{- with $.Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          {{- with $.Values.migrations.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

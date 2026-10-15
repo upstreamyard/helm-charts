@@ -53,7 +53,7 @@ redis:
   host: ""
   # -- Redis port.
   port: 6379
-  # -- Redis database number.
+  # -- Redis database number. Discourse uses this one and the next one (for Sidekiq).
   db: 0
   # -- Redis password, if any. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
   password: ""
@@ -90,6 +90,20 @@ sidekiq:
   replicaCount: 1
   # -- Threads per Sidekiq process (`DISCOURSE_SIDEKIQ_WORKERS`).
   concurrency: 5
+  # -- Startup probe: waits for Sidekiq's first heartbeat in Redis (`sidekiq-alive` in the image).
+  startupProbe:
+    exec:
+      command: ["sidekiq-alive"]
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 18
+  # -- Liveness probe: fails when Sidekiq stopped sending its heartbeat to Redis (after about 60 s), so a hung Sidekiq is restarted after 3 failed checks.
+  livenessProbe:
+    exec:
+      command: ["sidekiq-alive"]
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
   # -- Resources for the Sidekiq container.
   resources:
     requests:
@@ -99,13 +113,13 @@ sidekiq:
       memory: 1536Mi
 
 migrations:
-  # -- Run `db:migrate` in a Job before every install and upgrade (Helm hook), and disable migrations on pod startup. If false, every web pod migrates on startup (safe, Discourse uses advisory locks).
+  # -- Run migrations in Jobs (Helm hooks) and disable migrations on pod startup: regular migrations before every install and upgrade, post-deployment migrations (which remove old columns) after it. If false, every web pod runs all migrations on startup (safe for concurrent pods, Discourse locks them).
   enabled: true
-  # -- Retries of the migration Job before the install/upgrade fails.
+  # -- Retries of each migration Job before the install/upgrade fails.
   backoffLimit: 3
-  # -- Maximum runtime of the migration Job in seconds.
+  # -- Maximum runtime of each migration Job in seconds.
   activeDeadlineSeconds: 1800
-  # -- Resources for the migration Job.
+  # -- Resources for the migration Jobs.
   resources:
     requests:
       cpu: 100m
@@ -193,6 +207,7 @@ startupProbe:
     path: /srv/status
     port: http
   periodSeconds: 5
+  timeoutSeconds: 5
   failureThreshold: 60
 # -- Liveness probe on `/srv/status`.
 livenessProbe:
