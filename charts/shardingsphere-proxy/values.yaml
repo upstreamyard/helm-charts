@@ -1,0 +1,167 @@
+# -- Number of proxy pods. More than 1 needs `mode: Cluster` with ZooKeeper, so all pods share one configuration.
+replicaCount: 1
+
+image:
+  # -- Image repository. upstreamyard's image includes the MySQL JDBC driver.
+  repository: upstreamyard/shardingsphere-proxy
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# -- Users that may connect (`authority.users` in `global.yaml`): `user` (`name@host`, `%` = any host), `password`, and `admin: true` for users that may run DistSQL. Required unless `existingSecret` is set, because without users ShardingSphere accepts `root`/`root` as admin.
+users: []
+# - user: admin@%
+#   password: change-me
+#   admin: true
+# - user: app@%
+#   password: change-me-too
+
+# -- Privilege provider (`authority.privilege`). `ALL_PERMITTED` gives every user access to every logical database; `DATABASE_PERMITTED` limits users through `props.user-database-mappings`.
+privilege:
+  type: ALL_PERMITTED
+
+# -- `Standalone` (one pod; configuration from these values on every start) or `Cluster` (several pods sharing their configuration through ZooKeeper).
+mode: Standalone
+
+cluster:
+  zookeeper:
+    # -- ZooKeeper servers, comma-separated, e.g. `zookeeper-0.zookeeper:2181,zookeeper-1.zookeeper:2181`. Required for `mode: Cluster`.
+    serverLists: ""
+  # -- ZooKeeper namespace (root node) of this proxy cluster. Defaults to the release's full name. In Cluster mode, ShardingSphere uses these values only while the namespace is empty, i.e. on the first start; set a new namespace to apply changed values (see README).
+  namespace: ""
+  # -- Further ZooKeeper repository properties.
+  props:
+    retryIntervalMilliseconds: 500
+    timeToLiveSeconds: 60
+    maxRetries: 3
+    operationTimeoutMilliseconds: 500
+
+# -- Properties (`props` in `global.yaml`), e.g. `sql-show: true`, `proxy-frontend-max-connections`. The port is set by the chart (3307).
+props: {}
+
+# -- Further top-level sections of `global.yaml`, e.g. `transaction`, `sqlParser`, `sqlFederation`, `logging`.
+globalConfig: {}
+
+# -- Logical databases: name → content of `database-<name>.yaml` without `databaseName` (the chart adds it). Given as text, because ShardingSphere's rules use YAML tags like `!SHARDING`. Holds passwords, so the chart stores it in a Secret.
+databases: {}
+# databases:
+#   sharding_db: |
+#     dataSources:
+#       ds_0:
+#         url: jdbc:mysql://mysql-0.example:3306/ds_0?sslMode=REQUIRED
+#         username: shardingsphere
+#         password: secret
+#     rules:
+#       - !SHARDING
+#         tables: ...
+
+# -- Name of an existing Secret with the complete configuration: `global.yaml` and `database-*.yaml` files (and optionally `logback.xml`). Replaces `users`, `privilege`, `mode`, `cluster`, `props`, `globalConfig` and `databases`.
+existingSecret: ""
+
+# -- Extra environment variables, e.g. `JVM_OPTS`.
+extraEnv: []
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# -- Init containers, e.g. to put extra JDBC drivers or plugins into a volume mounted at `/opt/shardingsphere-proxy/ext-lib`.
+initContainers: []
+# -- Extra volumes for the pods.
+extraVolumes: []
+# -- Extra volume mounts for the proxy container. Jar files in `/opt/shardingsphere-proxy/ext-lib` are on the classpath.
+extraVolumeMounts: []
+
+service:
+  # -- Service type. Use `LoadBalancer` for clients outside the cluster.
+  type: ClusterIP
+  # -- Service port. Clients connect here with a MySQL or PostgreSQL client, depending on the backend databases.
+  port: 3307
+  # -- Service annotations.
+  annotations: {}
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. ShardingSphere does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget when `replicaCount` is greater than 1.
+  enabled: true
+  # -- Pods that may be unavailable during voluntary disruptions.
+  maxUnavailable: 1
+
+# -- Seconds to wait before the container gets SIGTERM, so the pod is removed from the Service first. The proxy then closes its client connections within a second. 0 disables it.
+preStopSleepSeconds: 5
+
+# -- Seconds Kubernetes waits after SIGTERM.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe. The port opens once the configuration is loaded and the backend databases are connected (if a backend is unreachable, the proxy exits and the container restarts).
+startupProbe:
+  tcpSocket:
+    port: proxy
+  periodSeconds: 2
+  timeoutSeconds: 3
+  failureThreshold: 60
+# -- Liveness probe.
+livenessProbe:
+  tcpSocket:
+    port: proxy
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+# -- Readiness probe.
+readinessProbe:
+  tcpSocket:
+    port: proxy
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Resources. The Java heap is 80% of the memory limit (ShardingSphere's default), so always set one.
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+
+# -- Pod security context. The image runs as UID 10001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The root filesystem is read-only; `/tmp` is an emptyDir.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
+# -- Topology spread constraints, e.g. to spread the pods across nodes or zones.
+topologySpreadConstraints: []
