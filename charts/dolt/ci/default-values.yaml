@@ -1,0 +1,14 @@
+# Single server with a database and an application user, metrics on.
+auth:
+  database: app
+  username: app
+metrics:
+  enabled: true
+persistence:
+  size: 1Gi
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 1Gi

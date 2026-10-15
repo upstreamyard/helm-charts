@@ -1,0 +1,96 @@
+# Read-write: the primary (with one server: that server).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dolt.fullname" . }}
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "dolt.selectorLabels" . | nindent 4 }}
+    {{- if include "dolt.ha" . }}
+    dolthub.com/cluster_role: primary
+    {{- end }}
+  ports:
+    - name: mysql
+      port: {{ .Values.service.port }}
+      targetPort: mysql
+{{- if include "dolt.ha" . }}
+---
+# Read-only queries: every server that is up, the primary and the standbys.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dolt.readName" . }}
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+    app.kubernetes.io/component: read
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "dolt.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: mysql
+      port: {{ .Values.service.port }}
+      targetPort: mysql
+{{- end }}
+---
+# Stable DNS names per server (<pod>.<this service>), used for replication between them.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dolt.headlessName" . }}
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+    app.kubernetes.io/component: headless
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "dolt.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+    {{- if include "dolt.ha" . }}
+    - name: remotesapi
+      port: 50051
+      targetPort: remotesapi
+    {{- end }}
+    {{- if .Values.metrics.enabled }}
+    - name: metrics
+      port: 11228
+      targetPort: metrics
+    {{- end }}
+{{- if include "dolt.ha" . }}
+{{- range $i := until (int .Values.replicaCount) }}
+---
+# Replication address of {{ include "dolt.fullname" $ }}-{{ $i }}: a fixed IP across pod restarts.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dolt.fullname" $ }}-{{ $i }}-replication
+  labels:
+    {{- include "dolt.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: replication
+spec:
+  type: ClusterIP
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "dolt.selectorLabels" $ | nindent 4 }}
+    statefulset.kubernetes.io/pod-name: {{ include "dolt.fullname" $ }}-{{ $i }}
+  ports:
+    - name: remotesapi
+      port: 50051
+      targetPort: remotesapi
+{{- end }}
+{{- end }}

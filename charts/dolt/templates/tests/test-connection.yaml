@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "dolt.fullname" . }}-test-connection
+  labels:
+    # Not the servers' selector labels: this pod must not join their Services.
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: test
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    # Connects through the Service with the Dolt client from the image. With replication:
+    # the Service must reach the primary, every other server must be a standby, and no
+    # database may report a replication error.
+    - name: connection
+      image: {{ include "dolt.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: HOME
+          value: /tmp
+        - name: DOLT_ROOT_PATH
+          value: /tmp
+        - name: DOLT_CLI_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dolt.secretName" . }}
+              key: {{ include "dolt.rootPasswordKey" . }}
+      command:
+        - bash
+        - -c
+        - |
+          set -euo pipefail
+          sql() { dolt --host "$1" --port "$2" --user root --no-tls sql -r csv -q "$3" | tail -n 1; }
+          echo "Service: Dolt $(sql {{ include "dolt.fullname" . }} {{ .Values.service.port }} 'select dolt_version()')"
+          {{- if include "dolt.ha" . }}
+          role=$(sql {{ include "dolt.fullname" . }} {{ .Values.service.port }} 'select @@global.dolt_cluster_role')
+          echo "Service reaches the $role"
+          [ "$role" = primary ]
+          primaries=0
+          {{- range $i := until (int .Values.replicaCount) }}
+          r=$(sql {{ include "dolt.podHost" (list $ $i) }} 3306 'select @@global.dolt_cluster_role')
+          echo "{{ include "dolt.fullname" $ }}-{{ $i }}: $r"
+          [ "$r" = primary ] && primaries=$((primaries + 1))
+          [ "$r" = primary ] || [ "$r" = standby ]
+          {{- end }}
+          [ "$primaries" = 1 ]
+          errors=$(sql {{ include "dolt.fullname" . }} {{ .Values.service.port }} 'select count(*) from dolt_cluster.dolt_cluster_status where current_error is not null')
+          echo "Databases with replication errors: $errors"
+          [ "$errors" = 0 ]
+          sql {{ include "dolt.readName" . }} {{ .Values.service.port }} 'select 1' >/dev/null
+          echo "Read Service: ok"
+          {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}

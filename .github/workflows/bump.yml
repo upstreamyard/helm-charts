@@ -18,6 +18,9 @@ jobs:
           - chart: aegra
             upstream: aegra/aegra
             image: ghcr.io/upstreamyard/aegra
+          - chart: dolt
+            upstream: dolthub/dolt
+            image: docker.io/dolthub/dolt-sql-server
     env:
       # A GitHub App or fine-grained PAT (contents + pull requests: write).
       # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,

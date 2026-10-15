@@ -7,12 +7,13 @@ Instructions for AI agents and coding assistants working with this repository or
 - Repository: `helm repo add upstreamyard https://upstreamyard.github.io/helm-charts`, or OCI `oci://ghcr.io/upstreamyard/charts/<chart>`.
 - Every chart documents all of its values in `charts/<chart>/README.md`, and `values.schema.json` validates them.
 - `aegra`: requires PostgreSQL with pgvector (`database.url` or `database.existingSecret`). More than 1 replica requires Redis (`redis.url` or `redis.existingSecret`). Own agents and authentication ship in a user image built `FROM upstreamyard/aegra` (files under `/app`, `AEGRA_CONFIG=/app/agents/aegra.json`), set via `image.repository`. Auth is on only if that `aegra.json` has an `"auth"` entry; `AUTH_TYPE` has no effect in Aegra 0.10.8. Verify with `helm test <release>`.
+- `dolt`: DoltHub's official image `dolthub/dolt-sql-server`. `replicaCount: 1` is a single server; 2 or more is primary/standby replication (needs `persistence.enabled`). Write to `<release>-dolt`, read from `<release>-dolt-read`. Failover is manual: `kubectl exec <release>-dolt-<n> -c dolt -- /etc/dolt/promote.sh [--force]`. `auth.database`/`auth.username` create a database and user; the root password only applies on a server's first start. Verify with `helm test <release>`.
 
 ## Working on this repository
 
 Layout:
 
-- `charts/<chart>/`: one chart per image published by `upstreamyard/<image>`
+- `charts/<chart>/`: one chart per packaged project, using our `upstreamyard/<image>` or the project's official image
 - `charts/<chart>/ci/*-values.yaml`: values used by `ct install` in CI
 - `.github/ci/deps.yaml`: throwaway PostgreSQL (pgvector) and Redis for CI, reachable at `*.deps.svc`
 - `scripts/bump-chart.sh`: version bump logic used by `bump.yml`, which can run locally with `DRY_RUN=1`
