@@ -1,0 +1,10 @@
+{{- /* The API: the image's default command (uvicorn with two worker processes on port 8000). */}}
+{{ include "saleor.deployment" (dict
+  "root" .
+  "component" "api"
+  "replicas" .Values.replicaCount
+  "port" true
+  "grace" .Values.terminationGracePeriodSeconds
+  "lifecycle" .Values.lifecycle
+  "probes" (dict "startupProbe" .Values.startupProbe "livenessProbe" .Values.livenessProbe "readinessProbe" .Values.readinessProbe)
+  "resources" .Values.resources) }}

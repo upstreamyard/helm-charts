@@ -1,0 +1,12 @@
+{{- if .Values.beat.enabled }}
+{{- /* Exactly one scheduler: Recreate, so old and new beat never run at the same time. */}}
+{{ include "saleor.deployment" (dict
+  "root" .
+  "component" "beat"
+  "replicas" 1
+  "strategy" (dict "type" "Recreate")
+  "command" (list "celery" "--app" "saleor.celeryconf:app" "beat" "--loglevel=info" "--scheduler" "saleor.schedulers.schedulers.DatabaseScheduler")
+  "grace" 30
+  "probes" dict
+  "resources" .Values.beat.resources) }}
+{{- end }}

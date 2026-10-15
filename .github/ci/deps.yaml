@@ -1,9 +1,19 @@
-# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind.
+# Throwaway PostgreSQL (with pgvector), Redis and S3 (SeaweedFS) for chart tests in kind.
 # Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: deps
+---
+# One database per chart (POSTGRES_DB creates the first one).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: deps
+data:
+  databases.sql: |
+    CREATE DATABASE saleor;
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -26,10 +36,17 @@ spec:
             - { name: POSTGRES_DB, value: aegra }
           ports:
             - containerPort: 5432
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "aegra", "-d", "aegra"]
             periodSeconds: 2
+      volumes:
+        - name: init
+          configMap:
+            name: postgres-init
 ---
 apiVersion: v1
 kind: Service
@@ -72,3 +89,46 @@ spec:
   selector: { app: redis }
   ports:
     - port: 6379
+---
+# S3-compatible object storage without authentication. Buckets are created on startup.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: seaweedfs }
+  template:
+    metadata:
+      labels: { app: seaweedfs }
+    spec:
+      containers:
+        - name: seaweedfs
+          image: chrislusf/seaweedfs:4.48
+          command: ["sh", "-c"]
+          args:
+            - |
+              # Small volumes, so every bucket (collection) gets some on a small CI disk.
+              weed server -dir=/data -s3 -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=64 &
+              for bucket in saleor-media saleor-private; do
+                until echo "s3.bucket.create -name $bucket" | weed shell -master=localhost:9333 2>&1 | grep -q "created bucket"; do sleep 2; done
+              done
+              touch /tmp/buckets-ready
+              wait
+          ports:
+            - containerPort: 8333
+          readinessProbe:
+            exec:
+              command: ["test", "-f", "/tmp/buckets-ready"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+  namespace: deps
+spec:
+  selector: { app: seaweedfs }
+  ports:
+    - port: 8333

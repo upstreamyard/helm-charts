@@ -7,6 +7,7 @@ Instructions for AI agents and coding assistants working with this repository or
 - Repository: `helm repo add upstreamyard https://upstreamyard.github.io/helm-charts`, or OCI `oci://ghcr.io/upstreamyard/charts/<chart>`.
 - Every chart documents all of its values in `charts/<chart>/README.md`, and `values.schema.json` validates them.
 - `aegra`: requires PostgreSQL with pgvector (`database.url` or `database.existingSecret`). More than 1 replica requires Redis (`redis.url` or `redis.existingSecret`). Own agents and authentication ship in a user image built `FROM upstreamyard/aegra` (files under `/app`, `AEGRA_CONFIG=/app/agents/aegra.json`), set via `image.repository`. Auth is on only if that `aegra.json` has an `"auth"` entry; `AUTH_TYPE` has no effect in Aegra 0.10.8. Verify with `helm test <release>`.
+- `saleor`: uses Saleor's official images. Requires `saleor.publicUrl` (scheme and host only), `saleor.allowedClientHosts`, `saleor.secretKey` + `saleor.rsaPrivateKey` (or `saleor.existingSecret`), PostgreSQL (`database.url`), a Celery broker (`celery.brokerUrl`) and S3 buckets (`storage.s3.mediaBucket`, `storage.s3.privateBucket`); the API and the worker share files through them. Saleor 3.23.41 was tested on PostgreSQL 17 and 18 (Saleor's own CI uses 15); a fresh install of 3.22.73 fails on 18. Verify with `helm test <release>`.
 
 ## Working on this repository
 

@@ -1,0 +1,333 @@
+# -- Number of API pods.
+replicaCount: 1
+
+image:
+  # -- Image repository of the Saleor API, also used for the Celery worker, beat and the migration Job.
+  repository: ghcr.io/saleor/saleor
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+saleor:
+  # -- Public URL of the API, scheme and host only, e.g. `https://api.example.com/` (`PUBLIC_URL`). Used in links Saleor generates (thumbnails, webhooks, emails). Required.
+  publicUrl: ""
+  # -- Extra hostnames the API answers to (`ALLOWED_HOSTS`). The host of `publicUrl` and the Service's cluster DNS names are always allowed.
+  allowedHosts: []
+  # -- Hosts of your storefronts and the dashboard (`ALLOWED_CLIENT_HOSTS`). Saleor only sends users to redirect URLs on these hosts (password reset, account confirmation). Required.
+  allowedClientHosts: []
+  # -- Origins allowed to call the GraphQL API from a browser (CORS, `ALLOWED_GRAPHQL_ORIGINS`).
+  allowedGraphqlOrigins: ["*"]
+  # -- Django secret key (`SECRET_KEY`), e.g. from `openssl rand -hex 32`. Required unless `existingSecret` is set. Stored in a Secret created by this chart.
+  secretKey: ""
+  # -- RSA private key in PEM format that signs the JWT access tokens (`RSA_PRIVATE_KEY`), e.g. from `openssl genrsa 2048`. All pods must share it. Required unless `existingSecret` is set. Stored in a Secret created by this chart.
+  rsaPrivateKey: ""
+  # -- Name of an existing Secret that holds the secret key and the RSA private key (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the secret key.
+  secretKeyKey: secret-key
+  # -- Key in `existingSecret` that holds the RSA private key.
+  rsaPrivateKeyKey: rsa-private-key
+  # -- Send anonymous usage data to Saleor (`SEND_USAGE_TELEMETRY`). On by default in Saleor.
+  usageTelemetry: true
+  # -- Serve the GraphQL Playground on `GET /graphql/` (`PLAYGROUND_ENABLED`).
+  playground: true
+
+# First staff account with all permissions. Created by the migration Job if it doesn't exist yet;
+# the password is not changed afterwards.
+admin:
+  # -- Email of the first admin account. Leave empty to create it yourself (see the README).
+  email: ""
+  # -- Password of the first admin account. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the admin password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the admin password.
+  existingSecretKey: admin-password
+
+# PostgreSQL. Required.
+database:
+  # -- Connection URL (`DATABASE_URL`), e.g. `postgres://saleor:password@postgres:5432/saleor`. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  url: ""
+  # -- Name of an existing Secret that holds the connection URL (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the connection URL.
+  existingSecretKey: database-url
+
+# Message broker for background tasks: webhooks, emails, search indexing, data migrations. Required.
+celery:
+  # -- Broker URL (`CELERY_BROKER_URL`), e.g. `redis://redis:6379/1`. Redis, RabbitMQ (`amqp://`) and SQS (`sqs://`) work. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  brokerUrl: ""
+  # -- Name of an existing Secret that holds the broker URL.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the broker URL.
+  existingSecretKey: broker-url
+
+# Shared cache. Optional, but recommended with more than one pod: without it every process has its own in-memory cache.
+cache:
+  # -- Cache URL (`CACHE_URL`), e.g. `redis://redis:6379/0`. Use a different Redis database than the broker. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  url: ""
+  # -- Name of an existing Secret that holds the cache URL.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the cache URL.
+  existingSecretKey: cache-url
+
+# Media files (product images, thumbnails) and private files (webhook payloads, exports).
+# Saleor doesn't serve files from local disk in production, and the API and the worker must
+# see the same files, so object storage is required.
+storage:
+  # -- `s3` for Amazon S3 or an S3-compatible store (configured below). `custom` sets nothing; configure Google Cloud Storage (`GS_*`) or Azure (`AZURE_*`) with `extraEnv` and `extraEnvFrom`.
+  type: s3
+  s3:
+    # -- Bucket for public media (`AWS_MEDIA_BUCKET_NAME`). Objects must be readable by browsers, directly or through `customDomain`. Required.
+    mediaBucket: ""
+    # -- Bucket for private files such as webhook payloads (`AWS_MEDIA_PRIVATE_BUCKET_NAME`). Must not be public. Required.
+    privateBucket: ""
+    # -- Region (`AWS_S3_REGION_NAME`).
+    region: ""
+    # -- Endpoint of an S3-compatible store (`AWS_S3_ENDPOINT_URL`), e.g. `http://seaweedfs-s3:8333`. Empty for Amazon S3.
+    endpointUrl: ""
+    # -- Public host (and path) that serves the media bucket, e.g. a CDN (`AWS_MEDIA_CUSTOM_DOMAIN`). Needed when `endpointUrl` isn't reachable from browsers.
+    customDomain: ""
+    # -- Scheme of media URLs built from `customDomain` (`AWS_S3_URL_PROTOCOL`).
+    urlProtocol: "https:"
+    # -- Access key ID. Leave the keys and `existingSecret` empty to use the pod's cloud identity (e.g. EKS IAM roles for service accounts). Stored in a Secret created by this chart.
+    accessKeyId: ""
+    # -- Secret access key. Stored in a Secret created by this chart.
+    secretAccessKey: ""
+    # -- Name of an existing Secret that holds the access key ID and secret access key.
+    existingSecret: ""
+    # -- Key in `existingSecret` that holds the access key ID.
+    accessKeyIdKey: access-key-id
+    # -- Key in `existingSecret` that holds the secret access key.
+    secretAccessKeyKey: secret-access-key
+
+worker:
+  # -- Celery worker pods. They run webhooks, emails, search indexing and data migrations.
+  replicaCount: 1
+  # -- Task processes per worker pod (`--concurrency`). Celery's default is one per CPU of the node.
+  concurrency: 2
+  # -- Celery queues the workers consume. Add the queues you route tasks to with Saleor's `*_QUEUE_NAME` settings. The chart adds the queue for this version's data migrations.
+  queues: ["celery"]
+  # -- Seconds Kubernetes waits after SIGTERM. Celery stops taking tasks and finishes the running ones.
+  terminationGracePeriodSeconds: 60
+  # -- Liveness probe. Asks this worker for a reply over the broker; a worker that doesn't reply for 3 checks is restarted.
+  livenessProbe:
+    exec:
+      command: ["sh", "-c", "celery --app saleor.celeryconf:app inspect ping --destination celery@$HOSTNAME --timeout 10"]
+    initialDelaySeconds: 60
+    periodSeconds: 60
+    timeoutSeconds: 30
+    failureThreshold: 3
+  # -- Resources for the worker container.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+beat:
+  # -- Run Celery beat, the scheduler for periodic tasks (expiring checkouts and orders, search index updates, cleanup). Exactly one runs.
+  enabled: true
+  # -- Resources for the beat container.
+  resources:
+    requests:
+      cpu: 20m
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+
+migrations:
+  # -- Run `manage.py migrate` in a Job (Helm hook) before every install and upgrade. Saleor's pods don't migrate on startup, so if false you must run it yourself.
+  enabled: true
+  # -- Retries of the migration Job before the install/upgrade fails.
+  backoffLimit: 2
+  # -- Maximum runtime of the migration Job in seconds.
+  activeDeadlineSeconds: 1800
+  # -- Resources for the migration Job.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      memory: 1Gi
+
+dashboard:
+  # -- Deploy the Saleor dashboard (the admin UI, a static web app).
+  enabled: true
+  # -- Dashboard pods.
+  replicaCount: 1
+  image:
+    # -- Dashboard image repository.
+    repository: ghcr.io/saleor/saleor-dashboard
+    # -- Dashboard image tag. Released separately from the API; keep its minor version equal to the API's.
+    tag: "3.23.39"
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+  # -- GraphQL URL the dashboard calls from the browser (`API_URL`). Defaults to `saleor.publicUrl` + `graphql/`.
+  apiUrl: ""
+  service:
+    # -- Service type.
+    type: ClusterIP
+    # -- Service port. The dashboard listens on 8080 inside the container.
+    port: 80
+  ingress:
+    # -- Create an Ingress for the dashboard. It is served under `/dashboard/`.
+    enabled: false
+    # -- Ingress class name.
+    className: ""
+    # -- Ingress annotations.
+    annotations: {}
+    # -- Ingress hosts and paths. Add the host to `saleor.allowedClientHosts`.
+    hosts:
+      - host: dashboard.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    # -- Ingress TLS configuration.
+    tls: []
+  # -- Resources for the dashboard container.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  # -- Pod security context. nginx runs as non-root UID 101.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    fsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Container security context.
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# -- Extra environment variables for the API, worker, beat and migration containers, e.g. any Saleor setting such as `DATABASE_URL_REPLICA`, `DEFAULT_COUNTRY` or `SENTRY_DSN`.
+extraEnv: []
+# - name: DEFAULT_COUNTRY
+#   value: DE
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# - secretRef:
+#     name: saleor-extra
+
+# -- Extra volumes for the API, worker, beat and migration pods.
+extraVolumes: []
+# -- Extra volume mounts for the Saleor containers.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port of the API.
+  port: 8000
+
+ingress:
+  # -- Create an Ingress for the API.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. Allow request bodies as large as your image uploads, e.g. `nginx.ingress.kubernetes.io/proxy-body-size: 20m`.
+  annotations: {}
+  # -- Ingress hosts and paths. The host should match `saleor.publicUrl`.
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Saleor does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations, e.g. an IAM role for S3 access.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM, including the `preStop` sleep. The API server finishes requests in flight for up to 30 s.
+terminationGracePeriodSeconds: 45
+
+# -- Lifecycle hooks of the API container. The `preStop` sleep keeps a stopping pod serving until it is removed from the Service's endpoints; without it some requests fail during rollouts.
+lifecycle:
+  preStop:
+    exec:
+      command: ["sleep", "10"]
+
+# -- Startup probe on `/health/`. Boot takes about 10 s.
+startupProbe:
+  httpGet:
+    path: /health/
+    port: http
+  periodSeconds: 3
+  timeoutSeconds: 3
+  failureThreshold: 40
+# -- Liveness probe on `/health/`.
+livenessProbe:
+  httpGet:
+    path: /health/
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+# -- Readiness probe on `/health/`.
+readinessProbe:
+  httpGet:
+    path: /health/
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Resources for the API container (two server processes).
+resources:
+  requests:
+    cpu: 250m
+    memory: 768Mi
+  limits:
+    memory: 1536Mi
+
+# -- Pod security context for the API, worker, beat and migration pods. The image's `saleor` user is UID 999.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The root filesystem is read-only; `/tmp` is an emptyDir.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

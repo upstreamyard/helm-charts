@@ -18,6 +18,14 @@ jobs:
           - chart: aegra
             upstream: aegra/aegra
             image: ghcr.io/upstreamyard/aegra
+          - chart: saleor
+            upstream: saleor/saleor
+            image: ghcr.io/saleor/saleor
+          - chart: saleor
+            upstream: saleor/saleor-dashboard
+            image: ghcr.io/saleor/saleor-dashboard
+            # Released separately; the chart pins its tag in values.yaml.
+            values_path: .dashboard.image.tag
     env:
       # A GitHub App or fine-grained PAT (contents + pull requests: write).
       # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,
@@ -30,13 +38,15 @@ jobs:
 
       - name: Check for a new release
         id: bump
-        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}"
+        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}" "${{ matrix.values_path }}"
 
       - name: Skip if a PR for this version already exists
         if: steps.bump.outputs.changed == 'true'
         id: branch
         run: |
-          branch="bump/${{ matrix.chart }}-${{ steps.bump.outputs.version }}"
+          # The image name keeps branches apart when a chart tracks several images.
+          image="${{ matrix.image }}"
+          branch="bump/${{ matrix.chart }}-${image##*/}-${{ steps.bump.outputs.version }}"
           echo "name=$branch" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
             echo "Branch $branch already exists, nothing to do."; echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -51,14 +61,16 @@ jobs:
         env:
           BRANCH: ${{ steps.branch.outputs.name }}
           CHART: ${{ matrix.chart }}
+          IMAGE: ${{ matrix.image }}
           VERSION: ${{ steps.bump.outputs.version }}
         run: |
           git config user.name "upstreamyard-bot"
           git config user.email "bot@users.noreply.github.com"
           git switch -c "$BRANCH"
-          git commit -am "Update $CHART to $VERSION"
+          title="Update ${IMAGE##*/} to $VERSION in the $CHART chart"
+          git commit -am "$title"
           git push origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" \
-            --title "Update $CHART to $VERSION" \
-            --body "Automated: the $CHART project released $VERSION and the image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
+            --title "$title" \
+            --body "Automated: the ${IMAGE##*/} project released $VERSION and the image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
           gh pr merge "$BRANCH" --auto --squash
