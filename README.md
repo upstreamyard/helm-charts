@@ -5,6 +5,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 | Chart | App | Image |
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
+| [`xxl-job`](charts/xxl-job) | [XXL-JOB](https://github.com/xuxueli/xxl-job) admin, the distributed job scheduler for Java services | [`xuxueli/xxl-job-admin`](https://hub.docker.com/r/xuxueli/xxl-job-admin) (official XXL-JOB image) |
 
 ## Usage
 
@@ -26,8 +27,8 @@ cosign verify ghcr.io/upstreamyard/charts/aegra:<chart-version> \
 ## How releases work
 
 1. **Daily** ([`bump.yml`](.github/workflows/bump.yml)): if an upstream project released a new version and our image for it is published, a bot opens a PR that updates `appVersion` and bumps the chart's patch version.
-2. **On every PR** ([`lint-test.yml`](.github/workflows/lint-test.yml)): lint, README check, then a real install in a kind cluster against PostgreSQL (pgvector) and Redis, with `helm test`.
-3. Bot PRs **merge themselves** once `lint-test` passes. If it fails, the PR stays open for a human.
+2. **On every PR** ([`lint-test.yml`](.github/workflows/lint-test.yml)): lint, README check, then a real install in a kind cluster against PostgreSQL (pgvector), Redis and MySQL, with `helm test`.
+3. Bot PRs **merge themselves** once `lint-test` passes. If it fails, the PR stays open for a human. PRs that also change files bundled with a chart (e.g. the `xxl-job` database schema, via `scripts/bump-hooks/<chart>.sh`) always wait for a review.
 4. **On merge to `main`** ([`release.yml`](.github/workflows/release.yml)): a GitHub Release, the `index.yaml` on GitHub Pages, the OCI chart on GHCR (cosign-signed) and Artifact Hub metadata. Artifact Hub re-scans the repository on its own.
 
 ## Contributing

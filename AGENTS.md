@@ -7,6 +7,7 @@ Instructions for AI agents and coding assistants working with this repository or
 - Repository: `helm repo add upstreamyard https://upstreamyard.github.io/helm-charts`, or OCI `oci://ghcr.io/upstreamyard/charts/<chart>`.
 - Every chart documents all of its values in `charts/<chart>/README.md`, and `values.schema.json` validates them.
 - `aegra`: requires PostgreSQL with pgvector (`database.url` or `database.existingSecret`). More than 1 replica requires Redis (`redis.url` or `redis.existingSecret`). Own agents and authentication ship in a user image built `FROM upstreamyard/aegra` (files under `/app`, `AEGRA_CONFIG=/app/agents/aegra.json`), set via `image.repository`. Auth is on only if that `aegra.json` has an `"auth"` entry; `AUTH_TYPE` has no effect in Aegra 0.10.8. Verify with `helm test <release>`.
+- `xxl-job`: deploys the XXL-JOB admin with the official image `xuxueli/xxl-job-admin` (amd64 only). Requires MySQL (tested 8.4) with an existing utf8mb4 database (`database.host`, `database.username`, `database.password` or `database.existingSecret`). A pre-install/pre-upgrade Job (`mysql:8.4` client) creates missing tables from `files/schema.sql` and, on a database without users, the admin user with `admin.password` or a random password in the chart's Secret (key `admin-password`). It never alters existing tables; schema changes between XXL-JOB releases are applied by hand. Executors set `xxl.job.admin.addresses`, `xxl.job.executor.appname` and `xxl.job.executor.accessToken` (per executor group). Verify with `helm test <release>`.
 
 ## Working on this repository
 
@@ -16,6 +17,7 @@ Layout:
 - `charts/<chart>/ci/*-values.yaml`: values used by `ct install` in CI
 - `.github/ci/deps.yaml`: throwaway PostgreSQL (pgvector) and Redis for CI, reachable at `*.deps.svc`
 - `scripts/bump-chart.sh`: version bump logic used by `bump.yml`, which can run locally with `DRY_RUN=1`
+- `scripts/bump-hooks/<chart>.sh`: optional per-chart step of a bump (e.g. refreshing `charts/xxl-job/files/schema.sql`); bump PRs that change `charts/<chart>/files` don't auto-merge
 
 Rules:
 

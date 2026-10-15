@@ -4,9 +4,12 @@
 # Usage: scripts/bump-chart.sh <chart> <upstream-repo> <image>
 #   e.g. scripts/bump-chart.sh aegra aegra/aegra ghcr.io/upstreamyard/aegra
 #
-# Prints "version=<x>" and "changed=true|false" (also to $GITHUB_OUTPUT when set).
+# Prints "version=<x>", "changed=true|false" and "review=true|false" (also to $GITHUB_OUTPUT when set).
 # Edits charts/<chart>/Chart.yaml in place: appVersion, patch-bumped chart version,
 # Artifact Hub image and changes annotations. Does not commit.
+# If scripts/bump-hooks/<chart>.sh exists, it runs with the release tag and may update
+# files under charts/<chart>/files (e.g. a database schema). When those files change,
+# "review=true" tells the workflow not to auto-merge.
 #
 # Env: DRY_RUN=1          only report, do not edit
 #      SKIP_IMAGE_CHECK=1 do not require the image to exist (local testing only)
@@ -19,8 +22,8 @@ chart_yaml="charts/$chart/Chart.yaml"
 out() { echo "$1"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; return 0; }
 
 current=$(yq '.appVersion' "$chart_yaml")
-latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
-latest=${latest#v}
+tag=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
+latest=${tag#v}
 out "version=$latest"
 
 if [ "$latest" = "$current" ] || [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -1)" != "$latest" ]; then
@@ -43,10 +46,27 @@ if [ "${DRY_RUN:-}" = "1" ]; then
 fi
 
 image_name=${image##*/}
-VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name yq -i '
+# Image reference shown on Artifact Hub: our images by their Docker Hub name,
+# other images (e.g. a project's official one) as given, without "docker.io/".
+case "$image" in
+  ghcr.io/upstreamyard/*) image_ref=upstreamyard/$image_name ;;
+  docker.io/*) image_ref=${image#docker.io/} ;;
+  *) image_ref=$image ;;
+esac
+VERSION=$latest CHART_VERSION=$new_chart_version IMAGE_NAME=$image_name IMAGE_REF=$image_ref yq -i '
   .appVersion = strenv(VERSION) |
   .version = strenv(CHART_VERSION) |
-  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: upstreamyard/" + strenv(IMAGE_NAME) + ":" + strenv(VERSION) + "\n" |
+  .annotations."artifacthub.io/images" = "- name: " + strenv(IMAGE_NAME) + "\n  image: " + strenv(IMAGE_REF) + ":" + strenv(VERSION) + "\n" |
   .annotations."artifacthub.io/changes" = "- kind: changed\n  description: Update " + strenv(IMAGE_NAME) + " to " + strenv(VERSION) + "\n"
 ' "$chart_yaml"
 out "changed=true"
+
+hook="scripts/bump-hooks/$chart.sh"
+if [ -x "$hook" ]; then
+  "$hook" "$tag"
+  if [ -d "charts/$chart/files" ] && ! git diff --quiet -- "charts/$chart/files"; then
+    echo "The release changed files under charts/$chart/files; the PR needs a review."
+    out "review=true"; exit 0
+  fi
+fi
+out "review=false"
