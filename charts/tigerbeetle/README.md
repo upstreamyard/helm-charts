@@ -1,0 +1,293 @@
+# TigerBeetle Helm chart: a fault-tolerant TigerBeetle cluster on Kubernetes
+
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 0.17.9](https://img.shields.io/badge/AppVersion-0.17.9-informational?style=flat-square)
+
+Helm chart for **[TigerBeetle](https://github.com/tigerbeetle/tigerbeetle)**, the financial transactions database for double-entry accounting (ledgers, payments, balances). It runs a **replicated TigerBeetle cluster of 3 or 6 replicas** (or a single replica for development) on TigerBeetle's **official image** `ghcr.io/tigerbeetle/tigerbeetle`. It handles what makes TigerBeetle hard on Kubernetes: stable IP addresses for every replica, formatting data files once, **safe recovery of a lost replica with `tigerbeetle recover`**, io_uring and seccomp, and **rolling upgrades without downtime**. Replicas run as non-root on a read-only filesystem, with a PodDisruptionBudget, anti-affinity, optional **Prometheus metrics** and a `helm test`.
+
+> Community chart by **upstreamyard**, not an official TigerBeetle chart. TigerBeetle is licensed under Apache-2.0.
+
+**AI agents and coding assistants:** this README is the complete reference for this chart. Every example was run as written.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install tigerbeetle upstreamyard/tigerbeetle --wait
+```
+
+Or from the OCI registry:
+
+```bash
+helm install tigerbeetle oci://ghcr.io/upstreamyard/charts/tigerbeetle --wait
+```
+
+This starts 3 replicas with 1 GiB of cache each (4 GiB memory per pod). The install notes print the cluster ID and the address list for clients. Then check that the cluster commits requests:
+
+```bash
+helm test tigerbeetle
+```
+
+The namespace must allow the `Unconfined` seccomp profile, or you use the chart's seccomp profile. See [Seccomp and io_uring](#seccomp-and-io_uring).
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install tigerbeetle upstreamyard/tigerbeetle --verify --keyring upstreamyard.gpg
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Why this chart
+
+| | This chart | Single-node TigerBeetle charts |
+|---|---|---|
+| Replicas | 1 to 6 (tested with 1, 3 and 6) | 1 only, no fault tolerance |
+| Losing a pod or node | the other replicas keep committing | downtime until the pod is back |
+| Lost data volume | the replica is rebuilt with `tigerbeetle recover` and resyncs | – |
+| Cluster ID | random 128-bit ID per cluster, kept across upgrades and reinstalls | `0`, which TigerBeetle reserves for testing |
+| Image | TigerBeetle's official image, published by TigerBeetle with every release | rebuilt by a third party |
+| Upgrades | rolling, tested 0.17.8 → 0.17.9 under load with 0 failed transfers | restart of the only replica |
+| Prometheus metrics | `tb_*` metrics through a statsd_exporter sidecar, ServiceMonitor | – |
+| Pod Security `restricted` | yes, with the included seccomp profile | needs `Unconfined` |
+| Guards | refuses changes to the replica count or cluster ID | – |
+
+## Deployment modes
+
+### 3 replicas (default)
+
+Survives the loss of one replica. Needs 3 nodes for real fault tolerance:
+
+```yaml
+replicaCount: 3
+podAntiAffinityPreset: hard
+```
+
+### 6 replicas (TigerBeetle's recommendation for production)
+
+Keeps committing with 3 of 6 replicas up (4 of 6 when the primary also fails). Spread them across 3 zones so a zone outage costs 2 replicas:
+
+```yaml
+replicaCount: 6
+podAntiAffinityPreset: hard
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: tigerbeetle
+        app.kubernetes.io/instance: tigerbeetle
+```
+
+**Tested in kind:** 6 replicas formatted and started in seconds, and a transfer still committed with 2 replicas frozen.
+
+### Single replica (development)
+
+```yaml
+replicaCount: 1
+tigerbeetle:
+  cacheGrid: 256MiB
+resources:
+  requests:
+    memory: 3Gi
+  limits:
+    memory: 3Gi
+```
+
+The replica count is written into every data file, so it can't be changed later; the chart refuses such an upgrade. To move to more replicas, create a new cluster and copy the data.
+
+## Connecting clients
+
+TigerBeetle clients need two things: the **cluster ID** and the **address of every replica, as IP addresses**. TigerBeetle doesn't accept DNS names (`invalid IPv4 or IPv6 address`), so the chart gives every replica its own Service. Its ClusterIP stays the same when the pod moves to another node.
+
+```bash
+# Cluster ID
+kubectl get configmap tigerbeetle -o jsonpath='{.data.cluster-id}'
+
+# Addresses, in replica order
+kubectl get svc -l app.kubernetes.io/instance=tigerbeetle,app.kubernetes.io/component=replica \
+  --sort-by=.metadata.name \
+  -o go-template='{{range $i, $s := .items}}{{if $i}},{{end}}{{$s.spec.clusterIP}}:3000{{end}}'
+```
+
+Pass both to your client library (`cluster_id` and `replica_addresses`), or try the REPL that is part of the image:
+
+```bash
+kubectl run tb-repl -i --rm --restart=Never --image=ghcr.io/tigerbeetle/tigerbeetle:0.17.9 \
+  --overrides='{"spec":{"securityContext":{"seccompProfile":{"type":"Unconfined"}}}}' \
+  -- repl --cluster=<cluster-id> --addresses=<addresses> \
+  --command="create_accounts id=1 code=10 ledger=700"
+```
+
+**Static addresses:** the ClusterIPs last as long as the release. To keep the same client configuration across reinstalls, pin them to free IPs from your cluster's Service CIDR:
+
+```yaml
+replicaServices:
+  clusterIPs: [10.96.200.10, 10.96.200.11, 10.96.200.12]
+```
+
+**Fixed cluster ID:** set `cluster.id` (a decimal number as a string, e.g. `--set-string cluster.id=...`) when you deploy with Argo CD or `helm template`, because they can't read the generated ID back.
+
+## Replacing a lost replica
+
+When a replica's data file is gone (deleted PVC, failed local disk), the replica must **not** be formatted again. A newly formatted replica forgets what it already acknowledged, and the cluster could lose committed transfers. TigerBeetle's answer is `tigerbeetle recover`, which the chart runs automatically:
+
+- **During the first install,** each replica formats its data file. A post-install Job waits until all replicas listen and then creates the ConfigMap `<release>-tigerbeetle-bootstrapped`.
+- **From then on,** a replica that starts without a data file runs `tigerbeetle recover` and rejoins the cluster through state sync.
+
+**Tested in kind:** after deleting replica 2's PVC and pod, replica 2 recovered and was Ready in 6 seconds. With replica 0 frozen, replicas 1 and 2 still committed a new transfer and returned all earlier balances.
+
+`dataFile.onMissing` can force `format` or `recover`. Recovery needs the other replicas running. If **all** volumes are new (you want a fresh, empty cluster), delete the ConfigMaps `<release>-tigerbeetle-bootstrapped` and `<release>-tigerbeetle` before installing again. The replicas otherwise wait for recovery, and the `prepare` init container log says so.
+
+## Upgrading TigerBeetle
+
+Change `image.tag` (or upgrade the chart) and run `helm upgrade`. The StatefulSet restarts one replica at a time and waits `minReadySeconds` between them. The new image also contains the older releases, so the replicas switch to the new version together once all of them have it.
+
+**Tested in kind:** 0.17.8 → 0.17.9 with 3 replicas took 44 seconds, while a client created a transfer every second: **91 of 91 transfers succeeded**.
+
+TigerBeetle only supports upgrades from a minimum release, given in its release notes. Upgrade the servers before the clients; a client can't be newer than the cluster.
+
+## Seccomp and io_uring
+
+TigerBeetle does all disk and network I/O through **io_uring**. The `RuntimeDefault` seccomp profile of containerd and Docker blocks it, and TigerBeetle then stops with `error: PermissionDenied`. That's why the chart defaults to `seccompProfile: Unconfined`. It still runs as non-root, without capabilities and with a read-only root filesystem.
+
+Pod Security Admission refuses `Unconfined` at the `baseline` and `restricted` levels (`pod must not set securityContext.seccompProfile.type to "Unconfined"`). For those namespaces, use the chart's profile [`files/seccomp-tigerbeetle.json`](https://github.com/upstreamyard/helm-charts/blob/main/charts/tigerbeetle/files/seccomp-tigerbeetle.json): Docker's default profile for containers without capabilities, plus the three io_uring syscalls. Put it on every node as `/var/lib/kubelet/seccomp/profiles/tigerbeetle.json` (by your node provisioning or the Security Profiles Operator), then:
+
+```yaml
+podSecurityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  runAsNonRoot: true
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: Localhost
+    localhostProfile: profiles/tigerbeetle.json
+```
+
+**Tested in kind:** with this profile, 3 replicas installed and passed `helm test` in a namespace that enforces `restricted`.
+
+## Prometheus metrics
+
+TigerBeetle sends metrics as StatsD. With `metrics.enabled`, the chart starts the replicas with `--experimental --statsd=127.0.0.1:9125` and adds a [statsd_exporter](https://github.com/prometheus/statsd_exporter) sidecar that serves them in Prometheus format on port 9102 (Service `<release>-tigerbeetle-metrics`):
+
+```yaml
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true          # needs the Prometheus Operator CRDs
+```
+
+Metrics are named `tb_*` with the labels `cluster` (the ID in hex) and `replica`. Alert when `tb_replica_status` or `tb_replica_sync_stage` is not `0`. If `tb_grid_cache_misses` is high, the cache (`tigerbeetle.cacheGrid`) is too small. TigerBeetle marks StatsD output as experimental.
+
+## Sizing and production
+
+- **Memory:** a replica uses about `cacheGrid` + 2.1 GiB, measured. Set the memory request and limit to `cacheGrid` + 3 GiB. TigerBeetle asks for at least 6 GiB per replica in production and recommends 16 to 32 GiB, mostly as cache.
+- **CPU:** one core per replica.
+- **Disks:** one volume per replica on a separate node (`podAntiAffinityPreset: hard`), local NVMe recommended. TigerBeetle needs Direct IO, which ext4 and XFS volumes provide. `tigerbeetle.development: true` runs without Direct IO, for tests only.
+- **Swap:** keep it off (the Kubernetes default). The replica logs `Unable to lock pages in memory` because a non-root container can't lock memory. This only matters when the node swaps.
+
+```yaml
+# values-prod.yaml
+replicaCount: 6
+cluster:
+  id: "174981240988217733094178462953121098755"
+replicaServices:
+  clusterIPs: [10.96.200.10, 10.96.200.11, 10.96.200.12, 10.96.200.13, 10.96.200.14, 10.96.200.15]
+tigerbeetle:
+  cacheGrid: 12GiB
+resources:
+  requests:
+    cpu: "2"
+    memory: 15Gi
+  limits:
+    memory: 15Gi
+persistence:
+  storageClass: local-nvme
+  size: 500Gi
+podAntiAffinityPreset: hard
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+```
+
+## FAQ
+
+**Is there an official TigerBeetle Helm chart?** No. TigerBeetle publishes the container image but no Helm chart or operator. This chart uses that official image.
+
+**How do I run TigerBeetle highly available on Kubernetes?** Install with `replicaCount: 6` (or 3) and `podAntiAffinityPreset: hard`. See [Deployment modes](#deployment-modes).
+
+**Why does TigerBeetle fail with `PermissionDenied` in Kubernetes or Docker?** The default seccomp profile blocks io_uring. See [Seccomp and io_uring](#seccomp-and-io_uring).
+
+**Why can't I use DNS names in `--addresses`?** TigerBeetle only accepts IP addresses, for replicas and clients alike. The chart gives each replica a Service with a stable ClusterIP; see [Connecting clients](#connecting-clients).
+
+**What happens when a TigerBeetle replica loses its disk?** It recovers from the other replicas with `tigerbeetle recover`; see [Replacing a lost replica](#replacing-a-lost-replica).
+
+**Can I scale a TigerBeetle cluster up or down?** No. The replica count is fixed when the data files are formatted, and the chart refuses to change it.
+
+**How do I monitor TigerBeetle with Prometheus?** `metrics.enabled=true`, plus `metrics.serviceMonitor.enabled=true` for the Prometheus Operator.
+
+## Known issues
+
+- The chart reads the generated cluster ID and the bootstrap state from the cluster with Helm's `lookup`. Tools that render with `helm template`, such as Argo CD, can't do that: set `cluster.id`. The safety guards for the replica count and cluster ID don't apply there. Argo CD wasn't tested.
+- Tested on IPv4 only. The scripts handle IPv6 addresses, but this wasn't tested.
+- `helm uninstall` keeps the volumes and the ConfigMaps `<release>-tigerbeetle` and `<release>-tigerbeetle-bootstrapped`, so a reinstall continues the same cluster. Delete all three to start over.
+
+## Values
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| affinity | object | `{}` | Custom affinity rules. Replaces `podAntiAffinityPreset`. |
+| bootstrap.activeDeadlineSeconds | int | `1800` | Seconds the post-install Job waits for all replicas before it gives up. Helm's `--timeout` (default 5m) also applies. |
+| bootstrap.resources | object | `{}` | Resources of the post-install Job that waits until all replicas are formatted and listening. |
+| cluster.id | string | `""` | TigerBeetle cluster ID, a decimal number up to 128 bits. Clients need it. Empty: a random ID is generated on the first install and kept in the ConfigMap `<release>-tigerbeetle` (also after `helm uninstall`). Set it explicitly for production and for GitOps tools (Argo CD, Flux) that render with `helm template`. Can't be changed after the first install. Don't use `0` in production; TigerBeetle reserves it for testing. |
+| clusterDomain | string | `"cluster.local"` | Kubernetes cluster DNS domain, used to look up the per-replica Services. |
+| dataFile.onMissing | string | `"auto"` | What a replica does when its data file is missing. `auto`: `format` during the first install, `recover` afterwards (the only safe way to replace a lost replica). `format` or `recover` force one behaviour. See "Replacing a lost replica". |
+| fullnameOverride | string | `""` | Override the full resource name. |
+| image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
+| image.repository | string | `"ghcr.io/tigerbeetle/tigerbeetle"` | Image repository. The chart uses TigerBeetle's official image. |
+| image.tag | string | `""` | Image tag. Defaults to the chart's appVersion. Changing it upgrades the cluster in a rolling update. |
+| imagePullSecrets | list | `[]` | Secrets for pulling from a private registry. |
+| metrics.enabled | bool | `false` | Export metrics to Prometheus. TigerBeetle sends StatsD (experimental) to a statsd_exporter sidecar, which serves them on port 9102. |
+| metrics.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
+| metrics.image.repository | string | `"prom/statsd-exporter"` | statsd_exporter image. |
+| metrics.image.tag | string | `"v0.28.0"` | statsd_exporter tag. |
+| metrics.port | int | `9102` | Port of the Prometheus endpoint `/metrics`. |
+| metrics.resources | object | `{"limits":{"memory":"64Mi"},"requests":{"cpu":"10m","memory":"32Mi"}}` | Resources of the sidecar. |
+| metrics.serviceMonitor.enabled | bool | `false` | Create a Prometheus Operator ServiceMonitor. |
+| metrics.serviceMonitor.interval | string | `"30s"` | Scrape interval. |
+| metrics.serviceMonitor.labels | object | `{}` | Extra labels, e.g. the one your Prometheus selects on. |
+| minReadySeconds | int | `10` | Seconds a restarted replica must be ready before the rolling update moves on to the next one. |
+| nameOverride | string | `""` | Override the chart name in resource names. |
+| nodeSelector | object | `{}` | Node selector. |
+| persistence.accessModes | list | `["ReadWriteOnce"]` | Access modes of the volume. |
+| persistence.annotations | object | `{}` | Annotations for the PersistentVolumeClaims. |
+| persistence.enabled | bool | `true` | Store each replica's data file on a PersistentVolumeClaim. If false, an emptyDir is used and data is lost when a pod is deleted (testing only). |
+| persistence.size | string | `"20Gi"` | Volume size per replica. The data file grows automatically; TigerBeetle uses about 16 TiB for 40 billion transfers. |
+| persistence.storageClass | string | `""` | Storage class. Empty uses the cluster default. Local NVMe is recommended for production. |
+| podAnnotations | object | `{}` | Extra pod annotations. |
+| podAntiAffinityPreset | string | `"soft"` | Spread replicas across nodes: `soft` (preferred), `hard` (required; TigerBeetle requires separate machines in production) or `none`. Ignored when `affinity` is set. |
+| podDisruptionBudget.enabled | bool | `true` | Create a PodDisruptionBudget (only with more than one replica). |
+| podDisruptionBudget.maxUnavailable | int | `1` | Replicas that may be down at once during voluntary disruptions such as node drains. |
+| podLabels | object | `{}` | Extra pod labels. |
+| podSecurityContext | object | `{"fsGroup":10001,"fsGroupChangePolicy":"OnRootMismatch","runAsGroup":10001,"runAsNonRoot":true,"runAsUser":10001,"seccompProfile":{"type":"Unconfined"}}` | Pod security context. TigerBeetle does all I/O through io_uring, which the `RuntimeDefault` seccomp profile blocks, so the default is `Unconfined`. For a tighter profile, use `type: Localhost` with the chart's `files/seccomp-tigerbeetle.json` (see "Seccomp and io_uring"). |
+| port | int | `3000` | Port each replica listens on. |
+| priorityClassName | string | `""` | Priority class name. |
+| readinessProbe | object | `{"failureThreshold":3,"periodSeconds":5,"tcpSocket":{"port":"tigerbeetle"}}` | Readiness probe: the replica accepts TCP connections. |
+| replicaCount | int | `3` | Number of TigerBeetle replicas: 1 (no fault tolerance), 2, 3, 4, 5 or 6. TigerBeetle recommends 6 for production; 3 survives the loss of one replica. Fixed when the cluster is formatted: changing it later is refused. |
+| replicaServices.annotations | object | `{}` | Annotations for the per-replica Services. |
+| replicaServices.clusterIPs | list | `[]` | Fixed ClusterIPs for the per-replica Services, in replica order (one per replica, from your cluster's Service CIDR). Empty: Kubernetes assigns them. Fixed IPs give clients a static address list that also survives a reinstall. |
+| resources.limits.memory | string | `"4Gi"` | Memory limit. TigerBeetle allocates all memory at startup and never grows, so request = limit. |
+| resources.requests.cpu | string | `"1"` | CPU request. TigerBeetle uses one core per replica. |
+| resources.requests.memory | string | `"4Gi"` | Memory request. Keep it at `tigerbeetle.cacheGrid` + 3 GiB. TigerBeetle's minimum for production is 6 GiB. |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Container security context. |
+| terminationGracePeriodSeconds | int | `30` | Seconds Kubernetes waits after SIGTERM. TigerBeetle is crash-safe, so a short grace period is fine. |
+| tigerbeetle.cacheGrid | string | `"1GiB"` | Grid cache size (`--cache-grid`). The replica uses about this plus 3 GiB of memory, so raise `resources` with it. TigerBeetle recommends as large as possible, e.g. 12GiB on a 16 GiB node. |
+| tigerbeetle.development | bool | `false` | Run with `--development`: allows storage without Direct IO (tmpfs, some overlay filesystems) and uses smaller batches. Testing only, never in production. All replicas must use the same setting. |
+| tigerbeetle.extraArgs | list | `[]` | Extra arguments for `tigerbeetle start`. |
+| tolerations | list | `[]` | Tolerations. |
+| topologySpreadConstraints | list | `[]` | Topology spread constraints, e.g. across zones. |

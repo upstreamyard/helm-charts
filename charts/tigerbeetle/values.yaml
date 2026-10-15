@@ -1,0 +1,154 @@
+# -- Number of TigerBeetle replicas: 1 (no fault tolerance), 2, 3, 4, 5 or 6. TigerBeetle recommends 6 for production; 3 survives the loss of one replica. Fixed when the cluster is formatted: changing it later is refused.
+replicaCount: 3
+
+image:
+  # -- Image repository. The chart uses TigerBeetle's official image.
+  repository: ghcr.io/tigerbeetle/tigerbeetle
+  # -- Image tag. Defaults to the chart's appVersion. Changing it upgrades the cluster in a rolling update.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+cluster:
+  # -- TigerBeetle cluster ID, a decimal number up to 128 bits. Clients need it. Empty: a random ID is generated on the first install and kept in the ConfigMap `<release>-tigerbeetle` (also after `helm uninstall`). Set it explicitly for production and for GitOps tools (Argo CD, Flux) that render with `helm template`. Can't be changed after the first install. Don't use `0` in production; TigerBeetle reserves it for testing.
+  id: ""
+
+dataFile:
+  # -- What a replica does when its data file is missing. `auto`: `format` during the first install, `recover` afterwards (the only safe way to replace a lost replica). `format` or `recover` force one behaviour. See "Replacing a lost replica".
+  onMissing: auto
+
+tigerbeetle:
+  # -- Grid cache size (`--cache-grid`). The replica uses about this plus 3 GiB of memory, so raise `resources` with it. TigerBeetle recommends as large as possible, e.g. 12GiB on a 16 GiB node.
+  cacheGrid: 1GiB
+  # -- Run with `--development`: allows storage without Direct IO (tmpfs, some overlay filesystems) and uses smaller batches. Testing only, never in production. All replicas must use the same setting.
+  development: false
+  # -- Extra arguments for `tigerbeetle start`.
+  extraArgs: []
+
+# -- Port each replica listens on.
+port: 3000
+
+# -- Kubernetes cluster DNS domain, used to look up the per-replica Services.
+clusterDomain: cluster.local
+
+replicaServices:
+  # -- Fixed ClusterIPs for the per-replica Services, in replica order (one per replica, from your cluster's Service CIDR). Empty: Kubernetes assigns them. Fixed IPs give clients a static address list that also survives a reinstall.
+  clusterIPs: []
+  # -- Annotations for the per-replica Services.
+  annotations: {}
+
+persistence:
+  # -- Store each replica's data file on a PersistentVolumeClaim. If false, an emptyDir is used and data is lost when a pod is deleted (testing only).
+  enabled: true
+  # -- Storage class. Empty uses the cluster default. Local NVMe is recommended for production.
+  storageClass: ""
+  # -- Access modes of the volume.
+  accessModes:
+    - ReadWriteOnce
+  # -- Volume size per replica. The data file grows automatically; TigerBeetle uses about 16 TiB for 40 billion transfers.
+  size: 20Gi
+  # -- Annotations for the PersistentVolumeClaims.
+  annotations: {}
+
+resources:
+  requests:
+    # -- CPU request. TigerBeetle uses one core per replica.
+    cpu: "1"
+    # -- Memory request. Keep it at `tigerbeetle.cacheGrid` + 3 GiB. TigerBeetle's minimum for production is 6 GiB.
+    memory: 4Gi
+  limits:
+    # -- Memory limit. TigerBeetle allocates all memory at startup and never grows, so request = limit.
+    memory: 4Gi
+
+# -- Pod security context. TigerBeetle does all I/O through io_uring, which the `RuntimeDefault` seccomp profile blocks, so the default is `Unconfined`. For a tighter profile, use `type: Localhost` with the chart's `files/seccomp-tigerbeetle.json` (see "Seccomp and io_uring").
+podSecurityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  runAsNonRoot: true
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: Unconfined
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Spread replicas across nodes: `soft` (preferred), `hard` (required; TigerBeetle requires separate machines in production) or `none`. Ignored when `affinity` is set.
+podAntiAffinityPreset: soft
+# -- Custom affinity rules. Replaces `podAntiAffinityPreset`.
+affinity: {}
+# -- Topology spread constraints, e.g. across zones.
+topologySpreadConstraints: []
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Priority class name.
+priorityClassName: ""
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+
+# -- Seconds a restarted replica must be ready before the rolling update moves on to the next one.
+minReadySeconds: 10
+# -- Seconds Kubernetes waits after SIGTERM. TigerBeetle is crash-safe, so a short grace period is fine.
+terminationGracePeriodSeconds: 30
+
+# -- Readiness probe: the replica accepts TCP connections.
+readinessProbe:
+  tcpSocket:
+    port: tigerbeetle
+  periodSeconds: 5
+  failureThreshold: 3
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (only with more than one replica).
+  enabled: true
+  # -- Replicas that may be down at once during voluntary disruptions such as node drains.
+  maxUnavailable: 1
+
+bootstrap:
+  # -- Seconds the post-install Job waits for all replicas before it gives up. Helm's `--timeout` (default 5m) also applies.
+  activeDeadlineSeconds: 1800
+  # -- Resources of the post-install Job that waits until all replicas are formatted and listening.
+  resources: {}
+
+metrics:
+  # -- Export metrics to Prometheus. TigerBeetle sends StatsD (experimental) to a statsd_exporter sidecar, which serves them on port 9102.
+  enabled: false
+  image:
+    # -- statsd_exporter image.
+    repository: prom/statsd-exporter
+    # -- statsd_exporter tag.
+    tag: v0.28.0
+    # -- Pull policy.
+    pullPolicy: IfNotPresent
+  # -- Port of the Prometheus endpoint `/metrics`.
+  port: 9102
+  # -- Resources of the sidecar.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the one your Prometheus selects on.
+    labels: {}
