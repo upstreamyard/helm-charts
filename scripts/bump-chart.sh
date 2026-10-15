@@ -19,8 +19,16 @@ chart_yaml="charts/$chart/Chart.yaml"
 out() { echo "$1"; [ -n "${GITHUB_OUTPUT:-}" ] && echo "$1" >> "$GITHUB_OUTPUT"; return 0; }
 
 current=$(yq '.appVersion' "$chart_yaml")
-latest=$(gh api "repos/$upstream/releases/latest" --jq .tag_name)
-latest=${latest#v}
+# Highest stable release (X.Y.Z), not GitHub's "latest release": some projects publish
+# patches for an older major line last (e.g. Parse Server's LTS), or release candidates.
+latest=$({ gh api --paginate "repos/$upstream/releases?per_page=100" --jq '.[] | select(.draft | not) | .tag_name' 2>/dev/null || true; } \
+  | { grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sed 's/^v//' | sort -V | tail -1)
+# Some projects (e.g. Discourse) publish releases only as git tags (vX.Y.Z).
+if [ -z "$latest" ]; then
+  latest=$(git ls-remote --tags --refs "https://github.com/$upstream.git" | sed 's#.*refs/tags/##' \
+    | { grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sed 's/^v//' | sort -V | tail -1)
+fi
+[ -n "$latest" ] || { echo "No release found for $upstream" >&2; exit 1; }
 out "version=$latest"
 
 if [ "$latest" = "$current" ] || [ "$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -1)" != "$latest" ]; then
