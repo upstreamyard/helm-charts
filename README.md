@@ -6,6 +6,7 @@ Helm charts for the container images maintained by [upstreamyard](https://github
 |---|---|---|
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
 | [`automq`](charts/automq) | [AutoMQ](https://github.com/AutoMQ/automq), Kafka-compatible streaming with messages stored in S3 (diskless Kafka) | [`automqinc/automq`](https://hub.docker.com/r/automqinc/automq) (official) |
+| [`nemo-guardrails`](charts/nemo-guardrails) | [NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails), an OpenAI-compatible LLM guardrails server (jailbreak, content safety, PII and dialog rails) | [`upstreamyard/nemo-guardrails`](https://github.com/upstreamyard/nemo-guardrails) |
 
 ## Usage
 
