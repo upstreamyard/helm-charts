@@ -174,6 +174,56 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/aegra-0.1.0/aegra-0.1.0.tgz
     version: 0.1.0
+  automq:
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
+        - kind: added
+          description: AutoMQ chart with combined or separate controllers, broker-only nodes, SASL/PLAIN authentication and Prometheus metrics
+      artifacthub.io/images: |
+        - name: automq
+          image: automqinc/automq:1.7.4-kafka
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: AutoMQ
+          url: https://github.com/AutoMQ/automq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.7.4
+    created: "2026-10-16T15:01:43.668377399Z"
+    description: AutoMQ Helm chart for Kubernetes. Kafka-compatible streaming with
+      messages stored in S3 (diskless Kafka) on the open-source AutoMQ edition, with
+      combined or separate KRaft controllers, scalable stateless brokers, SASL authentication
+      by default and Prometheus metrics. Replaces the Bitnami Kafka chart setup for
+      AutoMQ. Community chart by upstreamyard, not an official AutoMQ chart.
+    digest: 12ef6abfc05baaf1e1c440025b3208d3aa1187d29b53b3aa7ee5da93b7b267a4
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/automq
+    keywords:
+    - automq
+    - kafka
+    - apache-kafka
+    - diskless-kafka
+    - kafka-on-s3
+    - s3
+    - streaming
+    - message-broker
+    - kraft
+    - event-streaming
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: automq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/AutoMQ/automq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/automq-0.1.0/automq-0.1.0.tgz
+    version: 0.1.0
   nemo-guardrails:
   - annotations:
       artifacthub.io/category: security
@@ -229,4 +279,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.0/nemo-guardrails-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-16T14:28:32.89802599Z"
+generated: "2026-10-16T15:01:43.668432548Z"
