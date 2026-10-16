@@ -18,6 +18,9 @@ jobs:
           - chart: aegra
             upstream: aegra/aegra
             image: ghcr.io/upstreamyard/aegra
+          - chart: nemo-guardrails
+            upstream: NVIDIA-NeMo/Guardrails
+            image: ghcr.io/upstreamyard/nemo-guardrails
     env:
       # A GitHub App or fine-grained PAT (contents + pull requests: write).
       # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,
