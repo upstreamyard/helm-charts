@@ -18,6 +18,10 @@ jobs:
           - chart: aegra
             upstream: aegra/aegra
             image: ghcr.io/upstreamyard/aegra
+          - chart: automq
+            upstream: AutoMQ/automq
+            image: docker.io/automqinc/automq
+            tag_suffix: -kafka
           - chart: nemo-guardrails
             upstream: NVIDIA-NeMo/Guardrails
             image: ghcr.io/upstreamyard/nemo-guardrails
@@ -33,6 +37,8 @@ jobs:
 
       - name: Check for a new release
         id: bump
+        env:
+          TAG_SUFFIX: ${{ matrix.tag_suffix }}
         run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}"
 
       - name: Skip if a PR for this version already exists

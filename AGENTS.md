@@ -7,6 +7,7 @@ Instructions for AI agents and coding assistants working with this repository or
 - Repository: `helm repo add upstreamyard https://upstreamyard.github.io/helm-charts`, or OCI `oci://ghcr.io/upstreamyard/charts/<chart>`.
 - Every chart documents all of its values in `charts/<chart>/README.md`, and `values.schema.json` validates them.
 - `aegra`: requires PostgreSQL with pgvector (`database.url` or `database.existingSecret`). More than 1 replica requires Redis (`redis.url` or `redis.existingSecret`). Own agents and authentication ship in a user image built `FROM upstreamyard/aegra` (files under `/app`, `AEGRA_CONFIG=/app/agents/aegra.json`), set via `image.repository`. Auth is on only if that `aegra.json` has an `"auth"` entry; `AUTH_TYPE` has no effect in Aegra 0.10.8. Verify with `helm test <release>`.
+- `automq`: requires an S3 bucket (`s3.dataBucket`; plus `s3.endpoint` and `s3.pathStyle: true` for S3-compatible stores) and credentials (`s3.accessKey`/`s3.secretKey`, `s3.existingSecret`, or `s3.authType: instance` for IRSA/Pod Identity). SASL/PLAIN is on by default; passwords are in the chart's Secret as `user-<name>`. `controller.replicas` (1, 3 or 5) is fixed after install; scale with `broker.replicas` and `controller.controllerOnly: true`. Clients use the bootstrap address from the install notes. Verify with `helm test <release>`.
 
 ## Working on this repository
 
@@ -14,7 +15,7 @@ Layout:
 
 - `charts/<chart>/`: one chart per image published by `upstreamyard/<image>`
 - `charts/<chart>/ci/*-values.yaml`: values used by `ct install` in CI
-- `.github/ci/deps.yaml`: throwaway PostgreSQL (pgvector) and Redis for CI, reachable at `*.deps.svc`
+- `.github/ci/deps.yaml`: throwaway PostgreSQL (pgvector), Redis and S3-compatible storage (bucket `automq`) for CI, reachable at `*.deps.svc`
 - `scripts/bump-chart.sh`: version bump logic used by `bump.yml`, which can run locally with `DRY_RUN=1`
 
 Rules:
