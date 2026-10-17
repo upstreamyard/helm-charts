@@ -1,0 +1,13 @@
+{{- if and .Values.podDisruptionBudget.enabled (include "falkordb.replication" .) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "falkordb.fullname" . }}
+  labels:
+    {{- include "falkordb.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "falkordb.selectorLabels" . | nindent 6 }}
+{{- end }}
