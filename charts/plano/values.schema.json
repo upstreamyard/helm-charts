@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "listeners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "name"],
+            "properties": {
+              "type": { "enum": ["model", "prompt", "agent"] },
+              "name": { "type": "string" },
+              "port": { "type": "integer", "minimum": 1024, "maximum": 65535 }
+            }
+          }
+        }
+      }
+    },
+    "existingConfigMap": { "type": "string" },
+    "existingConfigMapKey": { "type": "string", "minLength": 1 },
+    "ports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "port"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]{0,13}[a-z0-9])?$" },
+          "port": { "type": "integer", "minimum": 1024, "maximum": 65535 }
+        }
+      }
+    },
+    "secretEnv": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+      "additionalProperties": { "type": ["string", "number", "boolean"] }
+    },
+    "existingSecret": { "type": "string" },
+    "stateStorage": {
+      "type": "object",
+      "properties": {
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string", "pattern": "^$|^postgres(ql)?://" },
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 },
+            "createTable": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "image": { "type": "string", "minLength": 1 },
+                "backoffLimit": { "type": "integer", "minimum": 0 },
+                "activeDeadlineSeconds": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sessionCache": {
+      "type": "object",
+      "properties": {
+        "redis": {
+          "type": "object",
+          "properties": {
+            "url": { "type": "string", "pattern": "^$|^rediss?://" },
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "logLevel": { "enum": ["trace", "debug", "info", "warn", "error"] },
+    "envoy": {
+      "type": "object",
+      "properties": {
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "adminOnAllInterfaces": { "type": "boolean" }
+      }
+    },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "serviceMonitor": {
+          "type": "object",
+          "properties": { "enabled": { "type": "boolean" }, "interval": { "type": "string" } }
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "from": { "type": "array" },
+        "metricsFrom": { "type": "array" }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "shutdownDelaySeconds": { "type": "integer", "minimum": 0 },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 1 },
+    "tmpSizeLimit": { "type": "string" },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "chatCompletion": {
+          "type": "object",
+          "properties": { "enabled": { "type": "boolean" }, "model": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
