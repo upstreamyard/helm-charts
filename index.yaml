@@ -622,6 +622,49 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.0/nemo-guardrails-0.1.0.tgz
     version: 0.1.0
+  postal:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial release
+      artifacthub.io/images: |
+        - name: postal
+          image: ghcr.io/postalserver/postal:3.3.7
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Postal project
+          url: https://github.com/postalserver/postal
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.3.7
+    created: "2026-10-17T11:57:48.93009809Z"
+    description: Postal, the open-source mail delivery platform for sending and receiving
+      email (web interface and API, SMTP server, workers). Community chart by upstreamyard,
+      not an official Postal chart.
+    digest: 4d1b925bfc5efb82a6129c036d0a26b75b73e941e1d6c4fb293889ac75ffd0de
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - postal
+    - email
+    - mail
+    - smtp
+    - mail-server
+    - transactional-email
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: postal
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/postalserver/postal
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/postal-0.1.0/postal-0.1.0.tgz
+    version: 0.1.0
   shardingsphere-proxy:
   - annotations:
       artifacthub.io/changes: |
@@ -847,4 +890,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T11:57:04.238546362Z"
+generated: "2026-10-17T11:57:48.930127897Z"
