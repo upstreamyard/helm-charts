@@ -512,6 +512,52 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.0/conductor-0.1.0.tgz
     version: 0.1.0
+  electric:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial release
+      artifacthub.io/images: |
+        - name: electric
+          image: electricsql/electric:1.8.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Electric project
+          url: https://github.com/electric-sql/electric
+        - name: Container image
+          url: https://hub.docker.com/r/electricsql/electric
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.1
+    created: "2026-10-17T12:38:09.670791109Z"
+    description: Electric sync engine, which syncs subsets of your PostgreSQL data
+      to web and mobile apps in real time over HTTP. Community chart by upstreamyard,
+      not an official ElectricSQL chart.
+    digest: c25de093af51d2dff8ebb675f06f1ee11588a85d1fdf63ac3c8c927093b68d12
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - electric
+    - electricsql
+    - sync
+    - postgresql
+    - logical-replication
+    - realtime
+    - local-first
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: electric
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/electric-sql/electric
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/electric-0.1.0/electric-0.1.0.tgz
+    version: 0.1.0
   falkordb:
   - annotations:
       artifacthub.io/category: database
@@ -1186,4 +1232,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T12:36:58.056418167Z"
+generated: "2026-10-17T12:38:09.670806943Z"
