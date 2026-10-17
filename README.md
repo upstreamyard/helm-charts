@@ -7,6 +7,7 @@ Helm charts maintained by [upstreamyard](https://github.com/upstreamyard), for o
 | [`activemq`](charts/activemq) | [Apache ActiveMQ Classic](https://github.com/apache/activemq) message broker (JMS, AMQP, STOMP, MQTT): single broker or high-availability master/slave, metrics | [`upstreamyard/activemq`](https://github.com/upstreamyard/activemq) |
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
 | [`automq`](charts/automq) | [AutoMQ](https://github.com/AutoMQ/automq), Kafka-compatible streaming with messages stored in S3 (diskless Kafka) | [`automqinc/automq`](https://hub.docker.com/r/automqinc/automq) (official) |
+| [`conductor`](charts/conductor) | [Conductor OSS](https://github.com/conductor-oss/conductor), a workflow orchestration engine originally built at Netflix | [`upstreamyard/conductor`](https://github.com/upstreamyard/conductor) |
 | [`nemo-guardrails`](charts/nemo-guardrails) | [NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails), an OpenAI-compatible LLM guardrails server (jailbreak, content safety, PII and dialog rails) | [`upstreamyard/nemo-guardrails`](https://github.com/upstreamyard/nemo-guardrails) |
 
 ## Usage
