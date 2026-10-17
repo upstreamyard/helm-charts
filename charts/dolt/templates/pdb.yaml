@@ -1,0 +1,13 @@
+{{- if and .Values.podDisruptionBudget.enabled (include "dolt.ha" .) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "dolt.fullname" . }}
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "dolt.selectorLabels" . | nindent 6 }}
+{{- end }}
