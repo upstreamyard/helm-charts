@@ -27,6 +27,7 @@ Rules:
 
 - Never push to `main`. Create a branch and open a pull request into `main`.
 - Bump the chart `version` on every change to a chart; CI enforces this.
+- Every chart sets `icon: https://upstreamyard.github.io/helm-charts/logo.png` (the upstreamyard logo, `logo.png` in this repo, published to GitHub Pages by `release.yml`).
 - Regenerate chart READMEs after changing `values.yaml` or `README.md.gotmpl`: `helm-docs --chart-search-root charts`. Write a `# --` comment above every value.
 - Follow the app's own project documentation for deployment behaviour (probes, migrations, required services), and link to it rather than restating it.
 - Charts never bundle databases or other stateful services; users bring their own.

@@ -1,3 +1,5 @@
+<img src="logo.png" alt="upstreamyard logo" width="120" align="right">
+
 # upstreamyard Helm charts
 
 Helm charts maintained by [upstreamyard](https://github.com/upstreamyard), for our own container images and for projects' official images.
