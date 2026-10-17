@@ -1,0 +1,37 @@
+Saleor {{ .Chart.AppVersion }} is deployed as "{{ include "saleor.fullname" . }}": {{ .Values.replicaCount }} API pod(s), {{ .Values.worker.replicaCount }} Celery worker pod(s){{ if .Values.beat.enabled }}, Celery beat{{ end }}{{ if .Values.dashboard.enabled }}, dashboard {{ .Values.dashboard.image.tag }}{{ end }}.
+{{- if .Values.migrations.enabled }}
+Database migrations ran in a Job before this release.
+{{- else }}
+migrations.enabled is false: run `python3 manage.py migrate` yourself before using this version.
+{{- end }}
+
+API: {{ .Values.saleor.publicUrl }}graphql/{{ if not .Values.ingress.enabled }} (no Ingress is created by this release; route that host to the Service){{ end }}
+Check it from your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "saleor.fullname" . }} 8000:{{ .Values.service.port }}
+  curl http://localhost:8000/health/
+{{- if .Values.dashboard.enabled }}
+
+Dashboard: served under /dashboard/ by svc/{{ include "saleor.dashboardFullname" . }}{{ if .Values.dashboard.ingress.enabled }} ({{ (first .Values.dashboard.ingress.hosts).host }}){{ end }}.
+It calls the API at {{ include "saleor.dashboardApiUrl" . }} from the browser.
+{{- end }}
+{{- if .Values.admin.email }}
+
+Log in as {{ .Values.admin.email }} (created by the migration Job if it didn't exist).
+{{- else }}
+
+Create the first admin account (asks for email and password):
+
+  kubectl -n {{ .Release.Namespace }} exec -it deploy/{{ include "saleor.fullname" . }} -- python3 manage.py createsuperuser
+{{- end }}
+{{- if eq .Values.storage.type "custom" }}
+
+storage.type is custom: configure Google Cloud Storage or Azure with extraEnv. Without it
+uploads go to the pod's disk, which Saleor doesn't serve and the worker can't read.
+{{- end }}
+{{- if hasPrefix "https://" .Values.saleor.publicUrl }}
+
+saleor.publicUrl is https, so Saleor redirects plain-http requests to https. Clients that
+call the Service directly over http (e.g. a storefront in the cluster) must send
+"X-Forwarded-Proto: https".
+{{- end }}

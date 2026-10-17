@@ -1,0 +1,40 @@
+{{- $svc := printf "%s.%s.svc" (include "kvrocks.fullname" .) .Release.Namespace -}}
+Apache Kvrocks {{ include "kvrocks.image" . | splitList ":" | last }} is deployed as "{{ include "kvrocks.fullname" . }}"
+{{- if .Values.sentinel.enabled }} with {{ .Values.replicaCount }} members (one master, {{ sub (int .Values.replicaCount) 1 }} replicas) and Sentinel failover.
+{{- else }} as a single instance.
+{{- end }}
+{{ if .Values.auth.enabled }}
+Password:
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "kvrocks.secretName" . }} -o jsonpath='{.data.{{ include "kvrocks.secretKey" . }}}' | base64 -d
+{{ end }}
+{{- if or (not .Values.sentinel.enabled) .Values.proxy.enabled }}
+Connect any Redis client to:
+  redis://{{ if .Values.auth.enabled }}:<password>@{{ end }}{{ $svc }}:{{ .Values.port }}
+{{- if .Values.sentinel.enabled }}
+  (HAProxy, always forwards to the current master)
+{{- end }}
+{{- end }}
+{{- if .Values.sentinel.enabled }}
+
+Sentinel-aware clients:
+  sentinel {{ include "kvrocks.fullname" . }}-sentinel.{{ .Release.Namespace }}.svc:{{ .Values.sentinel.port }}, master set "{{ .Values.sentinel.masterSet }}"
+{{- if .Values.auth.enabled }}
+  Sentinel uses the same password.
+{{- end }}
+{{- end }}
+
+Try it:
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if not .Values.auth.enabled }}
+
+WARNING: auth.enabled=false. Anyone who can reach the Service can read and change all data.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence.enabled=false. Data is lost when a pod is deleted.
+{{- end }}
+{{- if and .Values.sentinel.enabled (eq .Values.podAntiAffinityPreset "soft") }}
+
+NOTE: podAntiAffinityPreset is "soft", so several members may share a node.
+For high availability across node failures, set it to "hard".
+{{- end }}

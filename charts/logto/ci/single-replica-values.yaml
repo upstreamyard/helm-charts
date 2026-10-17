@@ -1,0 +1,8 @@
+# Used by chart-testing (ct install) in CI. PostgreSQL 17 is deployed into the
+# "deps" namespace by the workflow before the chart is installed.
+database:
+  url: postgres://logto:logto@logto-postgres.deps.svc:5432/logto
+# Public URLs that differ from the pod address, as in a real deployment.
+endpoint: https://auth.example.com
+adminConsole:
+  endpoint: https://admin.auth.example.com

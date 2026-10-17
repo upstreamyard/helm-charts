@@ -1,0 +1,210 @@
+# -- `standalone`: one FalkorDB instance. `replication`: one primary and replicas with Redis Sentinel, which promotes a replica when the primary fails.
+architecture: standalone
+
+# -- Number of FalkorDB pods with `architecture: replication` (one primary, the rest replicas), each with its own Sentinel. At least 3, so the Sentinels keep a majority when a pod is gone. Ignored with `standalone`.
+replicaCount: 3
+
+image:
+  # -- Image repository. The official server image without the browser UI.
+  repository: falkordb/falkordb-server
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+# -- Cluster DNS domain, used in the host names the pods announce to Sentinel and clients.
+clusterDomain: cluster.local
+
+auth:
+  # -- Require a password (`requirepass`) for FalkorDB and Sentinel. Without it, anyone who can reach the pods can read and change every graph.
+  enabled: true
+  # -- Password. Generated when empty, and kept across upgrades. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Existing Secret with the password (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` with the password.
+  existingSecretPasswordKey: password
+
+# -- FalkorDB module settings, passed as `FALKORDB_ARGS` (see FalkorDB's configuration reference). The defaults are those of the official image: queries waiting for a thread are limited to 25, read queries time out after 1 second and results are cut at 10000 rows. Set a key to `null` to drop it. `THREAD_COUNT` (default: the CPU limit, or all of the node's cores without one) limits concurrent queries.
+config:
+  MAX_QUEUED_QUERIES: 25
+  TIMEOUT: 1000
+  RESULTSET_SIZE: 10000
+
+persistence:
+  # -- Create a PersistentVolumeClaim per pod for /var/lib/falkordb/data. If false, an `emptyDir` is used and the graphs are lost when the pod is deleted.
+  enabled: true
+  # -- Use an existing claim instead (`standalone` only).
+  existingClaim: ""
+  # -- Storage class. Empty: the cluster default.
+  storageClass: ""
+  # -- Access modes of the claims.
+  accessModes:
+    - ReadWriteOnce
+  # -- Size of the claims. Leave room for the AOF and a full RDB snapshot next to each other.
+  size: 8Gi
+  # -- Annotations for the claims.
+  annotations: {}
+
+durability:
+  # -- Log every write to the append-only file (AOF), so a restart loses at most `appendfsync` worth of writes.
+  appendonly: true
+  # -- AOF fsync policy: `everysec`, `always` or `no`.
+  appendfsync: everysec
+  # -- RDB snapshot rules (`save`), e.g. `3600 1 300 100 60 10000` (Redis default). Empty string: no snapshots.
+  save: "3600 1 300 100 60 10000"
+
+# -- Extra lines for the FalkorDB (redis-server) configuration file, e.g. `maxclients 20000` or `aclfile /var/lib/falkordb/data/users.acl`. Added after the chart's settings, so they win.
+extraConfig: ""
+
+replication:
+  # -- With `architecture: replication`, the primary refuses writes (`NOREPLICAS`) unless this many replicas are connected and in sync. Stops a primary that was cut off or frozen from accepting writes that are lost when Sentinel demotes it. `0` turns it off.
+  minReplicasToWrite: 1
+  # -- Seconds without a reply after which a replica no longer counts for `minReplicasToWrite`.
+  minReplicasMaxLag: 10
+
+sentinel:
+  # -- Name of the monitored primary (`master` set). Sentinel-aware clients ask for it by this name.
+  masterSet: falkordb
+  # -- Sentinels that must agree the primary is down before a failover. Empty: a majority of `replicaCount`.
+  quorum: ""
+  # -- Milliseconds the primary must be unreachable before it counts as down.
+  downAfterMilliseconds: 5000
+  # -- Failover timeout in milliseconds.
+  failoverTimeout: 60000
+  # -- Extra lines for the Sentinel configuration file.
+  extraConfig: ""
+  # -- Resources of the Sentinel container.
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+metrics:
+  # -- Add a Prometheus exporter (`redis_exporter`) next to every FalkorDB pod, on port 9121.
+  enabled: false
+  image:
+    # -- Exporter image repository.
+    repository: oliver006/redis_exporter
+    # -- Exporter image tag.
+    tag: v1.93.0
+    # -- Exporter image pull policy.
+    pullPolicy: IfNotPresent
+  # -- Extra environment variables of the exporter, e.g. `REDIS_EXPORTER_CHECK_KEYS`.
+  extraEnv: []
+  # -- Resources of the exporter container.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor (needs the monitoring.coreos.com CRDs).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects ServiceMonitors by.
+    labels: {}
+
+# -- Extra environment variables of the FalkorDB container.
+extraEnv: []
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# -- Extra volumes, e.g. CSV files for `LOAD CSV`.
+extraVolumes: []
+# -- Extra volume mounts of the FalkorDB container.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service annotations.
+  annotations: {}
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: the full resource name.
+  name: ""
+  # -- ServiceAccount annotations.
+  annotations: {}
+
+# -- Pod annotations.
+podAnnotations: {}
+# -- Pod labels.
+podLabels: {}
+
+# -- Pod security context. UID 999 is the image's `falkordb` user.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Resources of the FalkorDB container. Graphs are held in memory; snapshots and AOF rewrites fork the process and need extra memory for pages that change meanwhile.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# -- Seconds to let FalkorDB hand over the primary role and save before it is killed.
+terminationGracePeriodSeconds: 60
+
+# Probes. Liveness accepts a server that is still loading its data; readiness needs a
+# loaded server and, on replicas, a working link to the primary.
+probes:
+  startup:
+    # -- Startup probe period in seconds.
+    periodSeconds: 5
+    # -- Startup probe failures before the container is restarted (5 s × 360 = 30 minutes for loading large graphs).
+    failureThreshold: 360
+  liveness:
+    # -- Liveness probe period in seconds.
+    periodSeconds: 10
+    # -- Liveness probe failures before the container is restarted.
+    failureThreshold: 6
+  readiness:
+    # -- Readiness probe period in seconds.
+    periodSeconds: 5
+    # -- Readiness probe failures before the pod is taken out of the Service.
+    failureThreshold: 3
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`maxUnavailable: 1`) with `architecture: replication`.
+  enabled: true
+
+# -- Spread pods across nodes with `architecture: replication`: `soft` (preferred), `hard` (required) or `""` (off). Ignored when `affinity` is set.
+podAntiAffinityPreset: soft
+
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity. Replaces `podAntiAffinityPreset`.
+affinity: {}
+# -- Topology spread constraints.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""

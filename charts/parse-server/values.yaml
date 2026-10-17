@@ -1,0 +1,165 @@
+# -- Number of Parse Server pods. Parse Server keeps no local state, so it scales horizontally (LiveQuery is not set up by this chart).
+replicaCount: 1
+
+image:
+  # -- Image repository. The Parse community's official image.
+  repository: parseplatform/parse-server
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+parse:
+  # -- Application ID (`PARSE_SERVER_APPLICATION_ID`), sent by clients in `X-Parse-Application-Id`. Required.
+  appId: ""
+  # -- Master key (`PARSE_SERVER_MASTER_KEY`), e.g. from `openssl rand -hex 32`. Stored in a Secret created by this chart. Required unless `existingSecret` is set.
+  masterKey: ""
+  # -- Name of an existing Secret that holds the master key.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the master key.
+  existingSecretKey: master-key
+  # -- Public URL of the API, including the `/parse` path, e.g. `https://api.example.com/parse` (`PARSE_PUBLIC_SERVER_URL`). Used in file URLs and emails. Required.
+  publicServerURL: ""
+  # -- Seconds after which a pod re-reads the database schema (`databaseOptions.schemaCacheTtl`). Without it, a class or field created through one pod stays unknown to the other pods until they restart. Empty disables it (Parse Server's default, fine for 1 replica).
+  schemaCacheTtl: 60
+  # -- Propagate schema changes to all pods at once through MongoDB change streams (`databaseOptions.enableSchemaHooks`). Needs a MongoDB replica set.
+  enableSchemaHooks: false
+  # -- IPs or CIDR ranges allowed to use the master key, comma-separated (`PARSE_SERVER_MASTER_KEY_IPS`). Empty keeps Parse Server's default: only localhost, i.e. Cloud Code and `kubectl exec`. Set your Parse Dashboard's pod range here if it connects with the master key.
+  masterKeyIps: ""
+
+# MongoDB connection. Required. PostgreSQL (with PostGIS) works with Parse Server too, but this chart is tested with MongoDB.
+database:
+  # -- Connection string, e.g. `mongodb://user:password@mongo:27017/parse`. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  uri: ""
+  # -- Name of an existing Secret that holds the connection string (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the connection string.
+  existingSecretKey: database-uri
+
+cloudCode:
+  # -- Load Cloud Code (functions, triggers, jobs) from a ConfigMap mounted at `/parse-server/cloud`.
+  enabled: false
+  # -- File that Parse Server loads (`PARSE_SERVER_CLOUD`).
+  entrypoint: main.js
+  # -- Content of `main.js`. The chart creates a ConfigMap from it. Ignored when `existingConfigMap` is set.
+  main: ""
+  # -- Name of an existing ConfigMap with your Cloud Code files (several files are possible; `entrypoint` is loaded).
+  existingConfigMap: ""
+
+# -- Extra environment variables. Top-level Parse Server options can be set as `PARSE_SERVER_*` (nested `databaseOptions` only as JSON in `PARSE_SERVER_DATABASE_OPTIONS`, which this chart sets from `parse.schemaCacheTtl` and `parse.enableSchemaHooks`), e.g. `PARSE_SERVER_ALLOW_CLIENT_CLASS_CREATION`, `PARSE_SERVER_LOG_LEVEL`. See https://github.com/parse-community/parse-server/blob/alpha/src/Options/Definitions.js
+extraEnv: []
+# - name: PARSE_SERVER_LOG_LEVEL
+#   value: info
+
+# -- Extra environment variables from Secrets or ConfigMaps, e.g. email adapter or push credentials.
+extraEnvFrom: []
+
+# -- Extra volumes for the pods.
+extraVolumes: []
+# -- Extra volume mounts for the Parse Server container.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port. Parse Server listens on 1337 inside the container.
+  port: 80
+
+ingress:
+  # -- Create an Ingress.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. Allow request bodies as large as your file uploads, e.g. `nginx.ingress.kubernetes.io/proxy-body-size: 20m`.
+  annotations: {}
+  # -- Ingress hosts and paths. Route `/parse` (or `/`) to the Service; the host should match `parse.publicServerURL`.
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /parse
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Parse Server does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds to wait before the container gets SIGTERM, so the pod is removed from the Service first (Node.js exits immediately on SIGTERM). 0 disables it.
+preStopSleepSeconds: 5
+
+# -- Seconds Kubernetes waits after SIGTERM.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe. `/parse/health` returns 200 only once Parse Server is connected and initialized.
+startupProbe:
+  httpGet:
+    path: /parse/health
+    port: http
+  periodSeconds: 2
+  timeoutSeconds: 5
+  failureThreshold: 60
+# -- Liveness probe on `/parse/health`.
+livenessProbe:
+  httpGet:
+    path: /parse/health
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+# -- Readiness probe on `/parse/health`.
+readinessProbe:
+  httpGet:
+    path: /parse/health
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Resources for the Parse Server container.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# -- Pod security context. The image runs as the `node` user, UID 1000.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. Logs go to an emptyDir, so the root filesystem is read-only.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

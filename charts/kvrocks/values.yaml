@@ -1,0 +1,228 @@
+# -- Number of Kvrocks pods. `1` runs a single instance. With `sentinel.enabled`, 3 or more: one master and replicas, with automatic failover.
+replicaCount: 1
+
+image:
+  # -- Image repository. The chart uses the official Apache Kvrocks image.
+  repository: apache/kvrocks
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+auth:
+  # -- Require a password (`requirepass`). Replicas, Sentinel, the proxy and the exporter use the same password.
+  enabled: true
+  # -- Password. Empty: a random one is generated on the first install and kept across upgrades. Ignored with `auth.existingSecret`.
+  password: ""
+  # -- Existing Secret with the password.
+  existingSecret: ""
+  # -- Key of the password in `auth.existingSecret`.
+  existingSecretKey: password
+
+# -- Port Kvrocks listens on.
+port: 6666
+
+# -- Kubernetes cluster DNS domain, used for the pod host names that replicas and Sentinel announce.
+clusterDomain: cluster.local
+
+kvrocks:
+  # -- RocksDB block cache in MB (`rocksdb.block_cache_size`). Kvrocks' own default is 4096, more than the default memory limit. Keep it at about a quarter to half of the memory limit.
+  blockCacheSize: 256
+  # -- Memtable size in MB per column family (`rocksdb.write_buffer_size`). Kvrocks' own default is 64.
+  writeBufferSize: 32
+  # -- Worker threads (`workers`).
+  workers: 4
+  # -- Extra `kvrocks.conf` settings, as `name: value`, e.g. `maxclients: 20000` or `rocksdb.compression: zstd`. Settings the chart manages (bind, port, dir, passwords, replication) are refused.
+  config: {}
+
+sentinel:
+  # -- Run Redis Sentinel next to each Kvrocks pod for automatic failover. Needs `replicaCount` of 3 or more.
+  enabled: false
+  image:
+    # -- Sentinel image. Valkey's Sentinel speaks the Redis Sentinel protocol (BSD licence).
+    repository: valkey/valkey
+    # -- Sentinel image tag.
+    tag: 9.0.6-alpine
+    # -- Pull policy.
+    pullPolicy: IfNotPresent
+  # -- Name of the master set that clients ask Sentinel for.
+  masterSet: kvrocks
+  # -- Sentinel port.
+  port: 26379
+  # -- Sentinels that must agree before a failover. Empty: a majority of `replicaCount`.
+  quorum: ""
+  # -- Milliseconds without an answer before Sentinel considers the master down.
+  downAfterMilliseconds: 5000
+  # -- Failover timeout in milliseconds.
+  failoverTimeout: 60000
+  # -- Replicas that resync with a new master at the same time.
+  parallelSyncs: 1
+  # -- Hand the master role to a replica before a master pod stops (rolling updates, node drains), so writes pause for about 3.5 seconds instead of `downAfterMilliseconds` plus the election, and none are lost.
+  failoverOnShutdown: true
+  # -- Resources of the Sentinel container.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      memory: 64Mi
+
+proxy:
+  # -- With `sentinel.enabled`: run HAProxy, which always forwards to the current master. Clients without Sentinel support connect to the `<release>-kvrocks` Service as to a single server.
+  enabled: true
+  # -- Forward only to a master with at least one connected replica. Protects against writes to a stale master that comes back after a failover (they would be lost). If all replicas are down, the proxy refuses connections; Sentinel clients still reach the master.
+  requireConnectedReplica: true
+  # -- HAProxy pods.
+  replicaCount: 2
+  image:
+    # -- HAProxy image.
+    repository: haproxy
+    # -- HAProxy tag.
+    tag: 3.2.25-alpine
+    # -- Pull policy.
+    pullPolicy: IfNotPresent
+  # -- Idle client timeout. Long, because Redis clients keep connections open (pub/sub, blocking commands).
+  timeoutClient: 1h
+  # -- Resources of the HAProxy pods.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  # -- Pod annotations of the HAProxy pods.
+  podAnnotations: {}
+  # -- Node selector of the HAProxy pods.
+  nodeSelector: {}
+  # -- Tolerations of the HAProxy pods.
+  tolerations: []
+
+service:
+  # -- Type of the `<release>-kvrocks` Service (the write endpoint).
+  type: ClusterIP
+  # -- Annotations of the `<release>-kvrocks` Service.
+  annotations: {}
+
+persistence:
+  # -- Store data on a PersistentVolumeClaim per pod. If false, an emptyDir is used and data is lost when a pod is deleted (testing only).
+  enabled: true
+  # -- Storage class. Empty uses the cluster default.
+  storageClass: ""
+  # -- Access modes of the volume.
+  accessModes:
+    - ReadWriteOnce
+  # -- Volume size per pod.
+  size: 8Gi
+  # -- Annotations of the PersistentVolumeClaims.
+  annotations: {}
+
+resources:
+  requests:
+    # -- CPU request.
+    cpu: 100m
+    # -- Memory request.
+    memory: 512Mi
+  limits:
+    # -- Memory limit. Kvrocks uses about `kvrocks.blockCacheSize` plus memtables plus a few hundred MB.
+    memory: 1Gi
+
+# -- Pod security context. The official image runs as UID 999.
+podSecurityContext:
+  runAsUser: 999
+  runAsGroup: 999
+  runAsNonRoot: true
+  fsGroup: 999
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context of all containers.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Spread Kvrocks pods across nodes: `soft` (preferred), `hard` (required) or `none`. Ignored when `affinity` is set.
+podAntiAffinityPreset: soft
+# -- Custom affinity rules. Replaces `podAntiAffinityPreset`.
+affinity: {}
+# -- Topology spread constraints, e.g. across zones.
+topologySpreadConstraints: []
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Priority class name.
+priorityClassName: ""
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Seconds Kubernetes waits after SIGTERM. Covers the master handover (`sentinel.failoverOnShutdown`).
+terminationGracePeriodSeconds: 60
+
+# -- Startup probe of Kvrocks. Allows for opening a large database and for a member that waits for a failover before it rejoins (see "Losing a volume").
+startupProbe:
+  periodSeconds: 5
+  failureThreshold: 120
+# -- Liveness probe of Kvrocks (`PING`).
+livenessProbe:
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+# -- Readiness probe of Kvrocks. A replica is ready once its link to the master is up and no full sync is running.
+readinessProbe:
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Extra environment variables of the Kvrocks container.
+extraEnv: []
+# -- Extra environment from ConfigMaps or Secrets for the Kvrocks container.
+extraEnvFrom: []
+# -- Extra volumes, e.g. TLS certificates.
+extraVolumes: []
+# -- Extra volume mounts of the Kvrocks container.
+extraVolumeMounts: []
+
+podDisruptionBudget:
+  # -- Create PodDisruptionBudgets for Kvrocks (with Sentinel) and HAProxy (with more than one pod).
+  enabled: true
+  # -- Kvrocks pods that may be down at once during voluntary disruptions such as node drains.
+  maxUnavailable: 1
+
+metrics:
+  # -- Export Prometheus metrics with kvrocks_exporter (a sidecar per pod, port 9121), including RocksDB compaction and replication metrics.
+  enabled: false
+  image:
+    # -- Exporter image.
+    repository: kvrocks/kvrocks-exporter
+    # -- Exporter tag.
+    tag: 1.0.11
+    # -- Pull policy.
+    pullPolicy: IfNotPresent
+  # -- Port of the Prometheus endpoint `/metrics`.
+  port: 9121
+  # -- Resources of the exporter.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the one your Prometheus selects on.
+    labels: {}

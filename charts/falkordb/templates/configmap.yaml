@@ -1,0 +1,269 @@
+{{- include "falkordb.validate" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "falkordb.fullname" . }}
+  labels:
+    {{- include "falkordb.labels" . | nindent 4 }}
+data:
+  falkordb.conf: |
+    bind * -::*
+    port 6379
+    appendonly {{ ternary "yes" "no" .Values.durability.appendonly }}
+    appendfsync {{ .Values.durability.appendfsync }}
+    save {{ .Values.durability.save | default "\"\"" }}
+    {{- if include "falkordb.replication" . }}
+    min-replicas-to-write {{ .Values.replication.minReplicasToWrite }}
+    min-replicas-max-lag {{ .Values.replication.minReplicasMaxLag }}
+    {{- end }}
+    {{- with .Values.extraConfig }}
+    {{- . | nindent 4 }}
+    {{- end }}
+  sentinel.conf: |
+    {{- with .Values.sentinel.extraConfig }}
+    {{- . | nindent 4 }}
+    {{- end }}
+
+  common.sh: |
+    # Shared by the start, probe and preStop scripts.
+    MY_HOST="$POD_NAME.$HEADLESS_DOMAIN"
+    # Sentinel's state, kept on the pod's volume so it survives restarts.
+    SENTINEL_CONF="$FALKORDB_DATA_PATH/sentinel.conf"
+
+    # Host name of pod number $1.
+    pod_host() { echo "$STATEFULSET_NAME-$1.$HEADLESS_DOMAIN"; }
+
+    # redis-cli with a timeout; REDISCLI_AUTH holds the password.
+    cli() { timeout 3 redis-cli --no-auth-warning --raw "$@" 2>/dev/null; }
+
+    # True when this pod's volume holds FalkorDB data (AOF or RDB files).
+    has_data() { ls "$FALKORDB_DATA_PATH" | grep -q -E '^(appendonlydir|.*\.rdb)$'; }
+
+    # The primary that the Sentinels of the other pods report, empty if none knows one.
+    sentinel_master() {
+      i=0
+      while [ "$i" -lt "$REPLICAS" ]; do
+        h=$(pod_host "$i")
+        if [ "$h" != "$MY_HOST" ]; then
+          m=$(cli -h "$h" -p 26379 SENTINEL get-master-addr-by-name "$MASTER_SET" | head -n1)
+          if [ -n "$m" ]; then echo "$m"; return; fi
+        fi
+        i=$((i + 1))
+      done
+    }
+
+    # Another pod whose FalkorDB reports itself as primary, empty if none.
+    peer_master() {
+      i=0
+      while [ "$i" -lt "$REPLICAS" ]; do
+        h=$(pod_host "$i")
+        if [ "$h" != "$MY_HOST" ] && [ "$(cli -h "$h" ROLE | head -n1)" = master ]; then
+          echo "$h"; return
+        fi
+        i=$((i + 1))
+      done
+    }
+
+    # The primary this pod's Sentinel knew last, empty if none.
+    saved_master() {
+      [ -f "$SENTINEL_CONF" ] || return 0
+      sed -n "s/^sentinel monitor $MASTER_SET \([^ ]*\) .*/\1/p" "$SENTINEL_CONF" | head -n1
+    }
+
+    # Sets MASTER and SOURCE: the other Sentinels' answer, else a pod that is
+    # primary, else the primary this pod's Sentinel knew before a restart, else
+    # pod 0 (first start).
+    find_master() {
+      SOURCE=sentinel; MASTER=$(sentinel_master)
+      if [ -z "$MASTER" ]; then SOURCE=peer; MASTER=$(peer_master); fi
+      if [ -z "$MASTER" ]; then SOURCE=saved; MASTER=$(saved_master); fi
+      if [ -z "$MASTER" ]; then SOURCE=default; MASTER=$(pod_host 0); fi
+    }
+
+    # True when another pod has data. Waits up to 60 s for the others to answer;
+    # on a first start they answer with 0 keys within seconds.
+    peers_have_data() {
+      deadline=$(($(date +%s) + 60))
+      while :; do
+        answered=0
+        i=0
+        while [ "$i" -lt "$REPLICAS" ]; do
+          h=$(pod_host "$i")
+          if [ "$h" != "$MY_HOST" ]; then
+            n=$(cli -h "$h" DBSIZE || true)
+            case "$n" in
+              0) answered=$((answered + 1)) ;;
+              [1-9]*|LOADING*) return 0 ;;
+            esac
+          fi
+          i=$((i + 1))
+        done
+        [ "$answered" -lt $((REPLICAS - 1)) ] || return 1
+        [ "$(date +%s)" -lt "$deadline" ] || return 1
+        sleep 2
+      done
+    }
+
+    # Sentinel ID of the pod with host name $1, derived from the name.
+    sentinel_id() { printf '%s' "$1" | sha1sum | cut -c1-40; }
+
+    # Escapes a value for a double-quoted string in a Redis config file.
+    conf_quote() { printf '"%s"' "$(printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g')"; }
+
+  start-falkordb.sh: |
+    #!/bin/sh
+    set -eu
+    . /scripts/common.sh
+    # The generated files contain the password.
+    umask 077
+    conf=/run/falkordb/falkordb.conf
+    {
+      if [ -n "${REDISCLI_AUTH:-}" ]; then
+        printf '%s\n' "requirepass $(conf_quote "$REDISCLI_AUTH")"
+        printf '%s\n' "masterauth $(conf_quote "$REDISCLI_AUTH")"
+      fi
+      if [ "$ARCHITECTURE" = replication ]; then
+        # A primary with an empty volume would make every replica copy the empty
+        # dataset. Wait until Sentinel promotes a pod that still has the data.
+        while :; do
+          find_master
+          if [ "$MASTER" = "$MY_HOST" ] && ! has_data; then
+            case "$SOURCE" in
+              sentinel|saved) reason="Sentinel names this pod as primary" ;;
+              *) reason=""; if peers_have_data; then reason="Another pod has data"; fi ;;
+            esac
+            if [ -n "$reason" ]; then
+              echo "$reason, but this pod's volume is empty. Waiting for a pod with data to be promoted." >&2
+              sleep 5
+              continue
+            fi
+          fi
+          break
+        done
+        echo "Primary: $MASTER (from $SOURCE)" >&2
+        echo "replica-announce-ip $MY_HOST"
+        if [ "$MASTER" != "$MY_HOST" ]; then
+          echo "replicaof $MASTER 6379"
+        fi
+      fi
+      cat /config/falkordb.conf
+    } > "$conf"
+    # The image's entrypoint adds --dir and --loadmodule with FALKORDB_ARGS.
+    export REDIS_ARGS="$conf"
+    exec /var/lib/falkordb/bin/run.sh
+
+  start-sentinel.sh: |
+    #!/bin/sh
+    set -eu
+    . /scripts/common.sh
+    find_master
+    echo "Primary: $MASTER (from $SOURCE)" >&2
+    # Sentinel needs the primary's host name to resolve before it starts.
+    until getent hosts "$MASTER" >/dev/null; do
+      echo "Waiting for $MASTER to resolve" >&2
+      sleep 2
+    done
+    umask 077
+    new="$SENTINEL_CONF.new"
+    {
+      echo "port 26379"
+      # A fixed ID per pod: a restarted Sentinel is not counted as an extra one.
+      echo "sentinel myid $(sentinel_id "$MY_HOST")"
+      echo "sentinel resolve-hostnames yes"
+      echo "sentinel announce-hostnames yes"
+      echo "sentinel announce-ip $MY_HOST"
+      echo "sentinel announce-port 26379"
+      if [ -n "${REDISCLI_AUTH:-}" ]; then
+        printf '%s\n' "requirepass $(conf_quote "$REDISCLI_AUTH")"
+        printf '%s\n' "sentinel sentinel-pass $(conf_quote "$REDISCLI_AUTH")"
+      fi
+      echo "sentinel monitor $MASTER_SET $MASTER 6379 $QUORUM"
+      if [ -n "${REDISCLI_AUTH:-}" ]; then
+        printf '%s\n' "sentinel auth-pass $MASTER_SET $(conf_quote "$REDISCLI_AUTH")"
+      fi
+      echo "sentinel down-after-milliseconds $MASTER_SET $DOWN_AFTER_MILLISECONDS"
+      echo "sentinel failover-timeout $MASTER_SET $FAILOVER_TIMEOUT"
+      echo "sentinel parallel-syncs $MASTER_SET 1"
+      # The other pods as replicas and Sentinels: Sentinel only learns replicas from a
+      # running primary, and must be able to promote one when the primary stays down.
+      i=0
+      while [ "$i" -lt "$REPLICAS" ]; do
+        h=$(pod_host "$i")
+        if getent hosts "$h" >/dev/null; then
+          [ "$h" = "$MY_HOST" ] || echo "sentinel known-sentinel $MASTER_SET $h 26379 $(sentinel_id "$h")"
+          [ "$h" = "$MASTER" ] || echo "sentinel known-replica $MASTER_SET $h 6379"
+        fi
+        i=$((i + 1))
+      done
+      # The epochs from before a restart.
+      if [ -f "$SENTINEL_CONF" ]; then
+        grep -E "^sentinel (config-epoch|leader-epoch) $MASTER_SET |^sentinel current-epoch " "$SENTINEL_CONF" || true
+      fi
+      cat /config/sentinel.conf
+    } > "$new"
+    mv "$new" "$SENTINEL_CONF"
+    exec redis-sentinel "$SENTINEL_CONF"
+
+  probe.sh: |
+    #!/bin/sh
+    # probe.sh live|ready
+    . /scripts/common.sh
+    out=$(cli PING)
+    if [ "$1" = live ]; then
+      # Loading a large dataset can take minutes; the server is alive meanwhile.
+      [ "$out" = PONG ] || echo "$out" | grep -q '^LOADING'
+      exit
+    fi
+    [ "$out" = PONG ] || { echo "PING: $out"; exit 1; }
+    if [ "$ARCHITECTURE" = replication ]; then
+      info=$(cli INFO replication)
+      if echo "$info" | grep -q '^role:slave'; then
+        echo "$info" | grep -q '^master_link_status:up' || { echo "replica not in sync with the primary"; exit 1; }
+      fi
+    fi
+
+  prestop-falkordb.sh: |
+    #!/bin/sh
+    # Hands the primary role to a replica before shutdown, so clients switch in
+    # seconds instead of waiting for Sentinel to notice the primary is gone.
+    # Writes are paused first and the replicas catch up, so no acknowledged write
+    # stays behind on this pod; paused writes fail with READONLY and clients retry.
+    . /scripts/common.sh
+    [ "$(cli ROLE | head -n1)" = master ] || exit 0
+    cli CLIENT PAUSE 30000 WRITE >/dev/null
+    # Wait up to 10 s until every replica has the primary's replication offset.
+    n=0
+    while [ "$n" -lt 20 ]; do
+      info=$(cli INFO replication | tr -d '\r')
+      offset=$(echo "$info" | sed -n 's/^master_repl_offset://p')
+      echo "$info" | grep '^slave[0-9]' | grep -qv "offset=$offset," || break
+      sleep 0.5; n=$((n + 1))
+    done
+    i=0
+    while [ "$i" -lt "$REPLICAS" ]; do
+      if [ "$(cli -h "$(pod_host "$i")" -p 26379 SENTINEL FAILOVER "$MASTER_SET")" = OK ]; then
+        break
+      fi
+      i=$((i + 1))
+    done
+    # Follow the new primary at once; Sentinel would only demote this pod seconds later.
+    n=0
+    while [ "$n" -lt 30 ]; do
+      new=$(sentinel_master)
+      if [ -n "$new" ] && [ "$new" != "$MY_HOST" ]; then
+        cli REPLICAOF "$new" 6379 >/dev/null
+        break
+      fi
+      sleep 1; n=$((n + 1))
+    done
+    cli CLIENT UNPAUSE >/dev/null
+
+  prestop-sentinel.sh: |
+    #!/bin/sh
+    # Keeps this Sentinel running while its pod's FalkorDB is still the primary,
+    # so it can take part in the handover.
+    . /scripts/common.sh
+    n=0
+    while [ "$(cli ROLE | head -n1)" = master ] && [ "$n" -lt 30 ]; do
+      sleep 1; n=$((n + 1))
+    done

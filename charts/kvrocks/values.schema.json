@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "imagePullSecrets": { "type": "array" },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "password": { "type": "string", "pattern": "^[^\\s]*$" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "clusterDomain": { "type": "string", "minLength": 1 },
+    "kvrocks": {
+      "type": "object",
+      "properties": {
+        "blockCacheSize": { "type": "integer", "minimum": 1 },
+        "writeBufferSize": { "type": "integer", "minimum": 1 },
+        "workers": { "type": "integer", "minimum": 1 },
+        "config": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "integer", "number", "boolean"] }
+        }
+      }
+    },
+    "sentinel": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "masterSet": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "quorum": { "type": ["string", "integer"], "pattern": "^[0-9]*$" },
+        "downAfterMilliseconds": { "type": "integer", "minimum": 1000 },
+        "failoverTimeout": { "type": "integer", "minimum": 1000 },
+        "parallelSyncs": { "type": "integer", "minimum": 1 },
+        "failoverOnShutdown": { "type": "boolean" }
+      }
+    },
+    "proxy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "requireConnectedReplica": { "type": "boolean" },
+        "timeoutClient": { "type": "string", "pattern": "^[0-9]+(ms|s|m|h|d)?$" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "storageClass": { "type": "string" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "size": { "type": "string" }
+      }
+    },
+    "podAntiAffinityPreset": { "enum": ["soft", "hard", "none"] },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "maxUnavailable": { "type": ["integer", "string"] }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "serviceMonitor": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "interval": { "type": "string" },
+            "labels": { "type": "object" }
+          }
+        }
+      }
+    }
+  }
+}
