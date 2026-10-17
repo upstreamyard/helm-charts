@@ -512,6 +512,55 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.0/conductor-0.1.0.tgz
     version: 0.1.0
+  dolt:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: added
+          description: Dolt chart with single-server and primary/standby replication modes
+      artifacthub.io/images: |
+        - name: dolt-sql-server
+          image: dolthub/dolt-sql-server:2.4.2
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Dolt
+          url: https://github.com/dolthub/dolt
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2.4.2
+    created: "2026-10-17T12:41:49.741250983Z"
+    description: Dolt Helm chart for Kubernetes. The version-controlled, MySQL-compatible
+      SQL database (branch, merge, diff and clone your data like Git) with high availability
+      through primary/standby replication, failover, Prometheus metrics and generated
+      passwords. Community chart by upstreamyard, not an official Dolt chart.
+    digest: 69a4ba607607047e81ad028216e52d9b3aa8042ceac0804bcaad06dce9f1f3cc
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/dolt
+    keywords:
+    - dolt
+    - dolthub
+    - dolt-sql-server
+    - database
+    - sql
+    - mysql
+    - version-control
+    - git-for-data
+    - replication
+    - high-availability
+    kubeVersion: '>=1.27.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: dolt
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/dolthub/dolt
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/dolt-0.1.0/dolt-0.1.0.tgz
+    version: 0.1.0
   electric:
   - annotations:
       artifacthub.io/changes: |
@@ -1232,4 +1281,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T12:38:09.670806943Z"
+generated: "2026-10-17T12:41:49.74128168Z"
