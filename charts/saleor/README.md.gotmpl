@@ -1,0 +1,141 @@
+# Saleor Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for [Saleor](https://github.com/saleor/saleor), the headless GraphQL commerce platform. It runs the GraphQL API, the Celery worker and beat for background tasks, and the [Saleor dashboard](https://github.com/saleor/saleor-dashboard), using Saleor's official images `ghcr.io/saleor/saleor` and `ghcr.io/saleor/saleor-dashboard`.
+
+> Community chart by **upstreamyard**, not an official Saleor chart. Saleor is © Saleor Commerce, licensed under BSD-3-Clause.
+
+## Install
+
+Saleor needs PostgreSQL, a Celery broker (e.g. Redis) and two S3 buckets (see [Requirements](#requirements)). Create the keys once and keep them; the RSA key signs login tokens, so a new key logs everyone out:
+
+```bash
+kubectl create secret generic saleor-keys \
+  --from-literal=secret-key="$(openssl rand -hex 32)" \
+  --from-literal=rsa-private-key="$(openssl genrsa 2048)"
+
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install saleor upstreamyard/saleor \
+  --set saleor.publicUrl=https://api.example.com/ \
+  --set 'saleor.allowedClientHosts={shop.example.com,dashboard.example.com}' \
+  --set saleor.existingSecret=saleor-keys \
+  --set database.url='postgres://saleor:...@your-postgres:5432/saleor' \
+  --set celery.brokerUrl=redis://your-redis:6379/1 \
+  --set cache.url=redis://your-redis:6379/0 \
+  --set storage.s3.mediaBucket=your-media-bucket \
+  --set storage.s3.privateBucket=your-private-bucket \
+  --set storage.s3.region=eu-central-1 \
+  --set admin.email=you@example.com --set admin.password='...'
+```
+
+Or from the OCI registry:
+
+```bash
+helm install saleor oci://ghcr.io/upstreamyard/charts/saleor --set saleor.publicUrl=https://api.example.com/ ...
+```
+
+The API answers on `/graphql/`, the dashboard on `/dashboard/` of its own Service (or `dashboard.ingress`). Without `admin.*`, create the first admin account with `kubectl exec -it deploy/saleor -- python3 manage.py createsuperuser`.
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install saleor upstreamyard/saleor --verify --keyring upstreamyard.gpg --set ...
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Requirements
+
+- **PostgreSQL** (required). Saleor 3.23.41 was tested with PostgreSQL 17 and 18; Saleor's own CI uses 15. The database user must be allowed to create tables and indexes (migrations).
+- **A Celery broker** (required): Redis, RabbitMQ or Amazon SQS. Webhooks, search indexing, emails and data migrations run as background tasks.
+- **Redis as a cache** (recommended with more than one pod), in a different Redis database than the broker.
+- **Object storage** (required): two S3 buckets, or Google Cloud Storage or Azure. The media bucket (product images, thumbnails) must be readable by browsers; the private bucket (webhook payloads, exports) must not be public. Saleor doesn't serve files from local disk in production, and the API writes files the worker reads, so a local volume doesn't work.
+
+This chart does not deploy a database, Redis or object storage.
+
+## What the chart does
+
+- **Production mode:** runs Saleor with `DEBUG=False`. `ALLOWED_HOSTS` is the host of `saleor.publicUrl` plus the Service's cluster DNS names, so other pods can call `http://<release>-saleor:8000/graphql/`.
+- **Migrations:** a Job runs `manage.py migrate` before every install and upgrade (Helm hook), then creates the admin account from `admin.*` if it doesn't exist yet. Saleor's pods don't migrate on startup.
+- **Data migrations on upgrades:** `migrate` also queues Celery tasks that migrate data. Celery discards tasks it doesn't know, so the old version's workers, which still run while the Job runs, would drop the new version's tasks. Without the steps below, a 3.22 → 3.23 upgrade lost 7 of these tasks. The chart therefore:
+  - sends them to a queue named after the new version, which only the new workers consume;
+  - replaces the workers with `Recreate`.
+
+  Tested: no task was lost on a 3.22.73 → 3.23.41 upgrade.
+- **Background tasks:** a Celery worker Deployment (`worker.*`) and exactly one Celery beat with Saleor's database scheduler (`beat.*`, `Recreate`). The worker's liveness probe pings it over the broker and restarts a hung worker after 3 failed checks.
+- **Dashboard:** the official dashboard image, configured with `API_URL` (defaults to `saleor.publicUrl` + `graphql/`). The chart runs its nginx as non-root on port 8080 with its own config, serving `/dashboard/`.
+- **Probes and shutdown:** `/health/` for startup, liveness and readiness. On rollouts, a 10 s `preStop` sleep keeps a stopping API pod serving until it has left the Service, then the server finishes requests in flight (up to 30 s). Tested: 0 failed requests out of 1546 during a rollout, compared with 5 out of 1030 without the sleep.
+- **Security:** runs as non-root (the image's `saleor` user, UID 999; nginx UID 101), read-only root filesystem, drops all capabilities, no ServiceAccount token. Secrets come from a Secret created by the chart or from your own (`existingSecret` for every credential).
+- **`helm test`** checks `/health/`, runs a GraphQL query (needs the database) through the Service, and checks that the dashboard serves the configured API URL.
+
+## Configuration
+
+Every Saleor setting is an environment variable; set them with `extraEnv` (plain values) or `extraEnvFrom` (Secrets). See Saleor's [list of environment variables](https://docs.saleor.io/setup/configuration). Shop settings (channels, taxes, shipping, payment and email plugins) live in the database and are changed in the dashboard.
+
+- **Apps and webhooks inside the cluster:** Saleor refuses to call private IP addresses (protection against server-side request forgery), so webhooks to apps in the same cluster fail with `Invalid IP address`. Set `HTTP_IP_FILTER_ENABLED=False` with `extraEnv` if you run Saleor apps in the cluster.
+- **Calling the API over http from inside the cluster:** when `saleor.publicUrl` is `https`, Saleor redirects plain-http requests to https (`301`). In-cluster clients such as a storefront doing server-side rendering must send `X-Forwarded-Proto: https`. The Ingress controller sends it for outside traffic.
+- **Email:** Saleor sends emails through its email plugins (configured in the dashboard) or through apps; `USER_EMAIL_URL` can provide the SMTP settings for the user emails plugin.
+- **Google Cloud Storage or Azure:** set `storage.type=custom` and the `GS_*` or `AZURE_*` variables (media and private bucket or container) with `extraEnv`/`extraEnvFrom`. Not tested by us; S3 was tested with an S3-compatible store (SeaweedFS).
+- **Credentials for S3 from a cloud identity** (e.g. EKS IAM roles for service accounts): leave `storage.s3.accessKeyId` and `existingSecret` empty and annotate the ServiceAccount (`serviceAccount.annotations`); boto3 then uses its default credential chain. Not tested by us.
+- **Separate task queues:** if you route tasks to other queues with Saleor's `*_QUEUE_NAME` settings, add them to `worker.queues`.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+replicaCount: 2
+saleor:
+  publicUrl: https://api.shop.example.com/
+  allowedClientHosts: [shop.example.com, dashboard.shop.example.com]
+  allowedGraphqlOrigins: [https://shop.example.com, https://dashboard.shop.example.com]
+  existingSecret: saleor-keys        # keys: secret-key, rsa-private-key
+database:
+  existingSecret: saleor-db          # key: database-url
+celery:
+  existingSecret: saleor-redis       # key: broker-url
+cache:
+  existingSecret: saleor-redis       # key: cache-url
+storage:
+  s3:
+    mediaBucket: shop-media
+    privateBucket: shop-private
+    region: eu-central-1
+    customDomain: media.shop.example.com   # CDN in front of the media bucket
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/saleor-s3
+worker:
+  replicaCount: 2
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+  hosts:
+    - host: api.shop.example.com
+      paths: [{ path: /, pathType: Prefix }]
+  tls:
+    - hosts: [api.shop.example.com]
+      secretName: api-tls
+dashboard:
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: dashboard.shop.example.com
+        paths: [{ path: /, pathType: Prefix }]
+    tls:
+      - hosts: [dashboard.shop.example.com]
+        secretName: dashboard-tls
+```
+
+## Known issues
+
+- **A fresh install of Saleor 3.22.73 fails on PostgreSQL 18** (migration `discount.0052_drop_sales_constraints`: `column "id" is in a primary key`). 3.23.41 installs fine on PostgreSQL 18.
+- **The dashboard image is released separately** from the API. The chart pins a dashboard version with the same minor version as the API; override `dashboard.image.tag` to change it.
+
+{{ template "chart.valuesSection" . }}

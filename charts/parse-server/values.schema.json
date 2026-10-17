@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "parse": {
+      "type": "object",
+      "properties": {
+        "appId": { "type": "string" },
+        "masterKey": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" },
+        "publicServerURL": { "type": "string", "pattern": "^(https?://.+)?$" },
+        "masterKeyIps": { "type": "string" },
+        "schemaCacheTtl": { "type": ["integer", "null"], "minimum": 1 },
+        "enableSchemaHooks": { "type": "boolean" }
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "pattern": "^((mongodb(\\+srv)?|postgres(ql)?)://.+)?$" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" }
+      }
+    },
+    "cloudCode": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "entrypoint": { "type": "string", "minLength": 1 },
+        "main": { "type": "string" },
+        "existingConfigMap": { "type": "string" }
+      }
+    },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "preStopSleepSeconds": { "type": "integer", "minimum": 0 },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 }
+  }
+}

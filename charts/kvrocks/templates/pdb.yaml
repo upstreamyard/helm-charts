@@ -1,0 +1,29 @@
+{{- if and .Values.podDisruptionBudget.enabled .Values.sentinel.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "kvrocks.fullname" . }}
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "kvrocks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: kvrocks
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled .Values.sentinel.enabled .Values.proxy.enabled (gt (int .Values.proxy.replicaCount) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-proxy
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "kvrocks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: proxy
+{{- end }}

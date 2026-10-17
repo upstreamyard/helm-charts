@@ -1,0 +1,6 @@
+# Used by chart-testing (ct install) in CI: two pods with the optional Redis cache.
+replicaCount: 2
+database:
+  url: postgres://logto:logto@logto-postgres.deps.svc:5432/logto
+redis:
+  url: redis://redis.deps.svc:6379

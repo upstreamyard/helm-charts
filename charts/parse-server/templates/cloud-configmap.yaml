@@ -1,0 +1,11 @@
+{{- if and .Values.cloudCode.enabled .Values.cloudCode.main (not .Values.cloudCode.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "parse-server.cloudConfigMap" . }}
+  labels:
+    {{- include "parse-server.labels" . | nindent 4 }}
+data:
+  {{ .Values.cloudCode.entrypoint }}: |
+    {{- .Values.cloudCode.main | nindent 4 }}
+{{- end }}
