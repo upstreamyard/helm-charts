@@ -1,5 +1,6 @@
-# Throwaway databases for chart tests in kind: PostgreSQL with pgvector and Redis (aegra), PostgreSQL 17 (logto).
-# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc.
+# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind, used by several charts.
+# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc. Services only one
+# chart needs are in .github/ci/deps/<chart>.yaml; CI starts those for the changed charts.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -20,6 +21,8 @@ spec:
       containers:
         - name: postgres
           image: pgvector/pgvector:pg18
+          # Logical replication, for charts that stream changes (e.g. electric).
+          args: ["-c", "wal_level=logical"]
           env:
             - { name: POSTGRES_USER, value: aegra }
             - { name: POSTGRES_PASSWORD, value: aegra }
@@ -72,40 +75,3 @@ spec:
   selector: { app: redis }
   ports:
     - port: 6379
----
-# PostgreSQL 17 for the logto chart (the version Logto's own Compose file uses).
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: logto-postgres
-  namespace: deps
-spec:
-  selector:
-    matchLabels: { app: logto-postgres }
-  template:
-    metadata:
-      labels: { app: logto-postgres }
-    spec:
-      containers:
-        - name: postgres
-          image: postgres:17-alpine
-          env:
-            - { name: POSTGRES_USER, value: logto }
-            - { name: POSTGRES_PASSWORD, value: logto }
-            - { name: POSTGRES_DB, value: logto }
-          ports:
-            - containerPort: 5432
-          readinessProbe:
-            exec:
-              command: ["pg_isready", "-U", "logto", "-d", "logto"]
-            periodSeconds: 2
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: logto-postgres
-  namespace: deps
-spec:
-  selector: { app: logto-postgres }
-  ports:
-    - port: 5432
