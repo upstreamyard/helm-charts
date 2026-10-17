@@ -1,0 +1,5 @@
+# The image's default configuration, hardened as in production.
+networkPolicy:
+  enabled: true
+telemetry:
+  enabled: false

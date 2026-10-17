@@ -1,0 +1,179 @@
+{{- include "nemo-guardrails.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nemo-guardrails.fullname" . }}
+  labels:
+    {{- include "nemo-guardrails.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "nemo-guardrails.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if include "nemo-guardrails.createSecret" . }}
+        checksum/secret: {{ include "nemo-guardrails.secretData" . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "nemo-guardrails.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "nemo-guardrails.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.checkConfig.enabled }}
+      initContainers:
+        - name: check-config
+          image: {{ include "nemo-guardrails.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["check-config", "/config"]
+          {{- with (include "nemo-guardrails.envFrom" .) }}
+          envFrom:
+            {{- . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "nemo-guardrails.volumeMounts" . | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.checkConfig.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- end }}
+      containers:
+        - name: nemo-guardrails
+          image: {{ include "nemo-guardrails.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - server
+            - --config=/config
+            - --default-config-id={{ include "nemo-guardrails.defaultConfigId" . }}
+            - --port=8000
+            {{- range .Values.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: NEMO_GUARDRAILS_DISABLE_CHAT_UI
+              value: {{ (not .Values.chatUI.enabled) | toString | quote }}
+            - name: NEMO_GUARDRAILS_LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            {{- if not .Values.telemetry.enabled }}
+            - name: NEMO_GUARDRAILS_NO_USAGE_STATS
+              value: "true"
+            {{- end }}
+            {{- with .Values.llm.baseUrl }}
+            - name: MAIN_MODEL_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.llm.engine }}
+            - name: MAIN_MODEL_ENGINE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.cors.enabled }}
+            - name: NEMO_GUARDRAILS_SERVER_ENABLE_CORS
+              value: "true"
+            - name: NEMO_GUARDRAILS_SERVER_ALLOWED_ORIGINS
+              value: {{ join "," (default (list "*") .Values.cors.allowedOrigins) | quote }}
+            {{- end }}
+            {{- with .Values.opentelemetry.endpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.opentelemetry.serviceName }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with (include "nemo-guardrails.envFrom" .) }}
+          envFrom:
+            {{- . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "nemo-guardrails.volumeMounts" . | nindent 12 }}
+          {{- if .Values.preStopSleepSeconds }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "{{ .Values.preStopSleepSeconds }}"]
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+        {{- if include "nemo-guardrails.hasConfigs" . }}
+        - name: config-root
+          emptyDir:
+            sizeLimit: 1Mi
+        {{- end }}
+        {{- range $id, $_ := .Values.configs }}
+        - name: config-{{ $id | replace "_" "-" | lower }}
+          configMap:
+            name: {{ include "nemo-guardrails.configMapName" (list $ $id) }}
+        {{- end }}
+        {{- range .Values.existingConfigMaps }}
+        - name: config-{{ .id | replace "_" "-" | lower }}
+          configMap:
+            name: {{ .configMap }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

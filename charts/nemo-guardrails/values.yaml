@@ -1,0 +1,213 @@
+# -- Number of NeMo Guardrails pods. Chat completions are stateless (clients send the history), so any number works. Ignored when `autoscaling.enabled`.
+replicaCount: 1
+
+image:
+  # -- Image repository. For extra Python packages (e.g. Presidio for PII detection), use your own image built `FROM upstreamyard/nemo-guardrails`.
+  repository: upstreamyard/nemo-guardrails
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# LLM credentials and endpoint.
+llm:
+  # -- OpenAI API key (`OPENAI_API_KEY`), used by the image's default configuration and `engine: openai` models. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  openaiApiKey: ""
+  # -- NVIDIA API key (`NVIDIA_API_KEY`) for `engine: nim` models. Stored in the chart's Secret. Ignored when `existingSecret` is set.
+  nvidiaApiKey: ""
+  # -- Existing Secret whose keys are environment variable names, e.g. `OPENAI_API_KEY`, `NVIDIA_API_KEY` or `AZURE_OPENAI_API_KEY`. Every key becomes an environment variable. Recommended for production.
+  existingSecret: ""
+  # -- `MAIN_MODEL_BASE_URL`: an OpenAI-compatible endpoint (vLLM, Ollama, NVIDIA NIM, LiteLLM), e.g. `http://vllm.llm:8000/v1`. Applies to requests with a `model` field, not to the Chat UI.
+  baseUrl: ""
+  # -- `MAIN_MODEL_ENGINE`, e.g. `openai`, `nim`, `azure`, `ollama`. Applies to requests with a `model` field. Empty: the engine from the configuration.
+  engine: ""
+
+# -- Guardrails configurations: `<config id>: {<file name>: <content>}`, e.g. `config.yml`, `prompts.yml`, `rails.co`, `actions.py`. Each becomes a ConfigMap mounted at `/config/<config id>`. Without `configs` and `existingConfigMaps`, the image's default configuration (id `config`, self check rails) is used.
+configs: {}
+#   support_bot:
+#     config.yml: |
+#       models:
+#         - type: main
+#           engine: openai
+#           model: gpt-4o-mini
+#       rails:
+#         input:
+#           flows: [self check input]
+#     prompts.yml: |
+#       prompts: ...
+
+# -- Configurations in ConfigMaps you manage, e.g. made from a folder with `kubectl create configmap`: a list of `{id: <config id>, configMap: <name>}`, each mounted at `/config/<id>`. Use a new ConfigMap name for every change (e.g. a hash suffix): running pods see edits to a mounted ConfigMap and load them unchecked.
+existingConfigMaps: []
+# - id: my_bot
+#   configMap: my-bot
+
+# -- Configuration for requests without `guardrails.config_id` (`--default-config-id`). Required with several configurations. Defaults to the only configuration, or to `config` (the image's default).
+defaultConfigId: ""
+
+checkConfig:
+  # -- Run the image's `check-config` in an init container before the server starts. A broken configuration then stops the pod (and the rollout) with a clear error instead of failing requests with HTTP 400. It calls no LLM.
+  enabled: true
+  # -- Resources for the check.
+  resources: {}
+
+chatUI:
+  # -- Serve NeMo Guardrails' Chat UI at `/chat` (`NEMO_GUARDRAILS_DISABLE_CHAT_UI=false`). NVIDIA: for internal testing only. It uses the model set in each configuration, not `llm.baseUrl`.
+  enabled: false
+
+# -- `NEMO_GUARDRAILS_LOG_LEVEL`. `WARNING` keeps messages, prompts and answers out of the logs; `INFO` logs every one of them.
+logLevel: WARNING
+
+telemetry:
+  # -- NeMo Guardrails' anonymous usage statistics to NVIDIA (on by default in NeMo Guardrails). `false` sets `NEMO_GUARDRAILS_NO_USAGE_STATS=true`.
+  enabled: true
+
+cors:
+  # -- Allow browser requests from `allowedOrigins` (`NEMO_GUARDRAILS_SERVER_ENABLE_CORS`).
+  enabled: false
+  # -- Allowed origins, e.g. `["https://app.example.com"]`. Empty allows all (`*`).
+  allowedOrigins: []
+
+opentelemetry:
+  # -- OTLP/HTTP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`), e.g. `http://otel-collector.observability:4318`. Turns on OpenTelemetry export. Traces also need `tracing` in the configuration; metrics need `NEMO_GUARDRAILS_IORAILS_ENGINE=1` in `extraEnv` (experimental in NeMo Guardrails).
+  endpoint: ""
+  # -- `OTEL_SERVICE_NAME`. Empty: `nemo-guardrails`.
+  serviceName: ""
+
+# -- Extra arguments for `nemoguardrails server`.
+extraArgs: []
+# -- Extra environment variables, e.g. `NEMO_GUARDRAILS_IORAILS_ENGINE` or `OTEL_*` settings.
+extraEnv: []
+# - name: NEMO_GUARDRAILS_IORAILS_ENGINE
+#   value: "1"
+# -- Extra environment variables from Secrets or ConfigMaps, e.g. keys for third-party guardrail services.
+extraEnvFrom: []
+# -- Extra volumes, e.g. a configuration with sub-folders (knowledge base) from a PVC or a CSI volume.
+extraVolumes: []
+# -- Extra volume mounts for the server and the config check, e.g. `/config/<id>`.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port. NeMo Guardrails listens on 8000 inside the container.
+  port: 8000
+
+ingress:
+  # -- Create an Ingress. NeMo Guardrails has no authentication: add it at the ingress or gateway.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: guardrails.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+networkPolicy:
+  # -- Create a NetworkPolicy that only lets `allowFrom` reach port 8000. Outgoing traffic (to the LLM) is not restricted.
+  enabled: false
+  # -- Allowed clients (NetworkPolicy `from` peers). Empty: pods in the release namespace with the label `nemo-guardrails-client: "true"`. Add your ingress controller's namespace when using an Ingress.
+  allowFrom: []
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler (needs metrics-server).
+  enabled: false
+  # -- Minimum pods.
+  minReplicas: 2
+  # -- Maximum pods.
+  maxReplicas: 10
+  # -- Target average CPU utilization in percent. The server mostly waits for the LLM, so CPU rises mainly with embedding-based rails.
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget when more than one pod runs (`replicaCount` > 1 or autoscaling).
+  enabled: true
+  # -- Pods that may be down during voluntary disruptions such as node drains.
+  maxUnavailable: 1
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. NeMo Guardrails does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM. The server finishes requests in progress first; LLM answers can take a while.
+terminationGracePeriodSeconds: 60
+
+# -- Seconds a pod keeps serving after it is told to stop, until the Service has stopped sending it new requests. Without it, requests during rolling updates fail with "connection refused". 0 disables it.
+preStopSleepSeconds: 5
+
+# -- Startup probe. `/v1/health` checks only that the server is up; configurations load on first use (see `checkConfig`).
+startupProbe:
+  httpGet:
+    path: /v1/health
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 2
+  failureThreshold: 30
+# -- Liveness probe.
+livenessProbe:
+  httpGet:
+    path: /v1/health
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+# -- Readiness probe.
+readinessProbe:
+  httpGet:
+    path: /v1/health
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+
+# -- Resources for the server. Measured: ~130 MiB idle, ~260 MiB with the embedding model loaded (dialog rails, knowledge bases).
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# -- Pod security context. The image runs as non-root UID 10001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The root filesystem is read-only; `/tmp` is an emptyDir.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
+# -- Topology spread constraints, e.g. to spread pods across zones.
+topologySpreadConstraints: []
