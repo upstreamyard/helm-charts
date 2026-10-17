@@ -1,0 +1,79 @@
+{{- /*
+After the first install, wait until every replica has formatted its data file and
+listens, then create the marker ConfigMap. From then on a replica whose data file
+is missing runs "tigerbeetle recover" instead of "format" (see tigerbeetle.sh).
+Helm runs hooks by weight and waits for the Job before it creates the marker.
+Also rendered on upgrades while the marker is missing (e.g. after a failed install).
+*/}}
+{{- $marker := lookup "v1" "ConfigMap" .Release.Namespace (include "tigerbeetle.bootstrappedName" .) }}
+{{- if or .Release.IsInstall (not $marker) }}
+{{- $hook := ternary "post-install" "post-install,post-upgrade" .Release.IsInstall }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}-bootstrap
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: {{ $hook }}
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.bootstrap.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "tigerbeetle.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wait
+          # Uses the TigerBeetle image's busybox, so no extra image is pulled.
+          image: {{ include "tigerbeetle.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              for i in $(seq 0 $(({{ .Values.replicaCount }} - 1))); do
+                host={{ include "tigerbeetle.fullname" . }}-$i.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+                until nc -z -w 2 "$host" {{ .Values.port }}; do
+                  echo "waiting for replica $i ($host)"; sleep 3
+                done
+                echo "replica $i is listening"
+              done
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.bootstrap.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+# Marker only, deliberately not deleted on uninstall: a reinstall on the old volumes
+# must keep recovering lost replicas. Delete it together with the volumes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tigerbeetle.bootstrappedName" . }}
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: {{ $hook }}
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  bootstrapped: "true"
+{{- end }}

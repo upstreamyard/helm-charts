@@ -11,6 +11,7 @@ Helm charts maintained by [upstreamyard](https://github.com/upstreamyard), for o
 | [`automq`](charts/automq) | [AutoMQ](https://github.com/AutoMQ/automq), Kafka-compatible streaming with messages stored in S3 (diskless Kafka) | [`automqinc/automq`](https://hub.docker.com/r/automqinc/automq) (official) |
 | [`conductor`](charts/conductor) | [Conductor OSS](https://github.com/conductor-oss/conductor), a workflow orchestration engine originally built at Netflix | [`upstreamyard/conductor`](https://github.com/upstreamyard/conductor) |
 | [`nemo-guardrails`](charts/nemo-guardrails) | [NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails), an OpenAI-compatible LLM guardrails server (jailbreak, content safety, PII and dialog rails) | [`upstreamyard/nemo-guardrails`](https://github.com/upstreamyard/nemo-guardrails) |
+| [`tigerbeetle`](charts/tigerbeetle) | [TigerBeetle](https://github.com/tigerbeetle/tigerbeetle) financial transactions database: fault-tolerant 3 or 6 replica cluster, safe replica recovery, rolling upgrades, Prometheus metrics | official [`ghcr.io/tigerbeetle/tigerbeetle`](https://github.com/tigerbeetle/tigerbeetle/pkgs/container/tigerbeetle) |
 | [`xxl-job`](charts/xxl-job) | [XXL-JOB](https://github.com/xuxueli/xxl-job) admin, the distributed job scheduler for Java services | [`xuxueli/xxl-job-admin`](https://hub.docker.com/r/xuxueli/xxl-job-admin) (official XXL-JOB image) |
 
 ## Usage
