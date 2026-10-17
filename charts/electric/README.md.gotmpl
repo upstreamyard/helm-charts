@@ -1,0 +1,104 @@
+# Electric Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for the [Electric](https://github.com/electric-sql/electric) sync engine. Electric reads changes from PostgreSQL through logical replication and syncs subsets of your tables ("shapes") to web and mobile apps over HTTP, so each client keeps a live local copy. It uses Electric's official image [`electricsql/electric`](https://hub.docker.com/r/electricsql/electric).
+
+> Community chart by **upstreamyard**, not an official ElectricSQL chart. Electric is licensed under Apache-2.0.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install electric upstreamyard/electric \
+  --set electric.secret=$(openssl rand -hex 32) \
+  --set database.url='postgresql://electric:password@your-postgres:5432/app'
+```
+
+Or from the OCI registry:
+
+```bash
+helm install electric oci://ghcr.io/upstreamyard/charts/electric --set electric.secret=... --set database.url=...
+```
+
+Then request a shape, with the secret, from your backend or auth proxy:
+
+```bash
+curl "http://electric.<namespace>.svc.cluster.local:3000/v1/shape?table=items&offset=-1&secret=<your secret>"
+```
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install electric upstreamyard/electric --verify --keyring upstreamyard.gpg --set ...
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Requirements
+
+- **PostgreSQL 14 or newer** with `wal_level = logical`. This chart is tested with PostgreSQL 18. It does not deploy a database. Managed PostgreSQL services have their own switch for logical replication.
+- **A database role for Electric** with `LOGIN` and `REPLICATION`, `CREATE` on the database (Electric creates its publication on first start) and ownership of every table you sync. We tested each: without `CREATE` the pod crash-loops with `Publication "electric_publication_…" not found`, and a shape for a table the role doesn't own fails with `must be owner of table`. If your role may not own the tables, set `ELECTRIC_MANUAL_TABLE_PUBLISHING=true` in `extraEnv` and add tables to the publication yourself, see Electric's [configuration reference](https://electric.ax/docs/sync/api/config#electric-manual-table-publishing).
+- **A direct connection** for `database.url`: logical replication doesn't work through most connection poolers. Ordinary queries can go through a pooler with `database.pooledUrl`.
+- **Connections:** Electric opens a pool of 20 connections (`ELECTRIC_DB_POOL_SIZE`) plus its replication connection. Make sure `max_connections` leaves room.
+- **An auth proxy** (recommended): Electric can't decide which user may see which rows. Clients should call your backend, which checks the user, adds the secret and the allowed `table`/`where` and forwards to Electric. See Electric's [auth guide](https://electric.ax/docs/sync/guides/auth).
+
+## What the chart does
+
+- **One pod:** Electric runs as a single active instance per replication slot, coordinated by a PostgreSQL advisory lock, so the chart always runs one replica.
+- **Secret required:** the chart refuses to install without `electric.secret` or `electric.existingSecret`. Without it, anyone who can reach the Service can read every table Electric's role can read. `electric.insecure: true` turns this off for development; `helm test` then skips the secret check. Changing the secret restarts the pod.
+- **Persistent shape storage:** shape logs and metadata go to a PersistentVolumeClaim mounted at `/var/lib/electric/data`. They survive restarts: in our tests a client resumed its shape after a pod restart and after an upgrade from 1.8.0 to 1.8.1 and received only the new rows. The claim is kept on `helm uninstall` (`persistence.keep`) so a reinstall continues where it left off.
+- **Without persistence** (`persistence.enabled: false`) Electric stores shapes in an emptyDir and the chart switches it to a temporary replication slot with a random name. PostgreSQL drops the slot when the pod stops, so no slot is left behind to hold WAL. The cost: every restart makes all clients re-fetch their shapes.
+- **Probes:** `/v1/health` answers 202 while Electric starts or waits for the replication lock and 200 once active. Startup and liveness accept both. Readiness depends on the rollout strategy, see [Storage and upgrades](#storage-and-upgrades). During a PostgreSQL outage in our test, the pod became not ready, stayed running without restarts and turned active again by itself once PostgreSQL was back.
+- **Configuration:** every Electric option is an environment variable; the chart sets the connection, secret, storage, replication stream ID, log level and metrics, and you add others with `extraEnv`. Logs go to stdout without colour codes.
+- **Metrics:** `metrics.enabled` exposes Prometheus metrics on port 9090 (`/metrics`), and `metrics.serviceMonitor.enabled` adds a ServiceMonitor. Only enable them with a scraper: Electric buffers unscraped metrics in memory without limit.
+- **Security:** runs as UID 10001 with a read-only root filesystem (Electric's start script writes its runtime config to an emptyDir at `/tmp`), drops all capabilities and doesn't mount a ServiceAccount token.
+- **`helm test`** checks that Electric is active, refuses a shape request without the secret (401), and with it looks the table up in PostgreSQL (400 for a table that doesn't exist).
+
+## Storage and upgrades
+
+How the pod is replaced on `helm upgrade` depends on whether old and new pod can mount the volume at the same time:
+
+| Storage (`persistence.accessModes`) | Rollout | Readiness | Measured in our tests |
+|---|---|---|---|
+| `ReadWriteOnce` (default) | `Recreate`: old pod stops, then the new one starts | only when active (200) | about 7 seconds without service; clients retry and resume their shapes |
+| `ReadWriteMany` | `RollingUpdate`: new pod starts first, takes over the lock when the old one stops | 202 or 200 | no failed request for existing or new shapes |
+
+With `ReadWriteMany`, the new pod serves existing shapes read-only while the old pod still holds the lock; requests that would create a new shape get a 503 with `Retry-After`, which Electric's TypeScript client retries. The chart also sets `ELECTRIC_SHAPE_DB_EXCLUSIVE_MODE=true`, which Electric requires on network filesystems. Note that network filesystems (NFS, EFS) are much slower than local disks for Electric's IO-heavy storage.
+
+Set `rolloutStrategy` to override the choice, e.g. `RollingUpdate` with an `existingClaim` you know is shared.
+
+**Keep storage and slot together.** The shape data on the volume and the replication slot in PostgreSQL belong together. If you switch to a different database, change `electric.replicationStreamId`, or delete the volume, clean up the other side by hand: drop the old slot and publication (`electric_slot_<id>`, `electric_publication_<id>`) so they don't keep PostgreSQL from removing WAL, or delete the old volume.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+electric:
+  existingSecret: electric               # key: electric-secret
+  replicationStreamId: myapp
+database:
+  existingSecret: electric-db            # key: database-url
+  existingSecretPooledUrlKey: pooled-url # optional, through PgBouncer
+persistence:
+  storageClass: fast-local-ssd
+  size: 50Gi
+resources:
+  requests: { cpu: "1", memory: 1Gi }
+  limits: { memory: 4Gi }
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+```
+
+## Known issues
+
+- **Replication stream ID:** only lower-case letters, digits and underscores. Electric 1.8.1 refuses to start with a hyphen (`Invalid unquoted identifier contains special characters`), although Electric's upgrading guide uses `deploy-blue` as an example. The chart's schema rejects such IDs.
+- **WAL growth:** while Electric is stopped, its replication slot keeps PostgreSQL from removing WAL. Don't leave a release scaled down or broken for long, and drop the slot when you uninstall Electric for good.
+- At startup the log shows `Failed open sctp dynamic library: libsctp.so.1`. It's harmless: the image doesn't ship an optional library the Erlang runtime looks for.
+
+{{ template "chart.valuesSection" . }}

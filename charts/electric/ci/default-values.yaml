@@ -1,0 +1,15 @@
+# Used by chart-testing (ct install) in CI. PostgreSQL (with wal_level=logical) is deployed
+# into the "deps" namespace by the workflow before the chart is installed.
+electric:
+  secret: ci-electric-secret-0123456789
+  # Own slot per values file: each install starts with empty storage.
+  replicationStreamId: ci_default
+database:
+  url: postgresql://aegra:aegra@postgres.deps.svc:5432/aegra?sslmode=disable
+persistence:
+  size: 1Gi
+  keep: false
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
