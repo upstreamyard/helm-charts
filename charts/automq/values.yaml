@@ -1,0 +1,225 @@
+# Default values for the AutoMQ chart.
+
+image:
+  # -- Image repository. The chart uses the `-kafka` variant of AutoMQ's official image (non-root, configured by environment variables).
+  repository: automqinc/automq
+  # -- Image tag. Defaults to `<appVersion>-kafka`.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets for private registries or mirrors.
+imagePullSecrets: []
+
+# -- Override the chart name.
+nameOverride: ""
+# -- Override the full resource name prefix.
+fullnameOverride: ""
+
+# -- Cluster DNS domain, used in the addresses brokers advertise to clients.
+clusterDomain: cluster.local
+
+# -- KRaft cluster ID (22 characters, base64url). Defaults to a stable value derived from the release namespace and name. It must never change after the first install.
+clusterId: ""
+
+s3:
+  # -- Bucket for message data and the write-ahead log (required unless `config` sets `s3.data.buckets`).
+  dataBucket: ""
+  # -- Bucket for AutoMQ's operational data (logs and metrics it uploads). Defaults to `dataBucket`.
+  opsBucket: ""
+  # -- Bucket region.
+  region: us-east-1
+  # -- S3 API endpoint. Leave empty for AWS S3; set it for MinIO, Ceph, Cloudflare R2, GCS and other S3-compatible storage.
+  endpoint: ""
+  # -- Use path-style URLs (`endpoint/bucket`). Most self-hosted S3-compatible stores need `true`.
+  pathStyle: false
+  # -- How AutoMQ authenticates to S3: `static` (access key from a Secret) or `instance` (no keys; the AWS SDK's default chain finds IRSA, EKS Pod Identity or the node's instance profile).
+  authType: static
+  # -- Access key ID (`authType: static`). Ignored when `existingSecret` is set.
+  accessKey: ""
+  # -- Secret access key (`authType: static`). Ignored when `existingSecret` is set.
+  secretKey: ""
+  # -- Existing Secret with the S3 credentials (`authType: static`).
+  existingSecret: ""
+  # -- Key of the access key ID in `existingSecret`.
+  existingSecretAccessKeyKey: access-key
+  # -- Key of the secret access key in `existingSecret`.
+  existingSecretSecretKeyKey: secret-key
+
+auth:
+  # -- Require SASL/PLAIN authentication on all listeners (clients, brokers and controllers). Passwords travel unencrypted without TLS, so keep the cluster network private.
+  enabled: true
+  # -- Users that clients log in with. A password left empty is generated once and kept across upgrades. Names may use letters, digits, `.`, `_` and `-`.
+  users:
+    - name: user1
+      password: ""
+  # -- Username brokers and controllers use among themselves. It can also be used as an admin login.
+  interBrokerUser: inter_broker
+  # -- Password of `interBrokerUser`. Generated once and kept across upgrades when empty.
+  interBrokerPassword: ""
+  # -- Existing Secret with the passwords: key `inter-broker-password` plus one key per user, named like the user. Passwords must not contain `"` or `\`.
+  existingSecret: ""
+
+controller:
+  # -- Number of controller nodes (KRaft quorum voters): 1, 3 or 5. Fixed after the first install.
+  replicas: 3
+  # -- Run controllers as controllers only. `false` makes them combined controller + broker nodes; `true` needs `broker.replicas >= 1`.
+  controllerOnly: false
+  # -- JVM heap and direct memory. AutoMQ uses direct memory for its write-ahead log and block cache.
+  heapOpts: "-Xms1g -Xmx1g -XX:MetaspaceSize=96m -XX:MaxDirectMemorySize=1g"
+  # -- Container resources.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 3Gi
+    limits:
+      memory: 3Gi
+  persistence:
+    # -- Keep the KRaft metadata log on a PersistentVolumeClaim. Controllers lose the cluster metadata without it.
+    enabled: true
+    # -- Storage class (empty = cluster default).
+    storageClass: ""
+    # -- Volume size. Only cluster metadata is stored locally; messages live in S3.
+    size: 10Gi
+    # -- Access modes.
+    accessModes:
+      - ReadWriteOnce
+    # -- Annotations for the PersistentVolumeClaims.
+    annotations: {}
+  # -- Node selector.
+  nodeSelector: {}
+  # -- Tolerations.
+  tolerations: []
+  # -- Affinity. When empty, `podAntiAffinityPreset` applies.
+  affinity: {}
+  # -- Spread pods across nodes: `soft`, `hard` or empty for none.
+  podAntiAffinityPreset: soft
+  # -- Topology spread constraints.
+  topologySpreadConstraints: []
+  # -- Extra pod annotations.
+  podAnnotations: {}
+  # -- Extra pod labels.
+  podLabels: {}
+
+broker:
+  # -- Number of broker-only nodes. They store nothing locally that matters, so you can scale them up and down.
+  replicas: 0
+  # -- JVM heap and direct memory.
+  heapOpts: "-Xms1g -Xmx1g -XX:MetaspaceSize=96m -XX:MaxDirectMemorySize=1g"
+  # -- Container resources.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 3Gi
+    limits:
+      memory: 3Gi
+  persistence:
+    # -- Use a PersistentVolumeClaim for the broker's local metadata cache. Off by default: brokers rebuild it from the controllers.
+    enabled: false
+    # -- Storage class (empty = cluster default).
+    storageClass: ""
+    # -- Volume size.
+    size: 5Gi
+    # -- Access modes.
+    accessModes:
+      - ReadWriteOnce
+    # -- Annotations for the PersistentVolumeClaims.
+    annotations: {}
+  # -- Node selector.
+  nodeSelector: {}
+  # -- Tolerations.
+  tolerations: []
+  # -- Affinity. When empty, `podAntiAffinityPreset` applies.
+  affinity: {}
+  # -- Spread pods across nodes: `soft`, `hard` or empty for none.
+  podAntiAffinityPreset: soft
+  # -- Topology spread constraints.
+  topologySpreadConstraints: []
+  # -- Extra pod annotations.
+  podAnnotations: {}
+  # -- Extra pod labels.
+  podLabels: {}
+
+# -- Extra Kafka/AutoMQ server properties for all nodes, e.g. `num.partitions: 6`. They override the chart's settings.
+config: {}
+
+metrics:
+  # -- Expose Prometheus metrics (AutoMQ's built-in exporter) on port 9090.
+  enabled: true
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra ServiceMonitor labels (e.g. for your Prometheus' selector).
+    labels: {}
+
+service:
+  # -- Type of the client Service.
+  type: ClusterIP
+  # -- Port of the client Service.
+  port: 9092
+  # -- Annotations for the client Service.
+  annotations: {}
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget per node group (maxUnavailable 1).
+  enabled: true
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- ServiceAccount name (generated when empty).
+  name: ""
+  # -- ServiceAccount annotations, e.g. `eks.amazonaws.com/role-arn` for `s3.authType: instance`.
+  annotations: {}
+  # -- Mount the ServiceAccount token. Needed for IRSA and similar pod identities.
+  automountToken: false
+
+# -- Seconds a node gets to shut down. AutoMQ moves its partitions to other brokers first.
+terminationGracePeriodSeconds: 120
+
+probes:
+  startup:
+    # -- Seconds between startup checks.
+    periodSeconds: 5
+    # -- Failed checks before the pod restarts (5 s x 60 = 5 minutes to start).
+    failureThreshold: 60
+  liveness:
+    # -- Seconds between liveness checks.
+    periodSeconds: 10
+    # -- Failed checks before the pod restarts.
+    failureThreshold: 6
+  readiness:
+    # -- Seconds between readiness checks.
+    periodSeconds: 5
+    # -- Failed checks before the pod stops receiving traffic.
+    failureThreshold: 3
+
+# -- Pod security context.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Priority class for all pods.
+priorityClassName: ""
+
+# -- Extra environment variables for all nodes.
+extraEnv: []
+# -- Extra `envFrom` sources for all nodes.
+extraEnvFrom: []
+# -- Extra volumes for all nodes.
+extraVolumes: []
+# -- Extra volume mounts for all nodes.
+extraVolumeMounts: []
