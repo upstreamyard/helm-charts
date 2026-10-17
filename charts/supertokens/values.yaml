@@ -1,0 +1,152 @@
+# -- Number of SuperTokens core pods. The core keeps no local state, so it scales horizontally.
+replicaCount: 1
+
+image:
+  # -- Image repository. SuperTokens' official image for PostgreSQL.
+  repository: supertokens/supertokens-postgresql
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+supertokens:
+  # -- API key(s) your backend SDK sends in the `api-key` header (`API_KEYS`). Comma-separated, each at least 20 characters of `A-Z a-z 0-9 = -`, e.g. from `openssl rand -hex 32`. Stored in a Secret created by this chart. Required unless `existingSecret` is set: without a key, anyone who can reach the Service can manage your users.
+  apiKeys: ""
+  # -- Name of an existing Secret that holds the API key(s).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the API key(s).
+  existingSecretKey: api-keys
+  # -- Log level (`LOG_LEVEL`): `DEBUG`, `INFO`, `WARN`, `ERROR` or `NONE`. Empty keeps SuperTokens' default (`INFO`).
+  logLevel: ""
+  # -- Send anonymous usage telemetry to SuperTokens (`DISABLE_TELEMETRY` is set to the opposite).
+  telemetry: true
+  # -- Refuse to start while the database schema is missing tables or columns the core needs (`SCHEMA_CHECK_STRICT_MODE`). Keep it on: it stops an upgrade before it breaks logins. See "Upgrading".
+  schemaCheckStrictMode: true
+
+# PostgreSQL connection. Required. The core creates its tables on first start.
+database:
+  # -- Connection URI, e.g. `postgresql://user:password@postgres:5432/supertokens` (`POSTGRESQL_CONNECTION_URI`). Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  uri: ""
+  # -- Name of an existing Secret that holds the connection URI (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the connection URI.
+  existingSecretKey: uri
+  # -- PostgreSQL schema for SuperTokens' tables (`POSTGRESQL_TABLE_SCHEMA`). Empty uses `public`.
+  schema: ""
+
+# -- Extra environment variables. Every option in SuperTokens' config.yaml can be set by its upper-case name, e.g. `ACCESS_TOKEN_VALIDITY`, `PASSWORD_HASHING_ALG`, `POSTGRESQL_CONNECTION_POOL_SIZE`. See https://github.com/supertokens/supertokens-core/blob/master/config.yaml and https://github.com/supertokens/supertokens-postgresql-plugin/blob/master/config.yaml
+extraEnv: []
+# - name: ACCESS_TOKEN_VALIDITY
+#   value: "3600"
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+
+# -- Extra volumes for the pods.
+extraVolumes: []
+# -- Extra volume mounts for the SuperTokens container.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port. SuperTokens' SDKs default to port 3567 in `connectionURI`.
+  port: 3567
+
+ingress:
+  # -- Create an Ingress. Usually not needed: only your backend talks to the core, never browsers or apps. If you enable it, keep `supertokens.apiKeys` set.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: supertokens.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. SuperTokens does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds the pod waits after it's removed from the Service before the core is told to stop. The image's start script ignores `SIGTERM`, so the chart stops the core itself in a `preStop` hook.
+shutdownDelaySeconds: 5
+
+# -- Seconds Kubernetes waits after the `preStop` hook before killing the container.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe on `/hello`, which answers only once the core is up and can query the database.
+startupProbe:
+  httpGet:
+    path: /hello
+    port: http
+  periodSeconds: 2
+  timeoutSeconds: 5
+  failureThreshold: 60
+# -- Liveness probe. A TCP check on purpose: `/hello` fails while the database is down, and restarting the core doesn't help then.
+livenessProbe:
+  tcpSocket:
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+# -- Readiness probe on `/hello`. Pods leave the Service while they can't reach the database.
+readinessProbe:
+  httpGet:
+    path: /hello
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Resources for the SuperTokens container. The core (Java) used about 200 MiB idle in our tests.
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    memory: 1Gi
+
+# -- Pod security context. The image runs as the `supertokens` user, UID 1000.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The core's temp files go to emptyDirs, so the root filesystem is read-only.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

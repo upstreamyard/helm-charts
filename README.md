@@ -1,13 +1,21 @@
+<img src="logo.png" alt="upstreamyard logo" width="120" align="right">
+
 # upstreamyard Helm charts
 
 Helm charts maintained by [upstreamyard](https://github.com/upstreamyard), for our own container images and for projects' official images.
 
 | Chart | App | Image |
 |---|---|---|
+| [`activemq`](charts/activemq) | [Apache ActiveMQ Classic](https://github.com/apache/activemq) message broker (JMS, AMQP, STOMP, MQTT): single broker or high-availability master/slave, metrics | [`upstreamyard/activemq`](https://github.com/upstreamyard/activemq) |
 | [`aegra`](charts/aegra) | [Aegra](https://github.com/aegra/aegra), a self-hosted alternative to LangGraph Platform | [`upstreamyard/aegra`](https://github.com/upstreamyard/aegra) |
 | [`automq`](charts/automq) | [AutoMQ](https://github.com/AutoMQ/automq), Kafka-compatible streaming with messages stored in S3 (diskless Kafka) | [`automqinc/automq`](https://hub.docker.com/r/automqinc/automq) (official) |
+| [`conductor`](charts/conductor) | [Conductor OSS](https://github.com/conductor-oss/conductor), a workflow orchestration engine originally built at Netflix | [`upstreamyard/conductor`](https://github.com/upstreamyard/conductor) |
 | [`nemo-guardrails`](charts/nemo-guardrails) | [NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails), an OpenAI-compatible LLM guardrails server (jailbreak, content safety, PII and dialog rails) | [`upstreamyard/nemo-guardrails`](https://github.com/upstreamyard/nemo-guardrails) |
 | [`postal`](charts/postal) | [Postal](https://github.com/postalserver/postal), a mail delivery platform for sending and receiving email | official `ghcr.io/postalserver/postal` |
+| [`shardingsphere-proxy`](charts/shardingsphere-proxy) | [Apache ShardingSphere-Proxy](https://github.com/apache/shardingsphere), a database proxy for sharding, read/write splitting, encryption and masking in front of MySQL and PostgreSQL | [`upstreamyard/shardingsphere-proxy`](https://github.com/upstreamyard/shardingsphere-proxy) |
+| [`supertokens`](charts/supertokens) | [SuperTokens](https://github.com/supertokens/supertokens-core), the open-source authentication server (sessions, passwordless, social login, MFA) | [`supertokens/supertokens-postgresql`](https://hub.docker.com/r/supertokens/supertokens-postgresql) (official) |
+| [`tigerbeetle`](charts/tigerbeetle) | [TigerBeetle](https://github.com/tigerbeetle/tigerbeetle) financial transactions database: fault-tolerant 3 or 6 replica cluster, safe replica recovery, rolling upgrades, Prometheus metrics | official [`ghcr.io/tigerbeetle/tigerbeetle`](https://github.com/tigerbeetle/tigerbeetle/pkgs/container/tigerbeetle) |
+| [`xxl-job`](charts/xxl-job) | [XXL-JOB](https://github.com/xuxueli/xxl-job) admin, the distributed job scheduler for Java services | [`xuxueli/xxl-job-admin`](https://hub.docker.com/r/xuxueli/xxl-job-admin) (official XXL-JOB image) |
 
 ## Usage
 

@@ -1,0 +1,3 @@
+# Releases the xxl-job chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: xuxueli/xxl-job
+  image: docker.io/xuxueli/xxl-job-admin
