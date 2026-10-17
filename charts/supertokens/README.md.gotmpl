@@ -1,0 +1,98 @@
+# SuperTokens Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for the [SuperTokens](https://github.com/supertokens/supertokens-core) core, the open-source authentication server behind SuperTokens' backend SDKs: sessions, email/password, passwordless, social and enterprise login, MFA, roles and multi-tenancy. It uses SuperTokens' official image [`supertokens/supertokens-postgresql`](https://hub.docker.com/r/supertokens/supertokens-postgresql).
+
+> Community chart by **upstreamyard**, not an official SuperTokens chart. SuperTokens is © SuperTokens Inc., licensed under Apache-2.0; its paid features (account linking, multi-tenancy, MFA, dashboard logins, OAuth provider, SAML, security features) need a SuperTokens licence key and fall under the licence in its `ee/` folder.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install supertokens upstreamyard/supertokens \
+  --set supertokens.apiKeys=$(openssl rand -hex 32) \
+  --set database.uri='postgresql://user:password@your-postgres:5432/supertokens'
+```
+
+Or from the OCI registry:
+
+```bash
+helm install supertokens oci://ghcr.io/upstreamyard/charts/supertokens --set supertokens.apiKeys=... --set database.uri=...
+```
+
+Then point your backend SDK at the core, with the same API key:
+
+```js
+supertokens.init({
+  supertokens: {
+    connectionURI: "http://supertokens.<namespace>.svc.cluster.local:3567",
+    apiKey: "<your API key>",
+  },
+  // ...
+});
+```
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install supertokens upstreamyard/supertokens --verify --keyring upstreamyard.gpg --set ...
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Requirements
+
+- **PostgreSQL** (required). SuperTokens' notes for 12.2 assume PostgreSQL 14 or newer; this chart is tested with PostgreSQL 18. This chart does not deploy a database.
+- Your backend, running one of SuperTokens' backend SDKs, must reach the Service. Browsers and apps talk to your backend, not to the core.
+
+## What the chart does
+
+- **Configuration:** the core reads every option of its `config.yaml` from an environment variable with the upper-case name (`ACCESS_TOKEN_VALIDITY`, `PASSWORD_HASHING_ALG`, …). The chart sets the API keys, the database URI, the table schema, log level, telemetry and the schema check; add others with `extraEnv`. Logs go to stdout (`kubectl logs`), not to files in the container. At SuperTokens' default level `INFO` every request is logged, including the probes' (two lines every 5 seconds per pod); `supertokens.logLevel: WARN` keeps only warnings and errors.
+- **API key required:** the chart refuses to install without `supertokens.apiKeys` or `supertokens.existingSecret`. Without a key, anyone who can reach the core can create, read and delete users. Changing `supertokens.apiKeys` restarts the pods. To rotate a key without failed requests, add the new key next to the old one (`old,new`), switch your backend to the new key, then remove the old one: during a rollout, old and new pods briefly serve side by side.
+- **No migration Job:** on a fresh database the core creates its tables itself. Upgrades can need manual SQL, see [Upgrading](#upgrading).
+- **Probes:** `/hello` for startup and readiness. It returns 200 only while the core can query the database, so during a database outage pods leave the Service instead of serving errors. Liveness is a TCP check, because restarting the core doesn't fix a database outage.
+- **Several replicas:** the core keeps no local state, so `replicaCount` can be raised. In our tests, two pods starting at once on an empty database created the schema without errors, and a rolling update under constant requests had no failed request.
+- **Shutdown:** the image's start script runs as PID 1 and ignores `SIGTERM`, which would leave every pod hanging until it's killed. The chart's `preStop` hook waits `shutdownDelaySeconds` (5) while the pod leaves the Service, then sends `SIGTERM` to the core, which shuts down cleanly.
+- **Security:** runs as the image's `supertokens` user (UID 1000) with a read-only root filesystem (the core's temp files go to an emptyDir), drops all capabilities, and doesn't mount a ServiceAccount token.
+- **`helm test`** checks `/hello`, that a call without the API key is refused (401) and that a call with it reads the database.
+
+## Upgrading
+
+SuperTokens creates missing tables at startup but never adds columns to existing ones. Some versions therefore need SQL run by hand **before** the upgrade, listed under "Migration" in [SuperTokens' CHANGELOG](https://github.com/supertokens/supertokens-core/blob/master/CHANGELOG.md) (e.g. 12.1.0 added two columns to `session_info`). Since 12.2.0 the core checks the schema at startup and, with `supertokens.schemaCheckStrictMode: true` (the default), refuses to start until the SQL has been run.
+
+Before `helm upgrade` to a new SuperTokens version:
+
+1. Read the "Migration" sections of every version between yours and the new one.
+2. Run the SQL against your database (use `CREATE INDEX CONCURRENTLY` on large tables, as the notes say).
+3. Upgrade the chart.
+
+If you miss a step, nothing breaks for your users. We tested 12.0.10 → 12.2.0 without the SQL: the new pod exits with `Database schema is out of date` and prints the exact `ALTER TABLE` statements in its log (`kubectl logs`), while the old pods keep serving and `helm upgrade` times out. After running those statements, the new pod started on its next restart and the rollout finished; existing users could sign in. Run `helm upgrade` once more to mark the release as deployed.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+replicaCount: 3
+supertokens:
+  existingSecret: supertokens          # key: api-keys
+  telemetry: false
+database:
+  existingSecret: supertokens-db       # key: uri
+resources:
+  requests: { cpu: 500m, memory: 512Mi }
+  limits: { memory: 1Gi }
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: supertokens }
+```
+
+{{ template "chart.valuesSection" . }}
