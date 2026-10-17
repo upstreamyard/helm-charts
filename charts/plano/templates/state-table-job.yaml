@@ -1,0 +1,86 @@
+{{- if and (include "plano.postgresEnabled" .) .Values.stateStorage.postgres.createTable.enabled }}
+{{- $useHookSecret := not .Values.stateStorage.postgres.existingSecret }}
+{{- if $useHookSecret }}
+# Hooks run before the chart's other resources, so the Job gets its own short-lived copy
+# of the connection string.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "plano.fullname" . }}-state-table
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  postgres-url: {{ .Values.stateStorage.postgres.url | b64enc | quote }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "plano.fullname" . }}-state-table
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+    app.kubernetes.io/component: state-table
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.stateStorage.postgres.createTable.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.stateStorage.postgres.createTable.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        # Not the Service's selector labels, so the Job pod never receives traffic.
+        app.kubernetes.io/name: {{ include "plano.name" . }}-state-table
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: state-table
+    spec:
+      restartPolicy: Never
+      # Not the chart's ServiceAccount: it doesn't exist yet during the first install.
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: create-table
+          image: {{ .Values.stateStorage.postgres.createTable.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["sh", "-c", 'psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "$SCHEMA_SQL"']
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                {{- include "plano.postgresSecretRef" (list . (printf "%s-state-table" (include "plano.fullname" .))) | nindent 16 }}
+            - name: SCHEMA_SQL
+              value: {{ .Files.Get "files/conversation_states.sql" | quote }}
+            - name: HOME
+              value: /tmp
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.stateStorage.postgres.createTable.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
