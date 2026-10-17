@@ -1,0 +1,3 @@
+# Releases the supertokens chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: supertokens/supertokens-core
+  image: docker.io/supertokens/supertokens-postgresql

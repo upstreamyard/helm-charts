@@ -1,0 +1,17 @@
+# Used by chart-testing (ct install) in CI. The mock LLM runs in the "deps" namespace
+# (.github/ci/deps.yaml); helm test sends a chat completion through Plano to it.
+config:
+  model_providers:
+    - model: openai/gpt-4o-mini
+      access_key: $OPENAI_API_KEY
+      base_url: http://mock-llm.deps.svc:8080
+      default: true
+secretEnv:
+  OPENAI_API_KEY: sk-ci-placeholder
+tests:
+  chatCompletion:
+    enabled: true
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi

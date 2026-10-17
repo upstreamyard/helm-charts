@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "xxl-job.fullname" . }}-test-login
+  labels:
+    {{- include "xxl-job.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: check
+      # The admin image contains curl, so no extra image is pulled.
+      image: {{ include "xxl-job.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      # Readiness, then a sign-in with a user that doesn't exist: the admin looks the
+      # user up in MySQL and answers "invalid" only if the database and its tables work.
+      # (A real sign-in would end that user's web session, so the test doesn't do one.)
+      command:
+        - sh
+        - -c
+        - >-
+          base=http://{{ include "xxl-job.fullname" . }}:{{ .Values.service.port }}{{ include "xxl-job.basePath" . }};
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+          curl -fsS "$base/actuator/health/readiness" && break; sleep 3; done &&
+          out=$(curl -fsS -X POST "$base/auth/doLogin" --data-urlencode userName=helm-test-no-such-user --data-urlencode password=x) &&
+          echo "$out" &&
+          echo "$out" | grep -q '"code":500' &&
+          echo "$out" | grep -q '"success":false' &&
+          ! echo "$out" | grep -qi 'exception'
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

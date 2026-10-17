@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "plano.fullname" . }}-test
+  labels:
+    app.kubernetes.io/name: {{ include "plano.name" . }}-test
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{ include "plano.clientLabel" . }}: "true"
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      # The Plano image has Python, so no extra image is pulled.
+      image: {{ include "plano.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["python", "-c", {{ .Files.Get "files/test.py" | quote }}]
+      env:
+        - name: PLANO_URL
+          value: http://{{ include "plano.fullname" . }}:{{ include "plano.llmPort" . }}
+        - name: TEST_MODEL
+          value: {{ if .Values.tests.chatCompletion.enabled }}{{ .Values.tests.chatCompletion.model | quote }}{{ else }}""{{ end }}
+        - name: PYTHONDONTWRITEBYTECODE
+          value: "1"
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

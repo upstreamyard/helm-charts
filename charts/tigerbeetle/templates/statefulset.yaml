@@ -1,0 +1,171 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: {{ include "tigerbeetle.fullname" . }}-headless
+  # All replicas start together: a recovering replica needs the others running.
+  podManagementPolicy: Parallel
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "tigerbeetle.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tigerbeetle.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/scripts: {{ include (print $.Template.BasePath "/scripts-configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: prepare
+          image: {{ include "tigerbeetle.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "/scripts/tigerbeetle.sh", "prepare"]
+          env:
+            {{- include "tigerbeetle.env" . | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "tigerbeetle.volumeMounts" . | nindent 12 }}
+      containers:
+        - name: tigerbeetle
+          image: {{ include "tigerbeetle.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/sbin/tini", "--", "/bin/sh", "/scripts/tigerbeetle.sh", "start"]
+          args:
+            {{- if .Values.metrics.enabled }}
+            - --experimental
+            - --statsd=127.0.0.1:9125
+            {{- end }}
+            {{- range .Values.tigerbeetle.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            {{- include "tigerbeetle.env" . | nindent 12 }}
+          ports:
+            - name: tigerbeetle
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "tigerbeetle.volumeMounts" . | nindent 12 }}
+        {{- if .Values.metrics.enabled }}
+        - name: statsd-exporter
+          image: "{{ .Values.metrics.image.repository }}:{{ .Values.metrics.image.tag }}"
+          imagePullPolicy: {{ .Values.metrics.image.pullPolicy }}
+          args:
+            - --statsd.listen-udp=127.0.0.1:9125
+            - --statsd.listen-tcp=
+            - --web.listen-address=:{{ .Values.metrics.port }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.metrics.resources | nindent 12 }}
+        {{- end }}
+      volumes:
+        - name: scripts
+          configMap:
+            name: {{ include "tigerbeetle.fullname" . }}-scripts
+        - name: bootstrap
+          configMap:
+            name: {{ include "tigerbeetle.bootstrappedName" . }}
+            optional: true
+        {{- if not .Values.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if eq .Values.podAntiAffinityPreset "soft" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "tigerbeetle.selectorLabels" . | nindent 20 }}
+      {{- else if eq .Values.podAntiAffinityPreset "hard" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "tigerbeetle.selectorLabels" . | nindent 18 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "tigerbeetle.selectorLabels" . | nindent 10 }}
+        {{- with .Values.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.persistence.accessModes | nindent 10 }}
+        {{- with .Values.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}
