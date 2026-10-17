@@ -1,0 +1,192 @@
+# -- Number of Logto pods. Logto keeps no state in the pod, so several replicas share the PostgreSQL database. Redis (`redis.url`) is optional and only adds a shared cache.
+replicaCount: 1
+
+image:
+  # -- Image repository. The official Logto image.
+  repository: svhd/logto
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# PostgreSQL connection. Required: PostgreSQL 14 or newer (tested with 17). The user must be
+# allowed to create roles (`CREATEROLE` or superuser), because Logto creates PostgreSQL roles
+# for its tenants when the database is first set up.
+database:
+  # -- Connection string `postgres://user:password@host:5432/logto`. URL-encode special characters in the password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  url: ""
+  # -- Name of an existing Secret that holds the connection string (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the connection string.
+  existingSecretKey: database-url
+
+# Redis connection. Optional: a shared cache that reduces database reads. Logto works without it,
+# also with several replicas.
+redis:
+  # -- Redis URL, e.g. `redis://redis:6379`. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  url: ""
+  # -- Name of an existing Secret that holds the Redis URL.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the Redis URL.
+  existingSecretKey: redis-url
+
+# -- Public URL of Logto (`ENDPOINT`), e.g. `https://auth.example.com`. It becomes the OIDC issuer, so set it before your apps use Logto. Empty means `http://localhost:3001`.
+endpoint: ""
+
+adminConsole:
+  # -- Serve the Admin Console on port 3002. If false, the chart sets `ADMIN_DISABLE_LOCALHOST=1` and doesn't expose the admin port.
+  enabled: true
+  # -- Public URL of the Admin Console (`ADMIN_ENDPOINT`), e.g. `https://admin.auth.example.com`. Empty means `http://localhost:3002`.
+  endpoint: ""
+
+# -- Trust `X-Forwarded-*` headers (`TRUST_PROXY_HEADER`). Needed behind an Ingress or load balancer that terminates TLS.
+trustProxyHeader: true
+
+secretVault:
+  # -- Key encryption key for Logto's Secret Vault (`SECRET_VAULT_KEK`): a base64-encoded 32-byte key, e.g. `openssl rand -base64 32`. Optional; the Secret Vault doesn't work without it. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  kek: ""
+  # -- Name of an existing Secret that holds the key encryption key.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the key encryption key.
+  existingSecretKey: secret-vault-kek
+
+migrations:
+  # -- Set up the database (`npm run cli db seed -- --swe`, skipped if it's already set up) and deploy database alterations (`npm run alteration deploy latest`) in a Job before every install and upgrade (Helm hook). Logto refuses to start until the alterations for its version are deployed. If false, you run these commands yourself.
+  enabled: true
+  # -- Retries of the Job before the install/upgrade fails.
+  backoffLimit: 3
+  # -- Maximum runtime of the Job in seconds.
+  activeDeadlineSeconds: 600
+  # -- Resources for the Job.
+  resources: {}
+
+# -- Extra environment variables for Logto, e.g. `CASE_SENSITIVE_USERNAME`, `DATABASE_STATEMENT_TIMEOUT`, proxy settings. See https://docs.logto.io/concepts/core-service/configuration
+extraEnv: []
+# - name: DATABASE_STATEMENT_TIMEOUT
+#   value: DISABLE_TIMEOUT   # for PgBouncer or RDS Proxy
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# - secretRef:
+#     name: logto-extra
+
+# -- Extra volumes for the pod, e.g. TLS certificates for `HTTPS_CERT_PATH`.
+extraVolumes: []
+# -- Extra volume mounts for the Logto container.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Port of the Logto core service (sign-in pages, OIDC, Management API).
+  port: 3001
+  # -- Port of the Admin Console (only when `adminConsole.enabled`).
+  adminPort: 3002
+
+ingress:
+  # -- Create an Ingress for the Logto core service (port 3001). Its host should match `endpoint`.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: auth.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+adminIngress:
+  # -- Create an Ingress for the Admin Console (port 3002). Its host should match `adminConsole.endpoint`. The first visitor of a new installation creates the admin account, so restrict access (e.g. by IP) until that is done.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: admin.auth.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Logto does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM. Logto stops within a second.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe on `/api/status` (answers 204 as soon as the server is up).
+startupProbe:
+  httpGet:
+    path: /api/status
+    port: http
+  periodSeconds: 2
+  failureThreshold: 30
+# -- Liveness probe on `/api/status`.
+livenessProbe:
+  httpGet:
+    path: /api/status
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+# -- Readiness probe on `/api/status`.
+readinessProbe:
+  httpGet:
+    path: /api/status
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Resources for the Logto container.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# -- Pod security context. Runs Logto as non-root UID 10001 (the image itself defaults to root).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

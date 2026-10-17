@@ -1,0 +1,5 @@
+# Releases the electric chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: electric-sql/electric
+  image: docker.io/electricsql/electric
+  # The repository releases several packages; the image follows the sync service.
+  release_prefix: "@core/sync-service@"

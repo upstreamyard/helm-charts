@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "falkordb.fullname" . }}-test-graph
+  # Not the pods' selector labels: the Service, the PodDisruptionBudget and
+  # anti-affinity must not count the test pod.
+  labels:
+    helm.sh/chart: {{ include "falkordb.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: test
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    # Writes a node to a test graph on the primary, reads it back from every pod
+    # (replicas included), then deletes the graph. Uses redis-cli from the image.
+    - name: graph
+      image: {{ include "falkordb.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        {{- include "falkordb.commonEnv" . | nindent 8 }}
+        - name: ARCHITECTURE
+          value: {{ .Values.architecture | quote }}
+        - name: SERVICE
+          value: {{ printf "%s.%s.svc.%s" (include "falkordb.fullname" .) .Release.Namespace .Values.clusterDomain | quote }}
+      command:
+        - sh
+        - -c
+        - |
+          set -eu
+          cli() { timeout 10 redis-cli --no-auth-warning --raw "$@"; }
+          if [ "$ARCHITECTURE" = replication ]; then
+            primary=$(cli -h "$SERVICE" -p 26379 SENTINEL get-master-addr-by-name "$MASTER_SET" | head -n1)
+          else
+            primary=$SERVICE
+          fi
+          echo "Primary: $primary"
+          graph=helm-test-$(date +%s)
+          token=$(od -An -N4 -tu4 /dev/urandom | tr -d ' ')
+          cli -h "$primary" GRAPH.QUERY "$graph" "CREATE (:Test {token: $token})" | grep -q 'Nodes created: 1'
+          echo "Wrote token $token to graph $graph"
+          i=0
+          while [ "$i" -lt "$REPLICAS" ]; do
+            host=$STATEFULSET_NAME-$i.$HEADLESS_DOMAIN
+            n=0
+            until cli -h "$host" GRAPH.RO_QUERY "$graph" "MATCH (t:Test) RETURN t.token" | grep -qx "$token"; do
+              n=$((n + 1))
+              [ "$n" -lt 30 ] || { echo "FAIL: $host does not return the token"; cli -h "$primary" GRAPH.DELETE "$graph"; exit 1; }
+              sleep 1
+            done
+            echo "Read it back from $host"
+            i=$((i + 1))
+          done
+          cli -h "$primary" GRAPH.DELETE "$graph" >/dev/null
+          echo OK
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

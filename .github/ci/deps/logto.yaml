@@ -1,0 +1,38 @@
+# Test services for the logto chart in kind; CI starts them when the chart changes. Not for production.
+# PostgreSQL 17 for the logto chart (the version Logto's own Compose file uses).
+# PostgreSQL 17 for the logto chart (the version Logto's own Compose file uses).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logto-postgres
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: logto-postgres }
+  template:
+    metadata:
+      labels: { app: logto-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - { name: POSTGRES_USER, value: logto }
+            - { name: POSTGRES_PASSWORD, value: logto }
+            - { name: POSTGRES_DB, value: logto }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "logto", "-d", "logto"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logto-postgres
+  namespace: deps
+spec:
+  selector: { app: logto-postgres }
+  ports:
+    - port: 5432

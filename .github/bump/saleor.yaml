@@ -1,0 +1,7 @@
+# Releases the saleor chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: saleor/saleor
+  image: ghcr.io/saleor/saleor
+- project: saleor/saleor-dashboard
+  image: ghcr.io/saleor/saleor-dashboard
+  # Released separately; the chart pins its tag in values.yaml.
+  values_path: .dashboard.image.tag
