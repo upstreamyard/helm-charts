@@ -1,0 +1,3 @@
+# Releases the dolt chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: dolthub/dolt
+  image: docker.io/dolthub/dolt-sql-server

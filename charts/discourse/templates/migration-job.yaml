@@ -1,0 +1,32 @@
+{{- if .Values.migrations.enabled }}
+{{- /*
+Discourse has two kinds of migrations: regular ones (db/migrate) only add to the schema,
+so the running version keeps working; post-deployment ones (db/post_migrate) remove
+things the old version may still use. The pre-install/pre-upgrade Job runs the regular
+ones, the post-install/post-upgrade Job the rest once all pods run the new version.
+
+Helm hooks run before the release's normal resources exist, so the pre Job cannot use
+the regular Secret on first install. A short-lived hook copy of the Secret is created
+first (weight -10) and deleted together with the Job once migrations succeeded.
+*/}}
+{{- $hookSecret := printf "%s-migrate" (include "discourse.fullname" .) }}
+{{- if include "discourse.createSecret" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookSecret }}
+  labels:
+    {{- include "discourse.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- include "discourse.secretData" . | nindent 2 }}
+---
+{{- end }}
+{{ include "discourse.migrationJob" (dict "root" . "name" "migrate" "hook" "pre-install,pre-upgrade" "secret" $hookSecret "skipPost" true) }}
+---
+{{ include "discourse.migrationJob" (dict "root" . "name" "post-migrate" "hook" "post-install,post-upgrade" "secret" (include "discourse.fullname" .) "skipPost" false) }}
+{{- end }}

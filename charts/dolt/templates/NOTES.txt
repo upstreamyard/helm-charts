@@ -1,0 +1,39 @@
+Dolt {{ default .Chart.AppVersion .Values.image.tag }} is starting ({{ if include "dolt.ha" . }}{{ .Values.replicaCount }} servers, primary/standby replication{{ else }}1 server{{ end }}).
+{{- $secret := include "dolt.secretName" . }}
+
+Credentials:
+  root:
+    kubectl get secret -n {{ .Release.Namespace }} {{ $secret }} -o jsonpath='{.data.{{ include "dolt.rootPasswordKey" . }}}' | base64 -d
+{{- if .Values.auth.username }}
+  {{ .Values.auth.username }} (all privileges on {{ .Values.auth.database }}, for your applications):
+    kubectl get secret -n {{ .Release.Namespace }} {{ $secret }} -o jsonpath='{.data.{{ include "dolt.userPasswordKey" . }}}' | base64 -d
+{{- end }}
+
+Clients in the cluster (MySQL protocol):
+  read-write: {{ include "dolt.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+{{- if include "dolt.ha" . }}
+  read-only:  {{ include "dolt.readName" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }} (primary and standbys)
+
+  The read-write Service follows the primary. Failover is manual (Dolt never promotes a
+  standby by itself). Make another server the primary:
+    planned:         kubectl exec -n {{ .Release.Namespace }} {{ include "dolt.fullname" . }}-1 -c dolt -- /etc/dolt/promote.sh
+    primary is down: kubectl exec -n {{ .Release.Namespace }} {{ include "dolt.fullname" . }}-1 -c dolt -- /etc/dolt/promote.sh --force
+{{- end }}
+
+SQL shell:
+  kubectl exec -it -n {{ .Release.Namespace }} {{ include "dolt.fullname" . }}-0 -c dolt -- bash -c 'DOLT_CLI_PASSWORD=$DOLT_ROOT_PASSWORD dolt --host 127.0.0.1 --user root --no-tls sql'
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics: port 11228 (/metrics) on every server{{ if .Values.metrics.serviceMonitor.enabled }}, scraped by the ServiceMonitor{{ end }}.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence.enabled=false. All databases are lost when a pod is deleted.
+{{- end }}
+{{- if and (include "dolt.ha" .) (not .Values.networkPolicy.enabled) }}
+
+NOTE: replication between the servers (port 50051) is plain HTTP inside the cluster.
+Set networkPolicy.enabled=true to accept it only from this release's servers.
+{{- end }}
+
+Check it: helm test -n {{ .Release.Namespace }} {{ .Release.Name }}

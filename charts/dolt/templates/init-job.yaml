@@ -1,0 +1,89 @@
+{{- if .Values.auth.database }}
+{{- $secret := include "dolt.secretName" . }}
+# Creates auth.database and auth.username on the primary after every install and upgrade
+# (idempotent; the user's password is set again from the Secret). Standbys get both by
+# replication.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "dolt.fullname" . }}-init
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+    app.kubernetes.io/component: init
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        # Not the servers' selector labels: this pod must not join their Services.
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: init
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: init
+          image: {{ include "dolt.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: HOME
+              value: /tmp
+            - name: DOLT_ROOT_PATH
+              value: /tmp
+            - name: DOLT_CLI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret }}
+                  key: {{ include "dolt.rootPasswordKey" . }}
+            {{- if .Values.auth.username }}
+            - name: USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret }}
+                  key: {{ include "dolt.userPasswordKey" . }}
+            {{- end }}
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              q="CREATE DATABASE IF NOT EXISTS \`{{ .Values.auth.database }}\`;"
+              {{- if .Values.auth.username }}
+              pw=${USER_PASSWORD//\\/\\\\}; pw=${pw//\'/\\\'}
+              q+=" CREATE USER IF NOT EXISTS '{{ .Values.auth.username }}'@'%' IDENTIFIED BY '$pw';"
+              q+=" ALTER USER '{{ .Values.auth.username }}'@'%' IDENTIFIED BY '$pw';"
+              q+=" GRANT ALL ON \`{{ .Values.auth.database }}\`.* TO '{{ .Values.auth.username }}'@'%';"
+              {{- end }}
+              # Waits up to 5 minutes for the primary to accept writes.
+              for i in $(seq 1 150); do
+                if out=$(dolt --host {{ include "dolt.fullname" . }} --port {{ .Values.service.port }} --user root --no-tls sql -q "$q" 2>&1); then
+                  echo "Database {{ .Values.auth.database }}{{ with .Values.auth.username }} and user {{ . }}{{ end }} are ready."; exit 0
+                fi
+                [ $((i % 15)) = 1 ] && echo "Waiting for the primary: $out"
+                sleep 2
+              done
+              echo "The primary didn't accept writes within 5 minutes: $out" >&2; exit 1
+          {{- with .Values.init.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}
