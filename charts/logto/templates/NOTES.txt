@@ -1,0 +1,24 @@
+Logto {{ .Chart.AppVersion }} is deployed as "{{ include "logto.fullname" . }}" ({{ .Values.replicaCount }} replica(s)).
+{{- if .Values.migrations.enabled }}
+The database was set up / altered by a Job before this release.
+{{- end }}
+
+Logto (sign-in, OIDC, Management API):
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "logto.fullname" . }} 3001:{{ .Values.service.port }}
+  # OIDC discovery: http://localhost:3001/oidc/.well-known/openid-configuration
+{{- if .Values.adminConsole.enabled }}
+
+Admin Console:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "logto.fullname" . }} 3002:{{ .Values.service.adminPort }}
+  # then browse to http://localhost:3002
+
+IMPORTANT: on a new installation, the FIRST person who opens the Admin Console
+creates the admin account. Do that right away, before exposing the Admin Console.
+{{- end }}
+{{- if not .Values.endpoint }}
+
+NOTE: endpoint is empty, so Logto's issuer is http://localhost:3001. Set endpoint to
+your public URL (e.g. https://auth.example.com) before apps rely on Logto.
+{{- end }}

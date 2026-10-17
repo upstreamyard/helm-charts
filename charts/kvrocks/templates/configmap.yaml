@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kvrocks.fullname" . }}
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+data:
+  # Passwords and replication settings are added at startup (scripts-configmap.yaml).
+  kvrocks.conf: |
+    bind 0.0.0.0
+    port {{ .Values.port }}
+    dir /var/lib/kvrocks
+    pidfile /var/run/kvrocks/kvrocks.pid
+    log-dir stdout
+    daemonize no
+    workers {{ .Values.kvrocks.workers }}
+    rocksdb.block_cache_size {{ .Values.kvrocks.blockCacheSize }}
+    rocksdb.write_buffer_size {{ .Values.kvrocks.writeBufferSize }}
+    {{- range $k, $v := .Values.kvrocks.config }}
+    {{ $k }} {{ $v }}
+    {{- end }}

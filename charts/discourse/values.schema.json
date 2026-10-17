@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "discourse": {
+      "type": "object",
+      "properties": {
+        "hostname": { "type": "string" },
+        "secretKeyBase": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{128})?$",
+          "description": "128 lowercase hex characters (openssl rand -hex 64); Discourse ignores other values"
+        },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" },
+        "developerEmails": { "type": "string" },
+        "notificationEmail": { "type": "string" }
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "name": { "type": "string", "minLength": 1 },
+        "username": { "type": "string", "minLength": 1 },
+        "password": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "db": { "type": "integer", "minimum": 0 },
+        "password": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" }
+      }
+    },
+    "smtp": {
+      "type": "object",
+      "properties": {
+        "address": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" },
+        "enableStartTls": { "type": "boolean" }
+      }
+    },
+    "web": {
+      "type": "object",
+      "properties": { "workers": { "type": "integer", "minimum": 1 } }
+    },
+    "sidekiq": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 0 },
+        "concurrency": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "migrations": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "backoffLimit": { "type": "integer", "minimum": 0 },
+        "activeDeadlineSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "uploads": { "$ref": "#/definitions/volume" },
+        "backups": { "$ref": "#/definitions/volume" }
+      }
+    },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 }
+  },
+  "definitions": {
+    "volume": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "accessModes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["ReadWriteOnce", "ReadWriteMany", "ReadWriteOncePod", "ReadOnlyMany"] }
+        },
+        "size": { "type": "string" }
+      }
+    }
+  }
+}

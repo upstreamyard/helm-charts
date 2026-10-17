@@ -1,0 +1,24 @@
+# Test services for the discourse chart in kind; CI starts them when the chart changes. Not for production.
+# The database "discourse" on the shared PostgreSQL for the discourse chart.
+# Creates the database "discourse" on the shared PostgreSQL (.github/ci/deps/shared.yaml).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: discourse-database
+  namespace: deps
+spec:
+  backoffLimit: 30
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: psql
+          image: pgvector/pgvector:pg18
+          env:
+            - { name: PGHOST, value: postgres.deps.svc }
+            - { name: PGUSER, value: aegra }
+            - { name: PGPASSWORD, value: aegra }
+            - { name: PGDATABASE, value: aegra }
+          command: ["sh", "-ec"]
+          args:
+            - psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'discourse'" | grep -q 1 || psql -c 'CREATE DATABASE discourse'

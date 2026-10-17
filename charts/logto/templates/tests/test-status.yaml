@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "logto.fullname" . }}-test-status
+  labels:
+    {{- include "logto.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: check
+      # The Logto image contains wget (no curl), so no extra image is pulled.
+      image: {{ include "logto.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      # Server status, then the sign-in experience, which Logto reads from the
+      # database (it answers 500 when the database is not set up or unreachable).
+      command:
+        - sh
+        - -c
+        - >-
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+          wget -q -O /dev/null http://{{ include "logto.fullname" . }}:{{ .Values.service.port }}/api/status && break; sleep 3; done &&
+          wget -q -O - http://{{ include "logto.fullname" . }}:{{ .Values.service.port }}/api/.well-known/sign-in-exp | grep -q '"signInMode"'
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

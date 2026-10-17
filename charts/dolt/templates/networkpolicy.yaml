@@ -1,0 +1,38 @@
+{{- if .Values.networkPolicy.enabled }}
+# MySQL port: from the selected clients (default: anywhere). Replication port: only from
+# the other servers of this release. Metrics port: from anywhere.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "dolt.fullname" . }}
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "dolt.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: 3306
+      {{- with .Values.networkPolicy.allowedClients }}
+      from:
+        {{- toYaml . | nindent 8 }}
+        # The release's own pods: the servers, the database init Job and helm test.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+      {{- end }}
+    {{- if include "dolt.ha" . }}
+    - ports:
+        - port: 50051
+      from:
+        - podSelector:
+            matchLabels:
+              {{- include "dolt.selectorLabels" . | nindent 14 }}
+    {{- end }}
+    {{- if .Values.metrics.enabled }}
+    - ports:
+        - port: 11228
+    {{- end }}
+{{- end }}

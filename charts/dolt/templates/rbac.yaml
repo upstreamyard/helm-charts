@@ -1,0 +1,32 @@
+{{- if include "dolt.ha" . }}
+# The role labeler sets dolthub.com/cluster_role on its own pod.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "dolt.fullname" . }}-role-labeler
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    resourceNames:
+      {{- range $i := until (int .Values.replicaCount) }}
+      - {{ include "dolt.fullname" $ }}-{{ $i }}
+      {{- end }}
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "dolt.fullname" . }}-role-labeler
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "dolt.fullname" . }}-role-labeler
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "dolt.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

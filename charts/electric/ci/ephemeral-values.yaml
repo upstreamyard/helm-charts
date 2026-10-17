@@ -1,0 +1,11 @@
+# Used by chart-testing (ct install) in CI: no PersistentVolumeClaim, temporary replication slot.
+electric:
+  secret: ci-electric-secret-0123456789
+database:
+  url: postgresql://aegra:aegra@postgres.deps.svc:5432/aegra?sslmode=disable
+persistence:
+  enabled: false
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi

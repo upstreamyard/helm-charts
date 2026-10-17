@@ -1,0 +1,115 @@
+# Discourse Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for [Discourse](https://github.com/discourse/discourse), the open-source community forum. It uses the [`upstreamyard/discourse`](https://github.com/upstreamyard/discourse) image, which runs one process per container.
+
+> Community chart by **upstreamyard**, not an official Discourse chart. Discourse is © Civilized Discourse Construction Kit, Inc., licensed under GPL-2.0-or-later; "Discourse" is a registered trademark of Civilized Discourse Construction Kit, Inc.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install discourse upstreamyard/discourse \
+  --set discourse.hostname=forum.example.com \
+  --set discourse.secretKeyBase=$(openssl rand -hex 64) \
+  --set database.host=your-postgres --set database.password='...' \
+  --set redis.host=your-redis
+```
+
+Or from the OCI registry:
+
+```bash
+helm install discourse oci://ghcr.io/upstreamyard/charts/discourse --set discourse.hostname=forum.example.com ...
+```
+
+Then create the first admin account (it asks for email and password):
+
+```bash
+kubectl exec -it deploy/discourse -- rake admin:create
+```
+
+Served over HTTPS (Ingress with TLS)? Turn on Admin > Settings > Security > "force https", or run `kubectl exec deploy/discourse -- rails runner 'SiteSetting.force_https = true'`. Without it Discourse generates `http://` links.
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install discourse upstreamyard/discourse --verify --keyring upstreamyard.gpg --set ...
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Requirements
+
+- **PostgreSQL 18 with the pgvector extension** (required). The `pgvector/pgvector:pg18` image is Postgres 18 with pgvector included; managed services (RDS, Cloud SQL, Azure) offer it too. Without pgvector the migrations fail with `extension "vector" is not available`, because the bundled Discourse AI plugin needs it. The user needs the right to create extensions on first install.
+- **Redis 7** (required), with persistence and no key eviction (`maxmemory-policy noeviction`). Discourse uses database `redis.db` and the next one.
+- **An SMTP server** for sign-up, password reset and notification emails.
+- A default StorageClass, or `persistence.*.storageClass`, for the uploads and backups volumes.
+
+This chart does not deploy a database or Redis.
+
+## What the chart does
+
+- **Migrations:** in two Jobs, as Discourse splits them. Before every install and upgrade, a Job runs the regular migrations, which only add to the schema, so pods of the old version keep working. After the new pods are ready, a second Job runs the post-deployment migrations, which remove what the old version still used. The web pods start with `MIGRATE_ON_BOOT=0`. Set `migrations.enabled=false` to run all migrations on pod startup instead.
+- **Background jobs:** by default every web pod also runs one Sidekiq process (emails, notifications, scheduled tasks). Set `sidekiq.enabled=true` for a separate Sidekiq Deployment that scales on its own.
+- **Storage:** PersistentVolumeClaims for uploads and backups, kept when the release is uninstalled. With the default ReadWriteOnce volumes the chart runs one web pod and replaces it on upgrades (`Recreate`, brief downtime); more pods or a separate Sidekiq need ReadWriteMany volumes (or S3), and installing without them fails with an error.
+- **Probes:** `/srv/status` for startup, liveness and readiness of the web pods. The Sidekiq pods are restarted when Sidekiq stops sending its heartbeat to Redis (`sidekiq-alive` in the image; it fails about 60 s into a hang, then after 3 failed checks).
+- **Graceful shutdown:** on `SIGTERM` the web server finishes requests in flight; `terminationGracePeriodSeconds: 40` is above its 30 s request timeout.
+- **Security:** runs as non-root UID 10001 with `fsGroup` 10001 for the volumes, drops all capabilities, and doesn't mount a ServiceAccount token. Discourse writes to its app directory, so the root filesystem stays writable.
+- **`helm test`** checks `/srv/status` and that the home page answers (it needs the database) through the Service.
+
+## Configuration
+
+Every Discourse setting from [`config/discourse_defaults.conf`](https://github.com/discourse/discourse/blob/main/config/discourse_defaults.conf) can be set as `DISCOURSE_<SETTING>` through `extraEnv` (plain values) or `extraEnvFrom` (Secrets). Forum settings (title, login methods, categories, …) live in the database and are changed in the admin UI.
+
+Plugins: the image contains the plugins bundled with Discourse (chat, Discourse AI, solved, reactions, …); enable them in the admin UI. Third-party plugins are not supported yet.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+discourse:
+  hostname: forum.example.com
+  existingSecret: discourse          # key: secret-key-base (openssl rand -hex 64)
+  notificationEmail: forum@example.com
+database:
+  host: postgres.example.internal
+  existingSecret: discourse-db       # key: database-password
+redis:
+  host: redis.example.internal
+smtp:
+  address: smtp.example.com
+  username: forum@example.com
+  existingSecret: discourse-smtp     # key: smtp-password
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 20m
+  hosts:
+    - host: forum.example.com
+      paths: [{ path: /, pathType: Prefix }]
+  tls:
+    - hosts: [forum.example.com]
+      secretName: forum-tls
+```
+
+For several web pods and a separate Sidekiq, add ReadWriteMany volumes:
+
+```yaml
+replicaCount: 2
+sidekiq:
+  enabled: true
+persistence:
+  uploads:
+    accessModes: [ReadWriteMany]
+    storageClass: your-rwx-class
+  backups:
+    accessModes: [ReadWriteMany]
+    storageClass: your-rwx-class
+```
+
+{{ template "chart.valuesSection" . }}

@@ -1,0 +1,120 @@
+# Logto Helm chart
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for [Logto](https://github.com/logto-io/logto), the open-source identity and access management platform: sign-in, OIDC and OAuth 2.0, SSO and multi-tenancy for your apps. It uses Logto's official image [`svhd/logto`](https://hub.docker.com/r/svhd/logto).
+
+> Community chart by **upstreamyard**, not an official Logto chart. Logto is © its authors, licensed under MPL-2.0.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install logto upstreamyard/logto \
+  --set database.url='postgres://logto:password@your-postgres:5432/logto' \
+  --set endpoint=https://auth.example.com \
+  --set adminConsole.endpoint=https://admin.auth.example.com
+```
+
+Or from the OCI registry:
+
+```bash
+helm install logto oci://ghcr.io/upstreamyard/charts/logto \
+  --set database.url='postgres://logto:password@your-postgres:5432/logto'
+```
+
+Then create the admin account right away (see "Admin Console" below):
+
+```bash
+kubectl port-forward svc/logto 3002:3002   # http://localhost:3002
+```
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install logto upstreamyard/logto --verify --keyring upstreamyard.gpg --set database.url='...'
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## Requirements
+
+- **PostgreSQL 14 or newer** (required; tested with 17). This chart does not deploy a database.
+- **The database user must be allowed to create roles** (`CREATEROLE` or superuser). Logto creates PostgreSQL roles for its tenants when it sets up the database; without the permission, setup fails with `permission denied to create role`. Logto's docs don't mention this.
+- **Redis** is optional: a shared cache that reduces database reads.
+
+## What the chart does
+
+- **Database setup and upgrades:** before every install and upgrade, a Job sets up an empty database (`npm run cli db seed -- --swe`, skipped when it's already set up) and deploys the database alterations of the new Logto version (`npm run alteration deploy latest`). Logto refuses to start until they are deployed.
+- **Non-root:** Logto's image runs as root by default; the chart runs it as UID 10001. Logto writes alteration scripts into a folder that only root's group may write to, so the chart mounts an empty volume there.
+- **Two endpoints:** Logto serves your apps on port `3001` (`endpoint`) and the Admin Console on port `3002` (`adminConsole.endpoint`). Each has its own Ingress (`ingress`, `adminIngress`) and should get its own host name. `trustProxyHeader` is on, so Logto uses the `X-Forwarded-*` headers of your Ingress.
+- **Probes:** `/api/status` for startup, liveness and readiness.
+- **Several replicas:** all pods share the database; Redis is optional.
+- **Connectors:** the official connectors (social sign-in, email, SMS) are part of the image, so nothing is downloaded at startup.
+- **Security:** runs as non-root UID 10001, drops all capabilities, and doesn't mount a ServiceAccount token.
+
+## Admin Console
+
+On a new installation, **the first person who opens the Admin Console creates the admin account**. Create it right away through `kubectl port-forward`, before you enable `adminIngress`, or restrict the admin Ingress (e.g. by IP or VPN). To run Logto without the Admin Console, set `adminConsole.enabled=false`.
+
+## Configuration
+
+Logto is configured through environment variables; the chart sets the essential ones from its values. Everything else goes into `extraEnv` or `extraEnvFrom`, for example:
+
+```yaml
+extraEnv:
+  - name: CASE_SENSITIVE_USERNAME
+    value: "false"
+  - name: DATABASE_STATEMENT_TIMEOUT
+    value: DISABLE_TIMEOUT          # when connecting through PgBouncer or RDS Proxy
+```
+
+All variables are listed in Logto's [configuration reference](https://docs.logto.io/concepts/core-service/configuration). To use Logto's [Secret Vault](https://docs.logto.io/secret-vault), set `secretVault.kek` (or `secretVault.existingSecret`) to a base64-encoded 32-byte key, e.g. from `openssl rand -base64 32`.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+replicaCount: 2
+database:
+  existingSecret: logto-db          # key: database-url
+redis:
+  existingSecret: logto-redis       # key: redis-url
+secretVault:
+  existingSecret: logto-kek         # key: secret-vault-kek
+endpoint: https://auth.example.com
+adminConsole:
+  endpoint: https://admin.auth.example.com
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: auth.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: auth-tls
+      hosts: [auth.example.com]
+adminIngress:
+  enabled: true
+  className: nginx
+  annotations: {}                   # restrict access, e.g. an IP allow-list
+  hosts:
+    - host: admin.auth.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: admin-auth-tls
+      hosts: [admin.auth.example.com]
+```
+
+## Known issue: restarts when the database drops connections
+
+When PostgreSQL closes Logto's connections (a database restart or failover), Logto 1.44.0 exits with an unhandled database error (`terminating connection due to administrator command`), so Kubernetes restarts the pod. It comes back as soon as the database is reachable; expect a few restarts and a short outage during database maintenance.
+
+{{ template "chart.valuesSection" . }}
