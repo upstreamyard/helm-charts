@@ -1,0 +1,14 @@
+{{- /* Web interface, HTTP API and click/open tracking (puma on port 5000). */}}
+{{ include "postal.deployment" (dict
+  "root" .
+  "component" "web"
+  "replicas" .Values.web.replicaCount
+  "command" (list "bundle" "exec" "puma" "-C" "config/puma.rb")
+  "ports" (list (dict "name" "http" "containerPort" 5000 "protocol" "TCP"))
+  "grace" .Values.web.terminationGracePeriodSeconds
+  "lifecycle" .Values.web.lifecycle
+  "probes" (dict
+    "startupProbe" (include "postal.webProbe" (list . .Values.web.startupProbe))
+    "livenessProbe" (include "postal.webProbe" (list . .Values.web.livenessProbe))
+    "readinessProbe" (include "postal.webProbe" (list . .Values.web.readinessProbe)))
+  "resources" .Values.web.resources) }}

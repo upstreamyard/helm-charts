@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "supertokens.fullname" . }}-test-api
+  labels:
+    {{- include "supertokens.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: api
+      # The SuperTokens image already contains curl, so no extra image is pulled.
+      image: {{ include "supertokens.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+          base="http://{{ include "supertokens.fullname" . }}:{{ .Values.service.port }}"
+          key=$(echo "$API_KEYS" | cut -d, -f1 | tr -d ' ')
+          for i in $(seq 1 10); do
+            curl -sf "$base/hello" | grep -q Hello && break
+            sleep 3
+          done
+          curl -sf "$base/hello" | grep -q Hello
+          # Without the API key the core must refuse; with it, a call that reads the database succeeds.
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$base/users/count")
+          [ "$code" = 401 ] || { echo "expected 401 without API key, got $code"; exit 1; }
+          out=$(curl -s -H "api-key: $key" "$base/users/count")
+          echo "$out" | grep -q '"status":"OK"' || { echo "expected OK with API key, got: $out"; exit 1; }
+          echo "SuperTokens core is up and requires the API key"
+      env:
+        - name: API_KEYS
+          valueFrom:
+            secretKeyRef:
+              name: {{ default (include "supertokens.fullname" .) .Values.supertokens.existingSecret }}
+              key: {{ ternary .Values.supertokens.existingSecretKey "api-keys" (not (empty .Values.supertokens.existingSecret)) }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}

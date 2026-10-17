@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "plano.fullname" . }}
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "plano.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- range (include "plano.ports" . | fromJsonArray) }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .name }}
+      protocol: TCP
+    {{- end }}
+    {{- if .Values.metrics.enabled }}
+    - name: metrics
+      port: 9092
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
