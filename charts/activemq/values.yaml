@@ -1,0 +1,226 @@
+# -- Number of brokers. ActiveMQ Classic runs one active broker; further replicas are standbys that take over when it stops (master/slave). More than 1 requires `store.type: jdbc` or a shared volume (`persistence.existingClaim` with `ReadWriteMany`).
+replicaCount: 1
+
+image:
+  # -- Image repository.
+  repository: upstreamyard/activemq
+  # -- Image tag. Defaults to the chart's appVersion (newest ActiveMQ 6.3). Use e.g. `6.2` or `5.19` (javax.jms clients) for the other release lines.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# Broker logins. The admin user (group `admins`) may do everything, including the web
+# console. The app user (group `users`) may send to, receive from and create any queue or
+# topic, but can't use the web console.
+auth:
+  # -- Name of the admin user.
+  adminUser: admin
+  # -- Password of the admin user. Generated when empty, and kept across upgrades. Ignored when `existingSecret` is set.
+  adminPassword: ""
+  # -- Name of the application user. Empty: no application user.
+  appUser: app
+  # -- Password of the application user. Generated when empty, and kept across upgrades. Ignored when `existingSecret` is set.
+  appPassword: ""
+  # -- Existing Secret with the passwords (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` with the admin password.
+  adminPasswordKey: admin-password
+  # -- Key in `existingSecret` with the app password.
+  appPasswordKey: app-password
+
+# -- Protocols the broker accepts: `openwire` (61616, JMS), `amqp` (5672), `stomp` (61613), `mqtt` (1883), `ws` (61614, WebSocket). The first one is used for probes and `helm test`.
+transports:
+  - openwire
+
+broker:
+  # -- Broker name (JMX, metrics label, networks of brokers). Empty: `localhost`, ActiveMQ's default.
+  name: ""
+  # -- Enable scheduled and delayed messages (`AMQ_SCHEDULED_DELAY`, ...). Scheduled messages are kept on the pod's volume, also with `store.type: jdbc`, so they don't move to a standby.
+  scheduler: false
+  # -- Disk limit for persistent messages, e.g. `20 gb`. Empty: 100 gb, which ActiveMQ lowers to the free space of the volume.
+  storeLimit: ""
+  # -- Disk limit for temporary storage, e.g. `5 gb`. Empty: 50 gb, lowered like `storeLimit`.
+  tempLimit: ""
+
+store:
+  # -- Message store: `kahadb` (files on the pod's volume) or `jdbc` (a database; master/slave without shared storage).
+  type: kahadb
+
+# Database for `store.type: jdbc`. The image includes the PostgreSQL driver. ActiveMQ creates
+# its tables (ACTIVEMQ_MSGS, ACTIVEMQ_ACKS, ACTIVEMQ_LOCK) on the first start.
+jdbc:
+  # -- JDBC URL, e.g. `jdbc:postgresql://postgres:5432/activemq`.
+  url: ""
+  # -- Database user. Needs to create tables on the first start.
+  user: ""
+  # -- Database password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Existing Secret with the database password.
+  existingSecret: ""
+  # -- Key in `existingSecret` with the database password.
+  existingSecretPasswordKey: password
+  # -- JDBC driver class. Empty: `org.postgresql.Driver`. Other databases need an image with their driver.
+  driver: ""
+
+# Volume for /var/lib/activemq: the KahaDB message store, temporary storage and scheduled messages.
+persistence:
+  # -- Create a PersistentVolumeClaim per broker. If false, an `emptyDir` is used and KahaDB messages are lost when the pod is deleted.
+  enabled: true
+  # -- Use an existing claim for all brokers instead. For master/slave with `store.type: kahadb` it must be `ReadWriteMany` with working file locks (e.g. NFSv4).
+  existingClaim: ""
+  # -- Storage class. Empty: the cluster default.
+  storageClass: ""
+  # -- Access modes of the per-broker claims.
+  accessModes:
+    - ReadWriteOnce
+  # -- Size of the per-broker claims.
+  size: 8Gi
+  # -- Annotations for the per-broker claims.
+  annotations: {}
+
+webConsole:
+  # -- Enable the web console and Jolokia on port 8161 (admin user only).
+  enabled: true
+
+metrics:
+  # -- Expose Prometheus metrics on port 9404 (broker, per-queue/topic and JVM metrics).
+  enabled: false
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor (needs the monitoring.coreos.com CRDs).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects ServiceMonitors by.
+    labels: {}
+
+# -- Heap options (`ACTIVEMQ_OPTS_MEMORY`). Empty: 60% of the memory limit.
+memoryOpts: ""
+# -- Extra Java options (`ACTIVEMQ_OPTS`), added after the image's own.
+javaOpts: ""
+
+# -- Your own config files, mounted in /etc/activemq where they replace the image's defaults of the same name, e.g. `activemq.xml` or `log4j2.properties`. With your own `activemq.xml`, `transports`, `store`, `broker` and `webConsole` are ignored.
+configFiles: {}
+#  log4j2.properties: |
+#    rootLogger.level=INFO
+#    ...
+
+# -- Secrets whose keys are added as files to /etc/activemq, like `configFiles`, for sensitive files: `users.properties` and `groups.properties` (more users), keystores for TLS, or an `activemq.xml` with credentials.
+configSecrets: []
+# - activemq-users
+
+# -- Extra environment variables, e.g. other `ACTIVEMQ_*` settings of the image.
+extraEnv: []
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# -- Extra volumes, e.g. a Secret with a TLS keystore.
+extraVolumes: []
+# -- Extra volume mounts. Not inside /etc/activemq: use `configFiles` or `configSecrets` for files there.
+extraVolumeMounts: []
+
+service:
+  # -- Service type for clients and the web console.
+  type: ClusterIP
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the web console.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: activemq.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: the full resource name.
+  name: ""
+  # -- ServiceAccount annotations.
+  annotations: {}
+
+# -- Pod annotations.
+podAnnotations: {}
+# -- Pod labels.
+podLabels: {}
+
+# -- Pod security context.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Resources. The heap is 60% of the memory limit, and ActiveMQ keeps up to 70% of the heap in memory for messages.
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi
+  limits:
+    memory: 1Gi
+
+# -- Seconds to let the broker shut down cleanly.
+terminationGracePeriodSeconds: 60
+
+# Probes. With one broker they check the first transport's port. With master/slave they
+# run the image's `broker-state` command, which also accepts a waiting standby: a standby
+# never opens the port, and a TCP probe would block rolling updates forever.
+probes:
+  startup:
+    # -- Startup probe period in seconds.
+    periodSeconds: 5
+    # -- Startup probe failures before the container is restarted (5 s × 120 = 10 minutes for a large KahaDB to recover).
+    failureThreshold: 120
+  liveness:
+    # -- Liveness probe period in seconds.
+    periodSeconds: 15
+    # -- Liveness probe failures before the container is restarted.
+    failureThreshold: 4
+  readiness:
+    # -- Readiness probe period in seconds.
+    periodSeconds: 5
+    # -- Readiness probe failures before the pod is taken out of the Service.
+    failureThreshold: 2
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`maxUnavailable: 1`) when `replicaCount` is greater than 1.
+  enabled: true
+
+# -- Spread brokers across nodes: `soft` (preferred), `hard` (required) or `""` (off). Ignored when `affinity` is set.
+podAntiAffinityPreset: soft
+
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity. Replaces `podAntiAffinityPreset`.
+affinity: {}
+# -- Topology spread constraints.
+topologySpreadConstraints: []
+# -- Priority class name.
+priorityClassName: ""

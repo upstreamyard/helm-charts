@@ -1,0 +1,44 @@
+apiVersion: v2
+name: activemq
+description: Apache ActiveMQ Classic Helm chart for Kubernetes. Secure JMS, AMQP, STOMP and MQTT message broker with high availability (JDBC or shared storage master/slave), Prometheus metrics and ActiveMQ 6.3, 6.2 and 5.19 images. Community chart by upstreamyard, not an official Apache ActiveMQ chart.
+type: application
+version: 0.1.0
+appVersion: "6.3.2"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/upstreamyard/helm-charts/tree/main/charts/activemq
+sources:
+  - https://github.com/upstreamyard/helm-charts
+  - https://github.com/upstreamyard/activemq
+  - https://github.com/apache/activemq
+keywords:
+  - activemq
+  - activemq-classic
+  - apache-activemq
+  - jms
+  - message-broker
+  - messaging
+  - queue
+  - amqp
+  - stomp
+  - mqtt
+maintainers:
+  - name: upstreamyard
+    url: https://github.com/upstreamyard
+annotations:
+  artifacthub.io/category: streaming-messaging
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/images: |
+    - name: activemq
+      image: upstreamyard/activemq:6.3.2
+  artifacthub.io/links: |
+    - name: Apache ActiveMQ
+      url: https://github.com/apache/activemq
+    - name: Container image
+      url: https://github.com/upstreamyard/activemq
+  artifacthub.io/signKey: |
+    fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+    url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+  artifacthub.io/changes: |
+    - kind: added
+      description: Apache ActiveMQ Classic chart with single-broker and master/slave modes
