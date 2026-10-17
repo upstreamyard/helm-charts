@@ -1,0 +1,14 @@
+{{- include "tigerbeetle.validate" . }}
+# The cluster ID and replica count are written into every data file at format time.
+# Kept on uninstall so a reinstall on the same volumes uses the same values.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+data:
+  cluster-id: {{ include "tigerbeetle.clusterId" . | quote }}
+  replica-count: {{ .Values.replicaCount | quote }}

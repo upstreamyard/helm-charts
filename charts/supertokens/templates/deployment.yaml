@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "supertokens.fullname" . }}
+  labels:
+    {{- include "supertokens.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "supertokens.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: core
+  template:
+    metadata:
+      annotations:
+        {{- if include "supertokens.createSecret" . }}
+        checksum/secret: {{ include "supertokens.secretData" . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "supertokens.labels" . | nindent 8 }}
+        app.kubernetes.io/component: core
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "supertokens.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: supertokens
+          image: {{ include "supertokens.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3567
+              protocol: TCP
+          env:
+            {{- include "supertokens.env" . | trim | nindent 12 }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                # PID 1 is the image's bash start script, which ignores SIGTERM. Wait until the pod
+                # is out of the Service, then send SIGTERM to the core's Java process, which shuts
+                # down cleanly. ("[.]" keeps this command from matching its own command line.)
+                command:
+                  - sh
+                  - -c
+                  - |
+                    sleep {{ int .Values.shutdownDelaySeconds }}
+                    for p in /proc/[0-9]*; do
+                      if grep -q 'io[.]supertokens[.]Main' "$p/cmdline" 2>/dev/null; then kill -TERM "${p#/proc/}"; fi
+                    done
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            # The core writes its web server's work files, a JNA native library and JVM data here.
+            - name: tmp
+              mountPath: /usr/lib/supertokens/temp
+              subPath: supertokens
+            - name: tmp
+              mountPath: /usr/lib/supertokens/logs
+              subPath: logs
+            - name: tmp
+              mountPath: /home/supertokens/.cache
+              subPath: cache
+            - name: tmp
+              mountPath: /tmp
+              subPath: tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

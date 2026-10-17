@@ -1,0 +1,22 @@
+SuperTokens core {{ .Chart.AppVersion }} is deployed as "{{ include "supertokens.fullname" . }}" ({{ .Values.replicaCount }} pod(s)).
+
+Point your backend SDK at it:
+
+  connectionURI: "http://{{ include "supertokens.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}"
+  apiKey:        the key from {{ if .Values.supertokens.existingSecret }}Secret "{{ .Values.supertokens.existingSecret }}"{{ else }}supertokens.apiKeys{{ end }}
+
+Check that it is up:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "supertokens.fullname" . }} 3567:{{ .Values.service.port }}
+  curl http://localhost:3567/hello
+{{- if .Values.ingress.enabled }}
+
+The core is exposed through an Ingress. Only your backend needs to reach it; keep the API key secret.
+{{- end }}
+{{- if .Values.supertokens.telemetry }}
+
+Anonymous usage telemetry to SuperTokens is on (SuperTokens' default). Turn it off with supertokens.telemetry=false.
+{{- end }}
+
+Before upgrading to a new SuperTokens version, read the "Migration" notes in SuperTokens'
+CHANGELOG: some versions need SQL to be run by hand, and the core refuses to start until it is.
