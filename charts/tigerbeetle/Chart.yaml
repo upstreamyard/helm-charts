@@ -1,0 +1,41 @@
+apiVersion: v2
+name: tigerbeetle
+description: TigerBeetle Helm chart for Kubernetes. Fault-tolerant 3 or 6 replica TigerBeetle cluster (financial transactions database for double-entry accounting) on the official image, with safe replica recovery, non-root, Prometheus metrics and helm test. Community chart by upstreamyard, not an official TigerBeetle chart.
+type: application
+version: 0.1.0
+appVersion: "0.17.9"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/upstreamyard/helm-charts/tree/main/charts/tigerbeetle
+sources:
+  - https://github.com/upstreamyard/helm-charts
+  - https://github.com/tigerbeetle/tigerbeetle
+keywords:
+  - tigerbeetle
+  - tigerbeetle-cluster
+  - financial-database
+  - ledger
+  - double-entry-accounting
+  - accounting
+  - payments
+  - oltp
+  - database
+  - high-availability
+maintainers:
+  - name: upstreamyard
+    url: https://github.com/upstreamyard
+annotations:
+  artifacthub.io/category: database
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/images: |
+    - name: tigerbeetle
+      image: ghcr.io/tigerbeetle/tigerbeetle:0.17.9
+  artifacthub.io/links: |
+    - name: TigerBeetle
+      url: https://github.com/tigerbeetle/tigerbeetle
+  artifacthub.io/signKey: |
+    fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+    url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+  artifacthub.io/changes: |
+    - kind: added
+      description: TigerBeetle chart with 1, 3 or 6 replica clusters on the official image

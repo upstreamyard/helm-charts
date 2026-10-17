@@ -1,0 +1,41 @@
+apiVersion: v2
+name: plano
+description: Plano Helm chart for Kubernetes. Plano (formerly archgw) is an AI gateway and LLM proxy built on Envoy, with one OpenAI-compatible API for OpenAI, Anthropic, Gemini, Amazon Bedrock, Azure OpenAI, Ollama and other providers, plus model routing, guardrails and agent orchestration. Runs the official image as non-root on a read-only filesystem without internet access at startup, keeps provider API keys away from the Envoy admin API, scales out with PostgreSQL conversation state and a Redis session cache, and ships Prometheus metrics, NetworkPolicy and helm test. Community chart by upstreamyard, not an official Plano chart.
+type: application
+version: 0.1.0
+appVersion: "0.4.37"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/upstreamyard/helm-charts/tree/main/charts/plano
+sources:
+  - https://github.com/upstreamyard/helm-charts
+  - https://github.com/katanemo/plano
+keywords:
+  - plano
+  - archgw
+  - ai-proxy
+  - ai-gateway
+  - llm-gateway
+  - llm-proxy
+  - llm-router
+  - openai-compatible
+  - envoy
+  - agents
+maintainers:
+  - name: upstreamyard
+    url: https://github.com/upstreamyard
+annotations:
+  artifacthub.io/category: networking
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/images: |
+    - name: plano
+      image: katanemo/plano:0.4.37
+  artifacthub.io/links: |
+    - name: Plano
+      url: https://github.com/katanemo/plano
+  artifacthub.io/signKey: |
+    fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+    url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+  artifacthub.io/changes: |
+    - kind: added
+      description: Plano chart on the official image

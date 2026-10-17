@@ -1,0 +1,247 @@
+# -- Number of Plano pods. More than 1 needs shared conversation state if you use it: `stateStorage.postgres` instead of `state_storage: {type: memory}` (the chart refuses that combination). See "Running several replicas".
+replicaCount: 1
+
+image:
+  # -- Image repository. Defaults to Plano's official image.
+  repository: katanemo/plano
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# -- Plano configuration, written to `plano_config.yaml` (see Plano's configuration reference: https://docs.planoai.dev/resources/configuration_reference.html). Values like `$OPENAI_API_KEY` are replaced with environment variables at startup; put the keys in `secretEnv` or `existingSecret`. Your `config` is merged with this default: maps merge, lists (`listeners`, `model_providers`) replace. Ignored when `existingConfigMap` is set.
+# @default -- an OpenAI model listener on port 12000
+config:
+  version: v0.3.0
+  listeners:
+    - type: model
+      name: model_listener
+      port: 12000
+  model_providers:
+    - model: openai/gpt-4o-mini
+      access_key: $OPENAI_API_KEY
+      default: true
+
+# -- Name of an existing ConfigMap with your `plano_config.yaml`. Replaces `config`. Then set `ports`, and `stateStorage`/`sessionCache` can't be used (configure them in your file).
+existingConfigMap: ""
+# -- Key in `existingConfigMap` that holds the configuration.
+existingConfigMapKey: plano_config.yaml
+
+# -- Container and Service ports, as a list of `name`/`port`. Empty: one port per listener in `config` (`llm` for the model listener, which also serves the probes). Required with `existingConfigMap`; name the model listener's port `llm`.
+ports: []
+# - name: llm
+#   port: 12000
+
+# -- Environment variables stored in a Secret created by the chart, e.g. provider API keys referenced as `$OPENAI_API_KEY` in `config`. For production use `existingSecret`.
+secretEnv: {}
+#  OPENAI_API_KEY: sk-...
+
+# -- Name of an existing Secret whose keys all become environment variables (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
+existingSecret: ""
+
+# Conversation state for the OpenAI Responses API (`previous_response_id`), shared by all pods.
+# Without it, Plano keeps no conversation state (or per-pod state with `state_storage: {type: memory}` in `config`).
+stateStorage:
+  postgres:
+    # -- PostgreSQL connection string `postgresql://user:password@host:5432/db`. URL-encode special characters in the password. Plano connects without TLS (see "Known issues"). Stored in a Secret created by the chart; ignored when `existingSecret` is set. When set, the chart adds `state_storage` to `config`.
+    url: ""
+    # -- Name of an existing Secret that holds the connection string.
+    existingSecret: ""
+    # -- Key in `existingSecret` that holds the connection string.
+    existingSecretKey: postgres-url
+    createTable:
+      # -- Create Plano's `conversation_states` table (`CREATE TABLE IF NOT EXISTS`) in a Job before every install and upgrade. Plano only checks that the table exists.
+      enabled: true
+      # -- Image with `psql` for the Job. The Plano image has no PostgreSQL client.
+      image: postgres:18-alpine
+      # -- Retries of the Job before the install/upgrade fails.
+      backoffLimit: 3
+      # -- Maximum runtime of the Job in seconds.
+      activeDeadlineSeconds: 300
+      # -- Resources for the Job.
+      resources: {}
+
+# Session cache for model affinity (`X-Model-Affinity` header), shared by all pods.
+# Without it, each pod remembers its own routing decisions.
+sessionCache:
+  redis:
+    # -- Redis URL, e.g. `redis://:password@redis:6379` or `rediss://` for TLS. Stored in a Secret created by the chart; ignored when `existingSecret` is set. When set, the chart adds `routing.session_cache` to `config`.
+    url: ""
+    # -- Name of an existing Secret that holds the Redis URL.
+    existingSecret: ""
+    # -- Key in `existingSecret` that holds the Redis URL.
+    existingSecretKey: redis-url
+
+# -- Log level of brightstaff and Envoy's WASM filters (`debug`, `info`, `warn`, `error`).
+logLevel: info
+
+envoy:
+  # -- Envoy worker threads. Envoy otherwise starts one per CPU of the node (not of the pod), and each one adds about 10 MiB, measured with Plano 0.4.37. Raise it for more throughput per pod.
+  concurrency: 2
+  # -- Bind Envoy's admin API (port 9901) to all interfaces, as the image does. Its `/config_dump` returns the provider API keys, so the chart keeps it on localhost.
+  adminOnAllInterfaces: false
+
+# -- Extra environment variables, e.g. `OTEL_TRACING_GRPC_ENDPOINT` (OpenTelemetry collector for traces).
+extraEnv: []
+# - name: OTEL_TRACING_GRPC_ENDPOINT
+#   value: http://otel-collector.monitoring:4317
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# - secretRef:
+#     name: llm-api-keys
+
+# -- Extra volumes, e.g. a CA bundle for `upstream_tls_ca_path` in `config`.
+extraVolumes: []
+# -- Extra volume mounts for the Plano container.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress for the `llm` port. Plano doesn't authenticate clients; protect the Ingress (see "Security").
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: plano.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+metrics:
+  # -- Add brightstaff's Prometheus endpoint (port 9092, `/metrics`) to the Service.
+  enabled: true
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects ServiceMonitors by.
+    labels: {}
+
+networkPolicy:
+  # -- Create a NetworkPolicy that only allows traffic to the listener ports and the metrics port. Plano also listens on internal ports (brightstaff 9091, Envoy 10001, 11000, 12001) on all interfaces; this closes them.
+  enabled: false
+  # -- Sources allowed to reach the listener ports (NetworkPolicy `from` entries). Empty: any pod and address.
+  from: []
+  # - podSelector:
+  #     matchLabels:
+  #       app.kubernetes.io/name: my-agent
+  # -- Sources allowed to reach the metrics port. Empty: any pod and address.
+  metricsFrom: []
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget.
+  enabled: false
+  # -- Maximum unavailable pods.
+  maxUnavailable: 1
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler. Needs the same shared state as `replicaCount` > 1.
+  enabled: false
+  # -- Minimum replicas.
+  minReplicas: 2
+  # -- Maximum replicas.
+  maxReplicas: 10
+  # -- Target average CPU utilization in percent.
+  targetCPUUtilizationPercentage: 70
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Plano does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds a stopping pod keeps serving before Plano is stopped, so that it leaves the Service endpoints first and running requests (streamed LLM responses) can finish. Plano itself stops at once and cuts open connections.
+shutdownDelaySeconds: 20
+# -- Seconds Kubernetes waits after the pod is asked to stop. Must be larger than `shutdownDelaySeconds`.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe. `/healthz` on the model listener is answered by Envoy once it has resolved the providers' hostnames. Allows 3 minutes: a first start in a new kind cluster took 67 seconds, later starts 1-3 seconds.
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: llm
+  periodSeconds: 2
+  failureThreshold: 90
+# -- Liveness probe.
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: llm
+  periodSeconds: 10
+  failureThreshold: 3
+# -- Readiness probe.
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: llm
+  periodSeconds: 5
+  failureThreshold: 2
+
+# -- Resources for the Plano container. Idle memory is about 290 MiB with 2 Envoy workers (measured with Plano 0.4.37).
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    memory: 768Mi
+
+# -- Pod security context. The official image runs as root; the chart runs it as a non-root user.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Size limit of the writable `/tmp` volume (rendered configs).
+tmpSizeLimit: 64Mi
+
+tests:
+  chatCompletion:
+    # -- Also send a chat completion in `helm test`. This calls your default model provider and costs a request.
+    enabled: false
+    # -- Model for the test request.
+    model: openai/gpt-4o-mini
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
+# -- Topology spread constraints.
+topologySpreadConstraints: []

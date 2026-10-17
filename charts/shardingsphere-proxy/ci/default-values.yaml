@@ -1,0 +1,38 @@
+# Standalone: one pod, t_order sharded by user_id across two MySQL databases (deps.yaml).
+users:
+  - user: admin@%
+    password: ci-admin
+    admin: true
+  - user: app@%
+    password: ci-app
+databases:
+  sharding_db: |
+    dataSources:
+      ds_0:
+        url: jdbc:mysql://mysql.deps.svc:3306/ds_0?sslMode=REQUIRED
+        username: root
+        password: rootpw
+      ds_1:
+        url: jdbc:mysql://mysql.deps.svc:3306/ds_1?sslMode=REQUIRED
+        username: root
+        password: rootpw
+    rules:
+      - !SHARDING
+        tables:
+          t_order:
+            actualDataNodes: ds_${0..1}.t_order
+            databaseStrategy:
+              standard:
+                shardingColumn: user_id
+                shardingAlgorithmName: by_user_id
+        shardingAlgorithms:
+          by_user_id:
+            type: INLINE
+            props:
+              algorithm-expression: ds_${user_id % 2}
+resources:
+  requests:
+    cpu: 100m
+    memory: 768Mi
+  limits:
+    memory: 768Mi

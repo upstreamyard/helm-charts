@@ -1,0 +1,42 @@
+{{- $web := include "postal.componentName" (list . "web") -}}
+{{- $smtp := include "postal.componentName" (list . "smtp") -}}
+Postal {{ .Chart.AppVersion }} is deployed as "{{ include "postal.fullname" . }}": {{ .Values.web.replicaCount }} web server pod(s), {{ .Values.smtp.replicaCount }} SMTP server pod(s), {{ .Values.worker.replicaCount }} worker pod(s).
+{{- if .Values.migrations.enabled }}
+Database migrations ran in a Job before this release.
+{{- else }}
+migrations.enabled is false: run `postal upgrade` yourself; new pods wait until the migrations are applied.
+{{- end }}
+
+Web interface and API: {{ .Values.postal.webProtocol }}://{{ .Values.postal.webHostname }}/{{ if not .Values.ingress.enabled }} (no Ingress is created by this release; route that host to svc/{{ $web }}){{ end }}
+The web server only answers requests for {{ .Values.postal.webHostname }}. To try it from your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $web }} 5000:{{ .Values.web.service.port }}
+  curl -H "Host: {{ .Values.postal.webHostname }}" http://localhost:5000/login
+{{- if .Values.admin.email }}
+
+Log in as {{ .Values.admin.email }} (created by the migration Job if it didn't exist).
+{{- else }}
+
+Create the first admin user (asks for email, name and password):
+
+  kubectl -n {{ .Release.Namespace }} exec -it deploy/{{ $web }} -- postal make-user
+{{- end }}
+
+SMTP: svc/{{ $smtp }} ({{ .Values.smtp.service.type }}), port(s) {{ range $i, $p := .Values.smtp.service.ports }}{{ if $i }}, {{ end }}{{ $p.port }}{{ end }}.
+{{- if eq .Values.smtp.service.type "ClusterIP" }}
+It is only reachable inside the cluster. To receive mail from the internet, set smtp.service.type=LoadBalancer
+with a fixed IP and point your MX records at it (see the chart README).
+{{- end }}
+{{- if not .Values.smtp.tls.enabled }}
+STARTTLS is off (smtp.tls.enabled=false): mail and SMTP passwords travel unencrypted.
+{{- end }}
+
+Publish the DNS records for {{ .Values.postal.webHostname }}: the A/AAAA record, MX {{ include "postal.mxRecords" . }},
+SPF {{ default (printf "spf.%s" .Values.postal.webHostname) .Values.dns.spfInclude }}, return path {{ default (printf "rp.%s" .Values.postal.webHostname) .Values.dns.returnPathDomain }} with the DKIM record from:
+
+  kubectl -n {{ .Release.Namespace }} exec deploy/{{ $web }} -- postal default-dkim-record
+{{- if not .Values.systemEmail.username }}
+
+Postal can't send its own emails (password resets, invitations) yet. Create a mail server and an
+SMTP credential in the web interface, then set systemEmail.username and systemEmail.password.
+{{- end }}

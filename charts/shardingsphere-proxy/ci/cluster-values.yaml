@@ -1,0 +1,27 @@
+# Cluster mode: two pods sharing their configuration through ZooKeeper (deps.yaml).
+replicaCount: 2
+mode: Cluster
+cluster:
+  zookeeper:
+    serverLists: zookeeper.deps.svc:2181
+users:
+  - user: admin@%
+    password: ci-admin
+    admin: true
+databases:
+  cluster_db: |
+    dataSources:
+      ds_0:
+        url: jdbc:mysql://mysql.deps.svc:3306/ds_0?sslMode=REQUIRED
+        username: root
+        password: rootpw
+    rules:
+      - !SINGLE
+        tables:
+          - "*.*"
+resources:
+  requests:
+    cpu: 100m
+    memory: 768Mi
+  limits:
+    memory: 768Mi

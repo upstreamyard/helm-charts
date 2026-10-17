@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}-test-connection
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  # The client uses io_uring too, so it needs the same seccomp profile as the replicas.
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: repl
+      # The TigerBeetle image contains the client (tigerbeetle repl), so no extra image is pulled.
+      image: {{ include "tigerbeetle.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "tigerbeetle.fullname" . }}
+              key: cluster-id
+      # A read-only query that the cluster has to commit: lookup of a random account ID.
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          addrs=""
+          for i in $(seq 0 $(({{ .Values.replicaCount }} - 1))); do
+            ip=$(getent hosts {{ include "tigerbeetle.fullname" . }}-$i.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }} | awk '{ print $1; exit }')
+            case $ip in *:*) ip="[$ip]" ;; esac
+            addrs="$addrs${addrs:+,}$ip:{{ .Values.port }}"
+          done
+          echo "cluster $CLUSTER_ID, addresses $addrs"
+          # repl exits with 1 when nothing is found, so check for the cluster's answer instead.
+          out=$(timeout 120 /tigerbeetle repl --cluster="$CLUSTER_ID" --addresses="$addrs" \
+            --command="lookup_accounts id=$(date +%s)" 2>&1) || true
+          echo "$out" | grep -v 'info(' || true
+          echo "$out" | grep -q -e 'No accounts were found' -e '"id"'
+          echo "the cluster answered"
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
