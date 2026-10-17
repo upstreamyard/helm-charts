@@ -1,0 +1,34 @@
+TigerBeetle {{ include "tigerbeetle.image" . | splitList ":" | last }} is deployed as "{{ include "tigerbeetle.fullname" . }}" with {{ .Values.replicaCount }} replica(s).
+{{- if eq (int .Values.replicaCount) 1 }}
+A single replica has no fault tolerance. TigerBeetle recommends 6 replicas for production.
+{{- end }}
+
+Clients need the cluster ID and the address of every replica, as IP addresses
+(TigerBeetle doesn't accept DNS names).
+
+  Cluster ID:
+    kubectl -n {{ .Release.Namespace }} get configmap {{ include "tigerbeetle.fullname" . }} -o jsonpath='{.data.cluster-id}'
+
+  Addresses:
+{{- if .Values.replicaServices.clusterIPs }}
+    {{ range $i, $ip := .Values.replicaServices.clusterIPs }}{{ if $i }},{{ end }}{{ $ip }}:{{ $.Values.port }}{{ end }}
+{{- else }}
+    kubectl -n {{ .Release.Namespace }} get svc -l app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=replica \
+      --sort-by=.metadata.name -o go-template='{{ "{{" }}range $i, $s := .items{{ "}}" }}{{ "{{" }}if $i{{ "}}" }},{{ "{{" }}end{{ "}}" }}{{ "{{" }}$s.spec.clusterIP{{ "}}" }}:{{ .Values.port }}{{ "{{" }}end{{ "}}" }}'
+
+  The ClusterIPs stay the same for the lifetime of the release. Pin them with
+  replicaServices.clusterIPs to keep the same list across reinstalls.
+{{- end }}
+
+Try it with the REPL:
+
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if eq .Values.podAntiAffinityPreset "soft" }}
+
+NOTE: podAntiAffinityPreset is "soft", so several replicas may share a node.
+TigerBeetle requires a separate machine per replica in production: set it to "hard".
+{{- end }}
+{{- if .Values.tigerbeetle.development }}
+
+WARNING: tigerbeetle.development=true runs without Direct IO. Never use it in production.
+{{- end }}

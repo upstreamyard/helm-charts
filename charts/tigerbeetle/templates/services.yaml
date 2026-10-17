@@ -1,0 +1,68 @@
+{{- include "tigerbeetle.validate" . }}
+# Governing Service of the StatefulSet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}-headless
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "tigerbeetle.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: tigerbeetle
+      port: {{ .Values.port }}
+      targetPort: tigerbeetle
+{{- /*
+One Service per replica. TigerBeetle replicas and clients only accept IP
+addresses, and a ClusterIP stays the same when a pod is rescheduled.
+*/}}
+{{- range $i := until (int .Values.replicaCount) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tigerbeetle.fullname" $ }}-{{ $i }}
+  labels:
+    {{- include "tigerbeetle.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: replica
+    tigerbeetle.upstreamyard.io/replica: {{ $i | quote }}
+  {{- with $.Values.replicaServices.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  {{- with $.Values.replicaServices.clusterIPs }}
+  clusterIP: {{ index . $i }}
+  {{- end }}
+  # Replicas must reach each other before they are ready, e.g. while recovering.
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "tigerbeetle.selectorLabels" $ | nindent 4 }}
+    statefulset.kubernetes.io/pod-name: {{ include "tigerbeetle.fullname" $ }}-{{ $i }}
+  ports:
+    - name: tigerbeetle
+      port: {{ $.Values.port }}
+      targetPort: tigerbeetle
+{{- end }}
+{{- if .Values.metrics.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}-metrics
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "tigerbeetle.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+{{- end }}

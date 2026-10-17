@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "xxl-job.fullname" . }}
+  labels:
+    {{- include "xxl-job.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "xxl-job.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: admin
+  template:
+    metadata:
+      annotations:
+        {{- if include "xxl-job.createSecret" . }}
+        checksum/secret: {{ include "xxl-job.secretData" . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "xxl-job.labels" . | nindent 8 }}
+        app.kubernetes.io/component: admin
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "xxl-job.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: xxl-job-admin
+          image: {{ include "xxl-job.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # The image's entrypoint is the same command without "exec": the shell stays
+          # PID 1 and doesn't pass SIGTERM on, so Java was killed only after the grace period.
+          command: ["sh", "-c", "exec java ${LOG_HOME:+-DLOG_HOME=$LOG_HOME} $JAVA_OPTS -jar /app.jar $PARAMS"]
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: TZ
+              value: {{ .Values.timezone | quote }}
+            - name: JAVA_OPTS
+              value: {{ .Values.javaOpts | quote }}
+            - name: LOG_HOME
+              value: /data/applogs
+            - name: SERVER_PORT
+              value: "8080"
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: {{ .Values.contextPath | quote }}
+            - name: XXL_JOB_I18N
+              value: {{ .Values.language | quote }}
+            - name: SPRING_DATASOURCE_URL
+              value: {{ include "xxl-job.jdbcUrl" . | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.database.username | quote }}
+            {{- include "xxl-job.dbPasswordEnv" (list . (include "xxl-job.fullname" .) "SPRING_DATASOURCE_PASSWORD") | nindent 12 }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: {{ include "xxl-job.basePath" . }}/actuator/health/liveness
+              port: http
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ include "xxl-job.basePath" . }}/actuator/health/liveness
+              port: http
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ include "xxl-job.basePath" . }}/actuator/health/readiness
+              port: http
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: logs
+              mountPath: /data/applogs
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

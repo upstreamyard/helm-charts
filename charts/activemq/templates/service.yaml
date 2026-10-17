@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "activemq.fullname" . }}
+  labels:
+    {{- include "activemq.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "activemq.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- range .Values.transports }}
+    - name: {{ . }}
+      port: {{ include "activemq.transportPort" . }}
+      targetPort: {{ . }}
+    {{- end }}
+    {{- if .Values.webConsole.enabled }}
+    - name: console
+      port: 8161
+      targetPort: console
+    {{- end }}
+---
+# Stable DNS names per broker (<pod>.<this service>), used in the failover URL.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "activemq.headlessName" . }}
+  labels:
+    {{- include "activemq.labels" . | nindent 4 }}
+    app.kubernetes.io/component: headless
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "activemq.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- range .Values.transports }}
+    - name: {{ . }}
+      port: {{ include "activemq.transportPort" . }}
+      targetPort: {{ . }}
+    {{- end }}
+    {{- if .Values.metrics.enabled }}
+    - name: metrics
+      port: 9404
+      targetPort: metrics
+    {{- end }}

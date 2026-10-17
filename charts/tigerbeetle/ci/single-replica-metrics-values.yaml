@@ -1,0 +1,14 @@
+# CI: one replica with the Prometheus metrics sidecar.
+replicaCount: 1
+tigerbeetle:
+  cacheGrid: 256MiB
+resources:
+  requests:
+    cpu: 100m
+    memory: 3Gi
+  limits:
+    memory: 3Gi
+persistence:
+  size: 2Gi
+metrics:
+  enabled: true

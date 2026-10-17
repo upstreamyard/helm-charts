@@ -1,0 +1,3 @@
+# Releases the shardingsphere-proxy chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: apache/shardingsphere
+  image: ghcr.io/upstreamyard/shardingsphere-proxy

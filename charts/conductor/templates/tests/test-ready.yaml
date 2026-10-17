@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "conductor.fullname" . }}-test-ready
+  labels:
+    {{- include "conductor.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: curl
+      # The Conductor image already contains curl, so no extra image is pulled.
+      image: {{ include "conductor.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      # Server health including the database, then the UI and its /api proxy.
+      command:
+        - sh
+        - -c
+        - >-
+          curl -sf --retry 10 --retry-all-errors --retry-delay 3
+          http://{{ include "conductor.fullname" . }}:{{ .Values.service.port }}/actuator/health &&
+          curl -sf -o /dev/null --retry 5 --retry-all-errors --retry-delay 3
+          http://{{ include "conductor.fullname" . }}:{{ .Values.service.uiPort }}/ &&
+          curl -sf -o /dev/null --retry 5 --retry-all-errors --retry-delay 3
+          http://{{ include "conductor.fullname" . }}:{{ .Values.service.uiPort }}/api/metadata/workflow
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

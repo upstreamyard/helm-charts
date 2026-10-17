@@ -1,0 +1,35 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plano.fullname" . }}
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "plano.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        {{- range (include "plano.ports" . | fromJsonArray) }}
+        - port: {{ .port }}
+          protocol: TCP
+        {{- end }}
+      {{- with .Values.networkPolicy.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+        # Pods with this label (e.g. the helm test pod) may always connect.
+        - podSelector:
+            matchLabels:
+              {{ include "plano.clientLabel" $ }}: "true"
+      {{- end }}
+    - ports:
+        - port: 9092
+          protocol: TCP
+      {{- with .Values.networkPolicy.metricsFrom }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
