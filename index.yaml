@@ -512,6 +512,50 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.0/conductor-0.1.0.tgz
     version: 0.1.0
+  discourse:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial release
+      artifacthub.io/images: |
+        - name: discourse
+          image: upstreamyard/discourse:2026.9.0
+      artifacthub.io/license: GPL-2.0-or-later
+      artifacthub.io/links: |
+        - name: Discourse project
+          url: https://github.com/discourse/discourse
+        - name: Container image
+          url: https://github.com/upstreamyard/discourse
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2026.9.0
+    created: "2026-10-17T12:45:35.800031734Z"
+    description: Discourse, the open-source community forum. Community chart by upstreamyard,
+      not an official Discourse chart.
+    digest: eb6495a5a1156f441b0769ea1332c0b9af37b40a72c973be3ca9a1c5e51605bb
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - discourse
+    - forum
+    - community
+    - discussion
+    - chat
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: discourse
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/discourse
+    - https://github.com/discourse/discourse
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.0/discourse-0.1.0.tgz
+    version: 0.1.0
   dolt:
   - annotations:
       artifacthub.io/category: database
@@ -1281,4 +1325,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T12:41:49.74128168Z"
+generated: "2026-10-17T12:45:35.800069535Z"
