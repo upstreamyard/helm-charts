@@ -1,0 +1,119 @@
+{{- if .Values.migrations.enabled }}
+{{- /*
+Saleor's pods don't migrate on startup. This Job runs `manage.py migrate` before every install
+and upgrade, then creates the first admin account if admin.email is set.
+
+Helm hooks run before the release's normal resources exist, so the Job cannot use the regular
+Secret on first install. A short-lived hook copy of the Secret is created first (weight -10)
+and deleted together with the Job once migrations succeeded.
+*/}}
+{{- $hookSecret := printf "%s-migrate" (include "saleor.fullname" .) }}
+{{- if include "saleor.createSecret" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookSecret }}
+  labels:
+    {{- include "saleor.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- include "saleor.secretData" . | nindent 2 }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "saleor.fullname" . }}-migrate
+  labels:
+    {{- include "saleor.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "saleor.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "saleor.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              # `migrate` queues data-migration tasks for the workers. Send them to this
+              # version's queue: workers of the previous version are still running and
+              # would discard tasks they don't know.
+              python3 - <<'EOF'
+              import os
+              import django
+              django.setup()
+              from django.core.management import call_command
+              from saleor.celeryconf import app
+              app.conf.task_default_queue = os.environ["DATA_MIGRATIONS_TASKS_QUEUE_NAME"]
+              call_command("migrate", interactive=False)
+              EOF
+              if [ -n "$DJANGO_SUPERUSER_EMAIL" ]; then
+                if out=$(python3 manage.py createsuperuser --no-input 2>&1); then
+                  echo "Created admin account $DJANGO_SUPERUSER_EMAIL"
+                elif echo "$out" | grep -q "already taken"; then
+                  echo "Admin account $DJANGO_SUPERUSER_EMAIL exists, not changed"
+                else
+                  echo "$out"; exit 1
+                fi
+              fi
+          env:
+            - name: DJANGO_SETTINGS_MODULE
+              value: saleor.settings
+            - name: DATA_MIGRATIONS_TASKS_QUEUE_NAME
+              value: {{ include "saleor.migrationQueue" . | quote }}
+            {{- if .Values.admin.email }}
+            - name: DJANGO_SUPERUSER_EMAIL
+              value: {{ .Values.admin.email | quote }}
+            - name: DJANGO_SUPERUSER_PASSWORD
+              {{- include "saleor.secretRef" (list $hookSecret .Values.admin.existingSecret .Values.admin.existingSecretKey "admin-password") | trim | nindent 14 }}
+            {{- end }}
+            {{- include "saleor.env" (list . $hookSecret) | trim | nindent 12 }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.migrations.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "saleor.volumeMounts" . | trim | nindent 12 }}
+      volumes:
+        {{- include "saleor.volumes" . | trim | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

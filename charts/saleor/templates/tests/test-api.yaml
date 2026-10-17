@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "saleor.fullname" . }}-test-api
+  labels:
+    {{- include "saleor.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      # The Saleor image has Python but no curl; using it avoids pulling another image.
+      image: {{ include "saleor.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["python3", "-c"]
+      args:
+        - |
+          import json, time, urllib.request
+
+          api = "http://{{ include "saleor.fullname" . }}:{{ .Values.service.port }}"
+
+          def get(url):
+              for attempt in range(10):
+                  try:
+                      with urllib.request.urlopen(url, timeout=10) as r:
+                          return r.status, r.read().decode()
+                  except OSError as e:
+                      print(f"{url}: {e}, retrying")
+                      time.sleep(3)
+              raise SystemExit(f"{url} not reachable")
+
+          status, _ = get(api + "/health/")
+          assert status == 200, f"/health/ returned {status}"
+
+          # A GraphQL query needs the database. X-Forwarded-Proto avoids the redirect to https
+          # that Saleor sends for plain-http requests when saleor.publicUrl is https.
+          req = urllib.request.Request(
+              api + "/graphql/",
+              data=json.dumps({"query": "{ shop { name defaultCountry { code } } }"}).encode(),
+              headers={"Content-Type": "application/json", "X-Forwarded-Proto": "https"},
+          )
+          with urllib.request.urlopen(req, timeout=30) as r:
+              body = json.load(r)
+          assert body.get("data", {}).get("shop") is not None, f"GraphQL query failed: {body}"
+          print("API answers GraphQL queries:", body["data"]["shop"])
+          {{- if .Values.dashboard.enabled }}
+
+          status, html = get("http://{{ include "saleor.dashboardFullname" . }}:{{ .Values.dashboard.service.port }}/dashboard/")
+          assert status == 200, f"dashboard returned {status}"
+          assert {{ include "saleor.dashboardApiUrl" . | quote }} in html, "dashboard doesn't use the configured API URL"
+          print("Dashboard is up")
+          {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
