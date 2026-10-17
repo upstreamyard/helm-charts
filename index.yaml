@@ -622,6 +622,101 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.0/nemo-guardrails-0.1.0.tgz
     version: 0.1.0
+  supertokens:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Initial release
+      artifacthub.io/images: |
+        - name: supertokens-postgresql
+          image: supertokens/supertokens-postgresql:12.2.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: SuperTokens project
+          url: https://github.com/supertokens/supertokens-core
+        - name: Container image
+          url: https://hub.docker.com/r/supertokens/supertokens-postgresql
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 12.2.0
+    created: "2026-10-17T11:53:10.74566772Z"
+    description: SuperTokens core, the open-source authentication server (sessions,
+      email/password, passwordless, social login, MFA), with PostgreSQL. Community
+      chart by upstreamyard, not an official SuperTokens chart.
+    digest: ad2a3d4028934c4b64205156d16812a63bb68f3359fcb3f661746efaeb6ee45d
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - supertokens
+    - authentication
+    - auth
+    - session
+    - login
+    - postgresql
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: supertokens
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/supertokens/supertokens-core
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/supertokens-0.1.0/supertokens-0.1.0.tgz
+    version: 0.1.0
+  tigerbeetle:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: added
+          description: TigerBeetle chart with 1, 3 or 6 replica clusters on the official image
+      artifacthub.io/images: |
+        - name: tigerbeetle
+          image: ghcr.io/tigerbeetle/tigerbeetle:0.17.9
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: TigerBeetle
+          url: https://github.com/tigerbeetle/tigerbeetle
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.17.9
+    created: "2026-10-17T11:53:10.913382824Z"
+    description: TigerBeetle Helm chart for Kubernetes. Fault-tolerant 3 or 6 replica
+      TigerBeetle cluster (financial transactions database for double-entry accounting)
+      on the official image, with safe replica recovery, non-root, Prometheus metrics
+      and helm test. Community chart by upstreamyard, not an official TigerBeetle
+      chart.
+    digest: 51a49f44aa09582b01de0e700a025d9780667757321899d3cb86c726ff4aa4e5
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/tigerbeetle
+    keywords:
+    - tigerbeetle
+    - tigerbeetle-cluster
+    - financial-database
+    - ledger
+    - double-entry-accounting
+    - accounting
+    - payments
+    - oltp
+    - database
+    - high-availability
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: tigerbeetle
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/tigerbeetle/tigerbeetle
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/tigerbeetle-0.1.0/tigerbeetle-0.1.0.tgz
+    version: 0.1.0
   xxl-job:
   - annotations:
       artifacthub.io/changes: |
@@ -706,4 +801,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T11:51:26.353342948Z"
+generated: "2026-10-17T11:53:10.91341316Z"
