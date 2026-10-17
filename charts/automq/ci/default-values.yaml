@@ -1,0 +1,17 @@
+# 3 combined controller + broker nodes, SASL on (the defaults), S3 from .github/ci/deps.yaml.
+s3:
+  dataBucket: automq
+  endpoint: http://s3.deps.svc:9000
+  pathStyle: true
+  accessKey: ci-access-key
+  secretKey: ci-secret-key
+controller:
+  heapOpts: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1536Mi
+    limits:
+      memory: 1536Mi
+  persistence:
+    size: 1Gi

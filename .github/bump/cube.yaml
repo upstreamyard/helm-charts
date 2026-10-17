@@ -1,0 +1,4 @@
+# Releases the cube chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: cube-js/cube
+  image: docker.io/cubejs/cube
+  tag_prefix: v
