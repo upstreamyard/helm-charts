@@ -1,0 +1,29 @@
+Docling Serve {{ .Chart.AppVersion }} is deployed as "{{ include "docling-serve.fullname" . }}" with the {{ .Values.engine.kind }} engine
+{{- if include "docling-serve.rq" . }} ({{ if .Values.autoscaling.enabled }}autoscaled API pods{{ else }}{{ .Values.replicaCount }} API pod(s){{ end }}, {{ if .Values.worker.autoscaling.enabled }}KEDA-scaled workers{{ else }}{{ .Values.worker.replicaCount }} worker(s){{ end }})
+{{- else }} ({{ .Values.engine.local.numWorkers }} conversions at a time){{ end }}.
+
+In-cluster URL:
+
+  http://{{ include "docling-serve.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+{{- if .Values.apiKey.enabled }}
+
+API key (send it as the X-Api-Key header):
+
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "docling-serve.apiKeySecretName" . }} -o jsonpath='{.data.{{ include "docling-serve.apiKeySecretKey" . }}}' | base64 -d; echo
+{{- end }}
+
+Try it:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "docling-serve.fullname" . }} 5001:{{ .Values.service.port }}
+  curl -X POST http://localhost:5001/v1/convert/source \
+    -H 'Content-Type: application/json' {{- if .Values.apiKey.enabled }} -H "X-Api-Key: $API_KEY"{{ end }} \
+    -d '{"sources": [{"kind": "http", "url": "https://arxiv.org/pdf/2206.01062"}]}'
+
+API docs: http://localhost:5001/docs{{ if .Values.ui.enabled }}   Web UI: http://localhost:5001/ui{{ end }}
+Check the installation: helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if not .Values.apiKey.enabled }}
+
+WARNING: the API key is off. Anyone who can reach the service can convert documents
+and make the server fetch any URL. Set apiKey.enabled=true unless something in front
+of the service handles authentication.
+{{- end }}

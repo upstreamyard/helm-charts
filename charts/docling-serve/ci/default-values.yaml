@@ -1,0 +1,5 @@
+# Used by chart-testing (ct install) in CI: one API pod with the local engine and a generated API key.
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
