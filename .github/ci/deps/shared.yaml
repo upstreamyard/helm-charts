@@ -1,5 +1,6 @@
-# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind.
-# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc.
+# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind, used by several charts.
+# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc. Services only one
+# chart needs are in .github/ci/deps/<chart>.yaml; CI starts those for the changed charts.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -20,7 +21,7 @@ spec:
       containers:
         - name: postgres
           image: pgvector/pgvector:pg18
-          # Logical replication, needed by Electric.
+          # Logical replication, for charts that stream changes (e.g. electric).
           args: ["-c", "wal_level=logical"]
           env:
             - { name: POSTGRES_USER, value: aegra }
