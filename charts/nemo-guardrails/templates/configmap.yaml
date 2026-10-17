@@ -1,0 +1,15 @@
+{{- range $id, $files := .Values.configs }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nemo-guardrails.configMapName" (list $ $id) }}
+  labels:
+    {{- include "nemo-guardrails.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: config
+immutable: true
+data:
+  {{- range $name, $content := $files }}
+  {{ $name }}: {{ $content | toString | quote }}
+  {{- end }}
+{{- end }}
