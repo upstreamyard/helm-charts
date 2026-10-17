@@ -1,6 +1,6 @@
 # Kvrocks Helm chart: Apache Kvrocks on Kubernetes with Sentinel high availability
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 2.17.0](https://img.shields.io/badge/AppVersion-2.17.0-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 2.17.0](https://img.shields.io/badge/AppVersion-2.17.0-informational?style=flat-square)
 
 Helm chart for **[Apache Kvrocks](https://github.com/apache/kvrocks)**, the Redis-compatible key-value database that stores data on disk in RocksDB instead of in RAM. It runs a single instance or a **highly available master/replica cluster with automatic Redis Sentinel failover**, plus an HAProxy endpoint that always points at the current master, so apps that only take one Redis URL survive a failover too. Password auth is on by default, memory settings fit the pod's limit, and Prometheus metrics (including RocksDB compaction), a ServiceMonitor and `helm test` are included. It uses the **official `apache/kvrocks` image** (Kvrocks 2.17.0) and tracks every Kvrocks release.
 

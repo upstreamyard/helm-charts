@@ -2,10 +2,11 @@ apiVersion: v2
 name: logto
 description: Logto, the open-source identity and access management platform (OIDC, SSO, multi-tenancy) for apps and SaaS. Community chart by upstreamyard, not an official Logto chart.
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "1.44.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
+icon: https://upstreamyard.github.io/helm-charts/logo.png
 sources:
   - https://github.com/upstreamyard/helm-charts
   - https://github.com/logto-io/logto
@@ -32,5 +33,5 @@ annotations:
     fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
-    - kind: added
-      description: First release
+    - kind: changed
+      description: Added the upstreamyard logo as the chart icon
