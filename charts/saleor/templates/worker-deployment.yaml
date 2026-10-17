@@ -1,0 +1,14 @@
+{{- /*
+Recreate: workers of the previous version stop before the new ones start, so they never take
+tasks of the new version (Celery discards tasks it doesn't know). The workers also consume the
+queue the migration Job sent this version's data-migration tasks to.
+*/}}
+{{ include "saleor.deployment" (dict
+  "root" .
+  "component" "worker"
+  "replicas" .Values.worker.replicaCount
+  "strategy" (dict "type" "Recreate")
+  "command" (list "celery" "--app" "saleor.celeryconf:app" "worker" "-E" "--loglevel=info" (printf "--concurrency=%d" (int .Values.worker.concurrency)) "--queues" (append .Values.worker.queues (include "saleor.migrationQueue" .) | join ","))
+  "grace" .Values.worker.terminationGracePeriodSeconds
+  "probes" (dict "livenessProbe" .Values.worker.livenessProbe)
+  "resources" .Values.worker.resources) }}
