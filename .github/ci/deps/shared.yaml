@@ -1,5 +1,6 @@
-# Throwaway PostgreSQL (with pgvector), Redis and MongoDB for chart tests in kind.
-# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc.
+# Throwaway PostgreSQL (with pgvector) and Redis for chart tests in kind, used by several charts.
+# Not for production. Referenced by charts/*/ci/*-values.yaml as *.deps.svc. Services only one
+# chart needs are in .github/ci/deps/<chart>.yaml; CI starts those for the changed charts.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -20,6 +21,8 @@ spec:
       containers:
         - name: postgres
           image: pgvector/pgvector:pg18
+          # Logical replication, for charts that stream changes (e.g. electric).
+          args: ["-c", "wal_level=logical"]
           env:
             - { name: POSTGRES_USER, value: aegra }
             - { name: POSTGRES_PASSWORD, value: aegra }
@@ -72,36 +75,3 @@ spec:
   selector: { app: redis }
   ports:
     - port: 6379
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mongo
-  namespace: deps
-spec:
-  selector:
-    matchLabels: { app: mongo }
-  template:
-    metadata:
-      labels: { app: mongo }
-    spec:
-      containers:
-        - name: mongo
-          # 8.2: MongoDB 8.0 refuses to start on Linux 6.19+ (SERVER-121912).
-          image: mongo:8.2
-          ports:
-            - containerPort: 27017
-          readinessProbe:
-            exec:
-              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-            periodSeconds: 2
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongo
-  namespace: deps
-spec:
-  selector: { app: mongo }
-  ports:
-    - port: 27017
