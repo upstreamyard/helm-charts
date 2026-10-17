@@ -1,0 +1,340 @@
+image:
+  # -- Image repository, used for the web server, SMTP server, workers and the migration Job.
+  repository: ghcr.io/postalserver/postal
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+postal:
+  # -- Hostname of the web interface and API, e.g. `postal.example.com` (`POSTAL_WEB_HOSTNAME`). The web server only answers requests for this host. Required.
+  webHostname: ""
+  # -- Protocol of the web interface as users reach it (`POSTAL_WEB_PROTOCOL`). Used in links Postal generates.
+  webProtocol: https
+  # -- Hostname of the SMTP server, shown to users as the server to send through (`POSTAL_SMTP_HOSTNAME`), e.g. `smtp.postal.example.com`. Set it when the SMTP load balancer has a different IP than the web interface. Defaults to `webHostname`.
+  smtpHostname: ""
+  # -- Rails secret key that signs sessions (`RAILS_SECRET_KEY`), e.g. from `openssl rand -hex 64`. All pods must share it. Required unless `existingSecret` is set. Stored in a Secret created by this chart.
+  secretKey: ""
+  # -- RSA private key in PEM format, e.g. from `openssl genrsa 2048` (mounted as `signing.key`). Signs messages with the default DKIM key of the return path domain and webhooks. Changing it invalidates the published DKIM record. Required unless `existingSecret` is set. Stored in a Secret created by this chart.
+  signingKey: ""
+  # -- Name of an existing Secret that holds the secret key and the signing key (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the Rails secret key.
+  secretKeyKey: secret-key
+  # -- Key in `existingSecret` that holds the signing key.
+  signingKeyKey: signing-key
+  # -- IP addresses or CIDR ranges of proxies in front of the web server, e.g. your Ingress controller's pod network (`POSTAL_TRUSTED_PROXIES`). Postal then takes the client IP from `X-Forwarded-For`.
+  trustedProxies: []
+  # -- Send all outgoing mail through these relays instead of delivering it directly, e.g. `["smtp://relay.example.com:587?ssl_mode=Auto"]` (`POSTAL_SMTP_RELAYS`); `ssl_mode` is `None`, `Auto`, `STARTTLS` or `TLS`. Use it when your cloud blocks outgoing port 25. Hostnames must be fully qualified (`relay.mail.svc.cluster.local`, not `relay.mail.svc`): Postal's resolver ignores the cluster's search domains.
+  smtpRelays: []
+
+# DNS names Postal shows users and checks for. Create the records as described in the README.
+# Empty values are derived from postal.webHostname, e.g. spf.postal.example.com.
+dns:
+  # -- MX hosts for incoming mail (`DNS_MX_RECORDS`). Defaults to `[smtpHostname]`.
+  mxRecords: []
+  # -- Name of the TXT record with the SPF policy that sending domains include (`DNS_SPF_INCLUDE`). Defaults to `spf.<webHostname>`.
+  spfInclude: ""
+  # -- Default return path domain (`DNS_RETURN_PATH_DOMAIN`). Bounces go here. Defaults to `rp.<webHostname>`.
+  returnPathDomain: ""
+  # -- Domain for route forwarding addresses (`DNS_ROUTE_DOMAIN`). Defaults to `routes.<webHostname>`.
+  routeDomain: ""
+  # -- Domain that sending domains' tracking CNAMEs point to (`DNS_TRACK_DOMAIN`). Defaults to `track.<webHostname>`.
+  trackDomain: ""
+  # -- Hostname Postal uses in `HELO`/`EHLO` when it delivers mail (`DNS_HELO_HOSTNAME`). Should match the reverse DNS (PTR) of your outgoing IP. Defaults to `smtpHostname`.
+  heloHostname: ""
+  # -- DKIM selector (`DNS_DKIM_IDENTIFIER`).
+  dkimIdentifier: postal
+
+# MariaDB (10.6 or newer; MySQL is not supported by Postal). Required. Postal keeps its
+# configuration in one database and creates one more database per mail server, named
+# <messageDatabasePrefix>-server-<id>, so the user needs all privileges on `<name>` and `<prefix>-*`.
+database:
+  # -- Hostname of the MariaDB server (`MAIN_DB_HOST`, `MESSAGE_DB_HOST`). Required.
+  host: ""
+  # -- Port of the MariaDB server.
+  port: 3306
+  # -- Database user.
+  username: postal
+  # -- Password of the database user. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the password (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the password.
+  existingSecretKey: password
+  # -- Name of the main database (`MAIN_DB_DATABASE`). Created by the migration Job if it doesn't exist.
+  name: postal
+  # -- Prefix of the per-mail-server databases (`MESSAGE_DB_DATABASE_NAME_PREFIX`).
+  messageDatabasePrefix: postal
+
+# SMTP server for Postal's own emails (password resets, user invitations). Create a mail server
+# and an SMTP credential in the web interface after install, then set username and password.
+systemEmail:
+  # -- SMTP host (`SMTP_HOST`). Defaults to this release's SMTP Service.
+  host: ""
+  # -- SMTP port (`SMTP_PORT`).
+  port: 25
+  # -- SMTP username (`SMTP_USERNAME`).
+  username: ""
+  # -- SMTP password (`SMTP_PASSWORD`). Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the SMTP password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the SMTP password.
+  existingSecretKey: smtp-password
+  # -- Sender name (`SMTP_FROM_NAME`).
+  fromName: Postal
+  # -- Sender address (`SMTP_FROM_ADDRESS`). Defaults to `postal@<webHostname>`.
+  fromAddress: ""
+
+# First admin user. Created by the migration Job if no user with this email exists; the password
+# is not changed afterwards.
+admin:
+  # -- Email of the first admin user. Leave empty to create it yourself with `postal make-user` (see the README).
+  email: ""
+  # -- First name of the admin user.
+  firstName: Postal
+  # -- Last name of the admin user.
+  lastName: Admin
+  # -- Password of the admin user. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the admin password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the admin password.
+  existingSecretKey: admin-password
+
+web:
+  # -- Web server pods (web interface, HTTP API, click and open tracking). Any number works.
+  replicaCount: 1
+  # -- Request threads per web server pod (`WEB_SERVER_MAX_THREADS`).
+  maxThreads: 5
+  service:
+    # -- Service type.
+    type: ClusterIP
+    # -- Service port. The web server listens on 5000 inside the container.
+    port: 80
+  # -- Seconds Kubernetes waits after SIGTERM, including the `preStop` sleep.
+  terminationGracePeriodSeconds: 40
+  # -- Lifecycle hooks. The `preStop` sleep keeps a stopping pod serving until it is removed from the Service's endpoints.
+  lifecycle:
+    preStop:
+      exec:
+        command: ["sleep", "10"]
+  # -- Startup probe. The chart adds the `Host` header (`postal.webHostname`), because the web server rejects other hosts.
+  startupProbe:
+    httpGet:
+      path: /.well-known/jwks.json
+      port: http
+    periodSeconds: 3
+    timeoutSeconds: 3
+    failureThreshold: 60
+  # -- Liveness probe. The chart adds the `Host` header.
+  livenessProbe:
+    httpGet:
+      path: /.well-known/jwks.json
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  # -- Readiness probe. The chart adds the `Host` header.
+  readinessProbe:
+    httpGet:
+      path: /.well-known/jwks.json
+      port: http
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # -- Resources for the web server container.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 384Mi
+    limits:
+      memory: 768Mi
+
+ingress:
+  # -- Create an Ingress for the web interface and API.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts. Defaults to `postal.webHostname` with path `/`.
+  hosts: []
+  # - host: postal.example.com
+  #   paths:
+  #     - path: /
+  #       pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+smtp:
+  # -- SMTP server pods. They receive mail from other mail servers and from your apps. Any number works.
+  replicaCount: 1
+  # -- Port the SMTP server listens on inside the container. Above 1024, so it needs no privileges; the Service maps port 25 to it.
+  containerPort: 2525
+  # -- Bind address (`SMTP_SERVER_DEFAULT_BIND_ADDRESS`). Use `::` for IPv4 and IPv6 on dual-stack clusters.
+  bindAddress: 0.0.0.0
+  # -- Maximum message size in MB (`SMTP_SERVER_MAX_MESSAGE_SIZE`). MariaDB's `innodb_log_file_size` must be at least 10 times this.
+  maxMessageSize: 14
+  # -- Expect the PROXY protocol header from the load balancer (`SMTP_SERVER_PROXY_PROTOCOL`), so Postal sees the sender's real IP. Every connection must then come through a proxy that sends it.
+  proxyProtocol: false
+  tls:
+    # -- Offer STARTTLS (`SMTP_SERVER_TLS_ENABLED`). Needs `secretName`.
+    enabled: false
+    # -- Name of a `kubernetes.io/tls` Secret (`tls.crt`, `tls.key`) for `postal.smtpHostname`, e.g. from cert-manager.
+    secretName: ""
+  service:
+    # -- Service type. Use `LoadBalancer` to receive mail from the internet; see the README for the IP setup.
+    type: ClusterIP
+    # -- Service ports, all forwarded to the SMTP server. Port 25 is for other mail servers; add 587 for your apps if you like (Postal serves both on the same listener). Each entry takes `name`, `port` and optionally `nodePort`.
+    ports:
+      - name: smtp
+        port: 25
+    # -- `externalTrafficPolicy` for `LoadBalancer`/`NodePort`. `Local` keeps the sender's IP (needed for spam checks and logs) without the PROXY protocol.
+    externalTrafficPolicy: ""
+    # -- Fixed IP for a `LoadBalancer` Service (if your provider supports `loadBalancerIP`; many use an annotation instead).
+    loadBalancerIP: ""
+    # -- Service annotations, e.g. for your cloud's load balancer.
+    annotations: {}
+  # -- Seconds Kubernetes waits after SIGTERM. The SMTP server stops accepting connections and finishes open sessions.
+  terminationGracePeriodSeconds: 60
+  # -- Liveness probe on the health server (`/health`, port 9091).
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: health
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  # -- Readiness probe on the health server. (A TCP probe on the SMTP port would log a broken-pipe error for every check.)
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: health
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # -- Startup probe on the health server.
+  startupProbe:
+    httpGet:
+      path: /health
+      port: health
+    periodSeconds: 3
+    timeoutSeconds: 3
+    failureThreshold: 60
+  # -- Resources for the SMTP server container.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+worker:
+  # -- Worker pods. They deliver outgoing mail, process incoming mail, send webhooks and run housekeeping (one worker is elected for it). Any number works.
+  replicaCount: 1
+  # -- Threads per worker pod (`WORKER_THREADS`).
+  threads: 2
+  # -- Seconds Kubernetes waits after SIGTERM. Workers finish the message they are delivering; a killed worker leaves it locked for a day (`POSTAL_QUEUED_MESSAGE_LOCK_STALE_DAYS`).
+  terminationGracePeriodSeconds: 120
+  # -- Liveness probe on the health server (`/health`, port 9090).
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  # -- Resources for the worker container.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+metrics:
+  podMonitor:
+    # -- Create a Prometheus Operator PodMonitor that scrapes `/metrics` of the SMTP servers and workers (needs the `monitoring.coreos.com` CRDs).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels for the PodMonitor, e.g. the label your Prometheus selects on.
+    labels: {}
+
+migrations:
+  # -- Run `postal initialize` (creates the database if needed, loads the schema or migrates it, including all mail server databases) in a Job (Helm hook) before every install and upgrade. If false, run `postal upgrade` yourself; until then new pods wait for pending migrations. Keep it on for the first install: on an empty database the pods crash until the schema exists.
+  enabled: true
+  # -- Retries of the migration Job before the install/upgrade fails.
+  backoffLimit: 2
+  # -- Maximum runtime of the migration Job in seconds.
+  activeDeadlineSeconds: 1800
+  # -- Resources for the migration Job.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 768Mi
+
+# -- Extra environment variables for all Postal containers, e.g. any Postal setting such as `LOGGING_SENTRY_DSN`, `RSPAMD_ENABLED` or `OIDC_ENABLED`.
+extraEnv: []
+# - name: RSPAMD_ENABLED
+#   value: "true"
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# - secretRef:
+#     name: postal-oidc
+
+# -- Extra volumes for all Postal pods, e.g. a ConfigMap with a `postal.yml`.
+extraVolumes: []
+# -- Extra volume mounts for all Postal containers. A `postal.yml` mounted at `/config/postal.yml` is read, but the chart's environment variables take precedence.
+extraVolumeMounts: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Postal does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Pod security context. The image's `postal` user is UID 999.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The image's Ruby carries the `cap_net_bind_service` file capability, and Linux refuses to start a program whose file capabilities are missing from the bounding set, so `NET_BIND_SERVICE` stays in it. With `allowPrivilegeEscalation: false` the processes don't get the capability; they run without any.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+    add: ["NET_BIND_SERVICE"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

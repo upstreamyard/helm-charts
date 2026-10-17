@@ -1,0 +1,20 @@
+ShardingSphere-Proxy {{ .Chart.AppVersion }} is deployed as "{{ include "shardingsphere-proxy.fullname" . }}" ({{ .Values.replicaCount }} pod(s), {{ if .Values.existingSecret }}configuration from Secret "{{ .Values.existingSecret }}"{{ else }}{{ .Values.mode }} mode{{ end }}).
+
+Connect from inside the cluster to {{ include "shardingsphere-proxy.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+with a MySQL client (MySQL or MariaDB backends) or a PostgreSQL client (PostgreSQL backends).
+From your machine:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "shardingsphere-proxy.fullname" . }} 3307:{{ .Values.service.port }}
+  mysql -h 127.0.0.1 -P 3307 -u <user> -p
+{{- if and (not .Values.existingSecret) (not .Values.databases) }}
+
+No logical databases are configured (databases: {}). Add them to the values, or create them
+with DistSQL as an admin user{{ if eq .Values.mode "Standalone" }} (in Standalone mode, DistSQL changes are lost when the pod restarts){{ end }}.
+{{- end }}
+{{- if and (not .Values.existingSecret) (eq .Values.mode "Cluster") }}
+
+Cluster mode: ZooKeeper namespace "{{ include "shardingsphere-proxy.namespace" . }}" on {{ .Values.cluster.zookeeper.serverLists }}.
+The values (users, props, databases) are only used while that namespace is empty, i.e. on the
+first start. Later changes to them have no effect; change rules with DistSQL, or set a new
+cluster.namespace to start again from the values.
+{{- end }}

@@ -1,0 +1,178 @@
+# -- Number of admin pods. All replicas share the MySQL database; a database lock ensures each job is triggered only once.
+replicaCount: 1
+
+image:
+  # -- Image repository. The official XXL-JOB admin image (amd64 only).
+  repository: xuxueli/xxl-job-admin
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# MySQL connection. Required: MySQL (tested with 8.4) and an existing database with the utf8mb4
+# character set. The chart does not create the database itself.
+database:
+  # -- MySQL host name.
+  host: ""
+  # -- MySQL port.
+  port: 3306
+  # -- Database name.
+  name: xxl_job
+  # -- Database user. Needs CREATE, SELECT, INSERT, UPDATE and DELETE on the database.
+  username: ""
+  # -- Database password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the database password (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the database password.
+  existingSecretKey: db-password
+  # -- Extra JDBC URL parameters, appended to `useUnicode=true&characterEncoding=UTF-8&serverTimezone=<timezone>`, e.g. `sslMode=REQUIRED`.
+  extraParams: ""
+
+# The first admin user, created by the setup Job on a new database. Later password changes in
+# the web UI are not overwritten.
+admin:
+  # -- User name of the first admin.
+  username: admin
+  # -- Password of the first admin. Empty means a random password, stored in the chart's Secret (see NOTES after install). Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the admin password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the admin password.
+  existingSecretKey: admin-password
+
+schemaSetup:
+  # -- Create XXL-JOB's tables (if missing) and the first admin user (if the database has no users) in a Job before every install and upgrade (Helm hook). Existing tables and data are never changed. If false, you load XXL-JOB's `tables_xxl_job.sql` yourself.
+  enabled: true
+  image:
+    # -- Image with the `mysql` client for the setup Job.
+    repository: mysql
+    # -- Image tag.
+    tag: "8.4"
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+  # -- Retries of the Job before the install/upgrade fails.
+  backoffLimit: 3
+  # -- Maximum runtime of the Job in seconds.
+  activeDeadlineSeconds: 300
+  # -- Resources for the Job.
+  resources: {}
+
+# -- Time zone of the admin (`TZ` and the JDBC `serverTimezone`). Cron expressions run in this time zone. The image's own default is `PRC` (China).
+timezone: UTC
+
+# -- Language of the web UI and alert texts (`xxl.job.i18n`): `en`, `zh_CN` or `zh_TC`.
+language: en
+
+# -- Context path of the web UI and API (`server.servlet.context-path`), e.g. `/xxl-job-admin`. Executors use it in `xxl.job.admin.addresses`.
+contextPath: /
+
+# -- JVM options (`JAVA_OPTS`).
+javaOpts: "-XX:MaxRAMPercentage=75.0"
+
+# -- Extra environment variables for the admin, e.g. Spring properties as `XXL_JOB_LOGRETENTIONDAYS` or `SPRING_MAIL_HOST`. See the properties in https://github.com/xuxueli/xxl-job/blob/master/xxl-job-admin/src/main/resources/application.properties
+extraEnv: []
+# - name: XXL_JOB_LOGRETENTIONDAYS
+#   value: "14"
+
+# -- Extra environment variables from Secrets or ConfigMaps, e.g. `SPRING_MAIL_PASSWORD`.
+extraEnvFrom: []
+# - secretRef:
+#     name: xxl-job-mail
+
+# -- Extra volumes for the pod, e.g. a ConfigMap with extra Spring properties, loaded with `SPRING_CONFIG_ADDITIONAL_LOCATION` in `extraEnv`.
+extraVolumes: []
+# -- Extra volume mounts for the admin container.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port of the web UI and the API that executors call.
+  port: 8080
+
+ingress:
+  # -- Create an Ingress for the web UI. Executors in the cluster should use the Service instead.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: xxl-job.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. XXL-JOB does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM. The admin stops its scheduler threads within a few seconds.
+terminationGracePeriodSeconds: 30
+
+# -- Startup probe timing. The chart sets the path (`<contextPath>actuator/health/liveness`) and port.
+startupProbe:
+  periodSeconds: 3
+  failureThreshold: 40
+# -- Liveness probe timing on `<contextPath>actuator/health/liveness`.
+livenessProbe:
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+# -- Readiness probe timing on `<contextPath>actuator/health/readiness`.
+readinessProbe:
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Resources for the admin container.
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+
+# -- Pod security context. Runs the admin as non-root UID 10001 (the image itself defaults to root).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The root filesystem is read-only; the chart mounts empty volumes for `/tmp` and the log folder.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector. The official image is built for amd64 only.
+nodeSelector:
+  kubernetes.io/arch: amd64
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

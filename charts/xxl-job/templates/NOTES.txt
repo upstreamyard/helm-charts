@@ -1,0 +1,30 @@
+XXL-JOB admin {{ .Chart.AppVersion }} is deployed as "{{ include "xxl-job.fullname" . }}" ({{ .Values.replicaCount }} replica(s)).
+{{- if .Values.schemaSetup.enabled }}
+A Job created missing tables in MySQL database "{{ .Values.database.name }}" before this release.
+{{- end }}
+
+Web UI:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "xxl-job.fullname" . }} 8080:{{ .Values.service.port }}
+  # then browse to http://localhost:8080{{ .Values.contextPath }}
+{{- if .Values.schemaSetup.enabled }}
+
+Sign in as "{{ .Values.admin.username }}" (created only on a new database).
+{{- if .Values.admin.existingSecret }}
+The password is in Secret "{{ .Values.admin.existingSecret }}", key "{{ .Values.admin.existingSecretKey }}".
+{{- else if .Values.admin.password }}
+The password is the one you set in admin.password.
+{{- else }}
+Get the generated password:
+
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "xxl-job.fullname" . }} -o jsonpath='{.data.admin-password}' | base64 -d; echo
+{{- end }}
+{{- end }}
+
+Executors (your services with xxl-job-core) use this admin address in the cluster:
+
+  xxl.job.admin.addresses=http://{{ include "xxl-job.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}{{ .Values.contextPath }}
+
+and the access token of their executor group (Executor Manager in the web UI).
+The admin calls executors directly on their registered address, so executor pods
+must be reachable from the admin pods.

@@ -1,0 +1,113 @@
+{{- if .Values.migrations.enabled }}
+{{- /*
+Runs `postal initialize` before every install and upgrade: it creates the main database if it
+doesn't exist, loads the schema on a fresh database or migrates it, and migrates every mail
+server's message database. Then it creates the admin user from admin.* if it doesn't exist.
+
+Helm hooks run before the release's normal resources exist, so the Job cannot use the regular
+Secret on first install. A short-lived hook copy of the Secret is created first (weight -10)
+and deleted together with the Job once migrations succeeded.
+*/}}
+{{- $hookSecret := printf "%s-migrate" (include "postal.fullname" .) }}
+{{- if include "postal.createSecret" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookSecret }}
+  labels:
+    {{- include "postal.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- include "postal.secretData" . | nindent 2 }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "postal.fullname" . }}-migrate
+  labels:
+    {{- include "postal.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "postal.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "postal.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - bash
+            - -ec
+            - |
+              postal initialize
+              if [ -n "$POSTAL_ADMIN_EMAIL" ]; then
+                bundle exec rails runner '
+                  email = ENV.fetch("POSTAL_ADMIN_EMAIL")
+                  if User.where(email_address: email).exists?
+                    puts "Admin user #{email} exists, not changed"
+                  else
+                    User.create!(email_address: email, password: ENV.fetch("POSTAL_ADMIN_PASSWORD"),
+                                 first_name: ENV.fetch("POSTAL_ADMIN_FIRST_NAME"), last_name: ENV.fetch("POSTAL_ADMIN_LAST_NAME"),
+                                 admin: true, email_verified_at: Time.now)
+                    puts "Created admin user #{email}"
+                  end'
+              fi
+          env:
+            {{- if .Values.admin.email }}
+            - name: POSTAL_ADMIN_EMAIL
+              value: {{ .Values.admin.email | quote }}
+            - name: POSTAL_ADMIN_FIRST_NAME
+              value: {{ .Values.admin.firstName | quote }}
+            - name: POSTAL_ADMIN_LAST_NAME
+              value: {{ .Values.admin.lastName | quote }}
+            - name: POSTAL_ADMIN_PASSWORD
+              {{- include "postal.secretRef" (list $hookSecret .Values.admin.existingSecret .Values.admin.existingSecretKey "admin-password") | trim | nindent 14 }}
+            {{- end }}
+            {{- include "postal.env" (list . $hookSecret) | trim | nindent 12 }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.migrations.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "postal.volumeMounts" . | trim | nindent 12 }}
+      volumes:
+        {{- include "postal.volumes" (list . $hookSecret) | trim | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
