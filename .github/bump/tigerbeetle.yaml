@@ -1,0 +1,3 @@
+# Releases the tigerbeetle chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: tigerbeetle/tigerbeetle
+  image: ghcr.io/tigerbeetle/tigerbeetle

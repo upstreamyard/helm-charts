@@ -1,6 +1,6 @@
 # AutoMQ Helm chart: diskless Kafka on S3 on Kubernetes
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 1.7.4](https://img.shields.io/badge/AppVersion-1.7.4-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 1.7.4](https://img.shields.io/badge/AppVersion-1.7.4-informational?style=flat-square)
 
 Helm chart for **[AutoMQ](https://github.com/AutoMQ/automq)**, the open-source, Kafka-compatible streaming platform that stores messages in **S3 or S3-compatible object storage** instead of broker disks ("diskless Kafka"). Kafka clients, tools and protocols work unchanged. The chart runs **3 combined KRaft controller + broker nodes** by default, or separate controllers with **stateless broker-only nodes you can scale in seconds**. **SASL authentication is on by default** with generated passwords, and Prometheus metrics, a ServiceMonitor, PodDisruptionBudgets and `helm test` are included. It uses AutoMQ's official open-source image (`automqinc/automq`, AutoMQ 1.7.4, based on Kafka 3.9) and replaces the Bitnami Kafka chart setup that AutoMQ's own guide relies on.
 

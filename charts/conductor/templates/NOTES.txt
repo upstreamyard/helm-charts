@@ -1,0 +1,19 @@
+Conductor {{ .Chart.AppVersion }} is deployed as "{{ include "conductor.fullname" . }}" ({{ .Values.replicaCount }} replica(s)).
+
+Open the UI:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "conductor.fullname" . }} 5000:{{ .Values.service.uiPort }}
+  # then browse to http://localhost:5000
+
+Workers inside the cluster connect to the API at:
+
+  http://{{ include "conductor.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/api
+
+Swagger UI: /swagger-ui/index.html on the API port.
+
+NOTE: Conductor has NO authentication. Anyone who can reach the service can create,
+run and delete workflows.
+{{- if .Values.ingress.enabled }}
+Your Ingress exposes the UI and the API. Make sure an authenticating proxy or the
+Ingress controller restricts access.
+{{- end }}
