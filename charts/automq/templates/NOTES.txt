@@ -1,0 +1,37 @@
+AutoMQ {{ .Chart.AppVersion }} (Kafka-compatible, messages stored in S3 bucket {{ .Values.s3.dataBucket | default "from config" }}).
+
+Brokers: {{ include "automq.brokerCount" . }}, controllers: {{ .Values.controller.replicas }}{{ if not .Values.controller.controllerOnly }} (combined controller + broker){{ end }}.
+
+Bootstrap address for clients in the cluster:
+
+  {{ include "automq.bootstrap" . }}
+
+{{- if .Values.auth.enabled }}
+
+Clients log in with SASL/PLAIN. Client properties for user {{ (first .Values.auth.users).name }}:
+
+  security.protocol=SASL_PLAINTEXT
+  sasl.mechanism=PLAIN
+  sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="{{ (first .Values.auth.users).name }}" password="<password>";
+
+Password:
+{{- if .Values.auth.existingSecret }}
+  kubectl -n {{ .Release.Namespace }} get secret {{ .Values.auth.existingSecret }} -o jsonpath='{.data.{{ (first .Values.auth.users).name }}}' | base64 -d
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "automq.secretName" . }} -o jsonpath='{.data.user-{{ (first .Values.auth.users).name }}}' | base64 -d
+{{- end }}
+
+SASL/PLAIN sends passwords unencrypted. Keep the cluster network private or add TLS in front.
+{{- else }}
+
+WARNING: auth.enabled=false. Anyone who can reach port 9092 can read, write and delete topics.
+{{- end }}
+
+Test the cluster (creates a topic, sends and receives 10 messages):
+
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if not .Values.clusterId }}
+
+The cluster ID ({{ include "automq.clusterId" . }}) is derived from the release name and namespace.
+Reinstalling under the same name with the same bucket reuses it.
+{{- end }}
