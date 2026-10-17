@@ -1,0 +1,170 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "plano.fullname" . }}
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "plano.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/scripts: {{ .Files.Get "files/start.sh" | sha256sum }}
+        {{- if not .Values.existingConfigMap }}
+        checksum/config: {{ include "plano.config" . | sha256sum }}
+        {{- end }}
+        {{- if include "plano.createSecret" . }}
+        checksum/secret: {{ include "plano.secretData" . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "plano.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "plano.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: plano
+          image: {{ include "plano.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # The chart's start script replaces the image's supervisord setup (see files/start.sh).
+          command: ["bash", "/etc/plano-chart/start.sh"]
+          ports:
+            {{- range (include "plano.ports" . | fromJsonArray) }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+              protocol: TCP
+            {{- end }}
+            - name: metrics
+              containerPort: 9092
+              protocol: TCP
+          env:
+            - name: PLANO_CONFIG_FILE
+              value: /etc/plano/plano_config.yaml
+            - name: LOG_LEVEL
+              value: {{ .Values.logLevel | quote }}
+            - name: PLANO_ENVOY_CONCURRENCY
+              value: {{ .Values.envoy.concurrency | toString | quote }}
+            - name: PLANO_ENVOY_ADMIN_ALL_INTERFACES
+              value: {{ .Values.envoy.adminOnAllInterfaces | toString | quote }}
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
+            {{- range $k, $v := .Values.secretEnv }}
+            - name: {{ $k }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "plano.fullname" $ }}
+                  key: {{ $k }}
+            {{- end }}
+            {{- if include "plano.postgresEnabled" . }}
+            - name: PLANO_STATE_POSTGRES_URL
+              valueFrom:
+                {{- include "plano.postgresSecretRef" (list . (include "plano.fullname" .)) | nindent 16 }}
+            {{- end }}
+            {{- if include "plano.redisEnabled" . }}
+            - name: PLANO_SESSION_CACHE_REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.sessionCache.redis.existingSecret }}
+                  name: {{ .Values.sessionCache.redis.existingSecret }}
+                  key: {{ .Values.sessionCache.redis.existingSecretKey }}
+                  {{- else }}
+                  name: {{ include "plano.fullname" . }}
+                  key: redis-url
+                  {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.existingSecret .Values.extraEnvFrom }}
+          envFrom:
+            {{- if .Values.existingSecret }}
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+            {{- end }}
+            {{- with .Values.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.shutdownDelaySeconds }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "{{ .Values.shutdownDelaySeconds }}"]
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/plano/plano_config.yaml
+              subPath: {{ if .Values.existingConfigMap }}{{ .Values.existingConfigMapKey }}{{ else }}plano_config.yaml{{ end }}
+              readOnly: true
+            - name: scripts
+              mountPath: /etc/plano-chart
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ default (include "plano.fullname" .) .Values.existingConfigMap }}
+        - name: scripts
+          configMap:
+            name: {{ include "plano.fullname" . }}-scripts
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ .Values.tmpSizeLimit }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

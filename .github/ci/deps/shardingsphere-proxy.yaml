@@ -1,0 +1,85 @@
+# Test services for the shardingsphere-proxy chart in kind; CI starts them when the chart changes. Not for production.
+# MySQL (databases ds_0 and ds_1) and ZooKeeper for the shardingsphere-proxy chart.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init
+  namespace: deps
+data:
+  init.sql: |
+    CREATE DATABASE IF NOT EXISTS ds_0;
+    CREATE DATABASE IF NOT EXISTS ds_1;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: mysql }
+  template:
+    metadata:
+      labels: { app: mysql }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          env:
+            - { name: MYSQL_ROOT_PASSWORD, value: rootpw }
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            # Over TCP: MySQL's first-start initialization runs without networking.
+            exec:
+              command: ["mysql", "-h", "127.0.0.1", "-uroot", "-prootpw", "-e", "USE ds_1"]
+            periodSeconds: 2
+      volumes:
+        - name: init
+          configMap:
+            name: mysql-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: deps
+spec:
+  selector: { app: mysql }
+  ports:
+    - port: 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: zookeeper }
+  template:
+    metadata:
+      labels: { app: zookeeper }
+    spec:
+      containers:
+        - name: zookeeper
+          image: zookeeper:3.9
+          ports:
+            - containerPort: 2181
+          readinessProbe:
+            tcpSocket:
+              port: 2181
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: deps
+spec:
+  selector: { app: zookeeper }
+  ports:
+    - port: 2181

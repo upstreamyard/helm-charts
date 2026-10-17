@@ -1,0 +1,152 @@
+# -- Number of Conductor pods. All pods share the PostgreSQL database; the chart always uses Conductor's PostgreSQL workflow lock, so you can scale up or down at any time.
+replicaCount: 1
+
+image:
+  # -- Image repository.
+  repository: upstreamyard/conductor
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# PostgreSQL connection. Required. Conductor stores workflows, queues, the search index
+# and locks in it, and creates its tables on startup.
+database:
+  # -- JDBC URL, e.g. `jdbc:postgresql://postgres:5432/conductor`. Append `?sslmode=require` for TLS.
+  url: ""
+  # -- Database user.
+  username: ""
+  # -- Database password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the password (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the password.
+  existingSecretPasswordKey: password
+
+# -- JVM options (`JAVA_OPTS`). The heap follows the container memory limit.
+javaOpts: "-XX:MaxRAMPercentage=75.0"
+
+# -- Extra environment variables. Any Conductor or Spring Boot property can be set this way: upper-case, `.` and `-` become `_` (`conductor.app.workflowOffsetTimeout` → `CONDUCTOR_APP_WORKFLOWOFFSETTIMEOUT`). See https://github.com/conductor-oss/conductor/blob/main/server/src/main/resources/application.properties
+extraEnv: []
+# - name: OPENAI_API_KEY
+#   valueFrom:
+#     secretKeyRef:
+#       name: llm-keys
+#       key: openai
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# - secretRef:
+#     name: conductor-llm-keys
+
+# -- Extra volumes for the pod, e.g. a ConfigMap with a properties file.
+extraVolumes: []
+# - name: config
+#   configMap:
+#     name: conductor-config
+
+# -- Extra volume mounts for the Conductor container. Properties files go into `/app/config`; select one with `CONFIG_PROP` in `extraEnv`.
+extraVolumeMounts: []
+# - name: config
+#   mountPath: /app/config/custom.properties
+#   subPath: custom.properties
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Port of the REST API (`/api`), Swagger UI and metrics. Workers connect to `http://<service>:<port>/api`.
+  port: 8080
+  # -- Port of the UI. The UI also proxies `/api` to the server in the same pod.
+  uiPort: 5000
+
+ingress:
+  # -- Create an Ingress. It routes to the UI port, which also serves `/api`, `/swagger-ui` and `/actuator` through the UI's proxy. Conductor has no authentication, so put an authenticating proxy or ingress in front.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: conductor.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Conductor does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM. Conductor (Spring Boot) shuts down gracefully within 30 seconds.
+terminationGracePeriodSeconds: 35
+
+# -- Startup probe. `/health` checks only that the server process is up. Allows up to 2 minutes for the first start, which creates the database tables.
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 2
+  failureThreshold: 60
+# -- Liveness probe on `/health` (process only), so a database outage does not restart healthy pods.
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+# -- Readiness probe on `/actuator/health`, which checks the database. Pods leave the Service while PostgreSQL is unreachable.
+readinessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Resources for the Conductor container.
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    memory: 2Gi
+
+# -- Pod security context. The image runs as non-root UID 10001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
