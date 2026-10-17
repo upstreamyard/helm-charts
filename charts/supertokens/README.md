@@ -1,6 +1,6 @@
 # SuperTokens Helm chart
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 12.2.0](https://img.shields.io/badge/AppVersion-12.2.0-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 12.2.0](https://img.shields.io/badge/AppVersion-12.2.0-informational?style=flat-square)
 
 Helm chart for the [SuperTokens](https://github.com/supertokens/supertokens-core) core, the open-source authentication server behind SuperTokens' backend SDKs: sessions, email/password, passwordless, social and enterprise login, MFA, roles and multi-tenancy. It uses SuperTokens' official image [`supertokens/supertokens-postgresql`](https://hub.docker.com/r/supertokens/supertokens-postgresql).
 

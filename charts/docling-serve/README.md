@@ -1,6 +1,6 @@
 # Docling Serve Helm chart: the Docling document conversion API on Kubernetes
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 1.37.0](https://img.shields.io/badge/AppVersion-1.37.0-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 1.37.0](https://img.shields.io/badge/AppVersion-1.37.0-informational?style=flat-square)
 
 Helm chart for **[Docling Serve](https://github.com/docling-project/docling-serve)**, the API server of [Docling](https://github.com/docling-project/docling). It converts PDF, DOCX, PPTX, XLSX, HTML and images into Markdown, JSON or HTML, with layout analysis, table structure and OCR, for RAG and document AI pipelines. It runs a **single API server**, or **scalable API servers plus RQ workers** with a job queue in Redis, and **KEDA autoscaling on the queue length** down to zero workers. An **API key is required by default** (generated), and the pods run non-root with a read-only root filesystem. It works with Docling Serve's official **CPU and CUDA images**, and includes Prometheus metrics, a ServiceMonitor and a `helm test` that converts a real PDF.
 
