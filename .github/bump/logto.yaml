@@ -1,0 +1,3 @@
+# Releases the logto chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: logto-io/logto
+  image: docker.io/svhd/logto

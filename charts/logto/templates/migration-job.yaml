@@ -1,0 +1,90 @@
+{{- if .Values.migrations.enabled }}
+{{- /*
+Helm hooks run before the release's normal resources exist, so the Job cannot use
+the regular Secret on first install. A short-lived hook copy of the Secret is
+created first (weight -10) and deleted together with the Job once it succeeded.
+*/}}
+{{- $hookSecret := printf "%s-migrate" (include "logto.fullname" .) }}
+{{- if include "logto.createSecret" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookSecret }}
+  labels:
+    {{- include "logto.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- include "logto.secretData" . | nindent 2 }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "logto.fullname" . }}-migrate
+  labels:
+    {{- include "logto.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "logto.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "logto.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Set up an empty database (skipped if already set up), then deploy the
+          # database alterations of this Logto version. CI=true: non-interactive.
+          command: ["sh", "-c", "npm run cli db seed -- --swe && npm run alteration deploy latest"]
+          env:
+            - name: CI
+              value: "true"
+            {{- include "logto.secretEnv" (list . $hookSecret) | nindent 12 }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.migrations.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "logto.alterationScriptsMount" . | nindent 12 }}
+      volumes:
+        - name: alteration-scripts
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

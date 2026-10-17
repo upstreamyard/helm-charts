@@ -1,0 +1,151 @@
+{{- define "kvrocks.proxyConfig" -}}
+global
+  maxconn 10000
+resolvers dns
+  parse-resolv-conf
+  hold valid 5s
+  hold nx 1s
+  hold refused 1s
+  hold timeout 1s
+defaults
+  mode tcp
+  timeout connect 3s
+  timeout client {{ .Values.proxy.timeoutClient }}
+  timeout server {{ .Values.proxy.timeoutClient }}
+  timeout check 2s
+frontend health
+  mode http
+  bind :8404
+  monitor-uri /healthz
+  monitor fail if { nbsrv(master) lt 1 }
+frontend kvrocks
+  bind :{{ .Values.port }}
+  default_backend master
+backend master
+  option tcp-check
+  tcp-check connect
+  {{- if .Values.auth.enabled }}
+  tcp-check send "AUTH ${KVROCKS_PASSWORD}\r\n"
+  tcp-check expect string +OK
+  {{- end }}
+  tcp-check send "INFO replication\r\n"
+  # min-recv 0: decide on the first answer instead of waiting for the check timeout.
+  {{- if .Values.proxy.requireConnectedReplica }}
+  # A master without a connected replica may be a stale one that Sentinel has already replaced.
+  # rise 2 below: a stale master that resumes can list its old replicas in the first answer.
+  tcp-check expect min-recv 0 rstring role:master[[:space:]]+connected_slaves:[1-9]
+  {{- else }}
+  tcp-check expect min-recv 0 string role:master
+  {{- end }}
+  tcp-check send "QUIT\r\n"
+  tcp-check expect string +OK
+  default-server check inter 1s fall 1 rise 2 resolvers dns init-addr none on-marked-down shutdown-sessions
+  {{- range $i := until (int .Values.replicaCount) }}
+  server member{{ $i }} {{ include "kvrocks.fullname" $ }}-{{ $i }}.{{ include "kvrocks.headless" $ }}.{{ $.Release.Namespace }}.svc.{{ $.Values.clusterDomain }}:{{ $.Values.port }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.sentinel.enabled .Values.proxy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-proxy
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+data:
+# HAProxy checks every member once a second and forwards only to the one that reports
+  # role:master. Clients of a member that loses the role are disconnected and reconnect.
+  haproxy.cfg: |
+    {{- include "kvrocks.proxyConfig" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-proxy
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+    app.kubernetes.io/component: proxy
+spec:
+  replicas: {{ .Values.proxy.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kvrocks.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: proxy
+  template:
+    metadata:
+      labels:
+        {{- include "kvrocks.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: proxy
+      annotations:
+        checksum/config: {{ include "kvrocks.proxyConfig" . | sha256sum }}
+        {{- with .Values.proxy.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsUser: 99
+        runAsGroup: 99
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: haproxy
+          image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
+          imagePullPolicy: {{ .Values.proxy.image.pullPolicy }}
+          args: ["-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+          env:
+            {{- include "kvrocks.passwordEnv" . | nindent 12 }}
+          ports:
+            - name: kvrocks
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+            - name: health
+              containerPort: 8404
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 2
+            failureThreshold: 2
+          livenessProbe:
+            tcpSocket:
+              port: health
+            periodSeconds: 10
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.proxy.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/local/etc/haproxy
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "kvrocks.fullname" . }}-proxy
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "kvrocks.selectorLabels" . | nindent 20 }}
+                    app.kubernetes.io/component: proxy
+      {{- with .Values.proxy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.proxy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,206 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-scripts
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+data:
+  common.sh: |
+    # Shared by the Kvrocks and Sentinel containers.
+    CLI=$(command -v redis-cli || command -v valkey-cli)
+    DATA=/var/lib/kvrocks
+    SENTINEL_CONF=$DATA/sentinel/sentinel.conf
+
+    host_of() { echo "$FULLNAME-$1.$HEADLESS.$NAMESPACE.svc.$CLUSTER_DOMAIN"; }
+    ME=$(host_of "${HOSTNAME##*-}")
+
+    log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+    # cli <host> <port> <command...>: one command against Kvrocks or Sentinel.
+    cli() {
+      h=$1 p=$2; shift 2
+      if [ -n "${KVROCKS_PASSWORD:-}" ]; then
+        timeout 3 "$CLI" -h "$h" -p "$p" -a "$KVROCKS_PASSWORD" --no-auth-warning "$@"
+      else
+        timeout 3 "$CLI" -h "$h" -p "$p" "$@"
+      fi
+    }
+
+    # The master known to a running Sentinel of another member.
+    master_from_peers() {
+      i=0
+      while [ "$i" -lt "$REPLICAS" ]; do
+        h=$(host_of "$i")
+        if [ "$h" != "$ME" ]; then
+          m=$(cli "$h" "$SENTINEL_PORT" sentinel get-master-addr-by-name "$MASTER_SET" 2>/dev/null | head -1)
+          case $m in ""|*ERR*|*NOAUTH*) ;; *) echo "$m"; return 0 ;; esac
+        fi
+        i=$((i + 1))
+      done
+      return 1
+    }
+
+    # "data" if another member holds keys, "empty" if all others answered without keys (a new
+    # cluster), nothing if some didn't answer.
+    peers_data() {
+      i=0 all=yes
+      while [ "$i" -lt "$REPLICAS" ]; do
+        h=$(host_of "$i")
+        if [ "$h" != "$ME" ]; then
+          if ! k=$(cli "$h" "$PORT" randomkey 2>&1); then all=no
+          else
+            case $k in "") ;; *ERR*|*NOAUTH*|*"Could not connect"*|*LOADING*) all=no ;; *) echo data; return 0 ;; esac
+          fi
+        fi
+        i=$((i + 1))
+      done
+      [ "$all" = yes ] && echo empty
+      return 0
+    }
+
+    # The master this member's Sentinel saw last. Sentinel keeps it on the data volume.
+    master_from_disk() {
+      [ -f "$SENTINEL_CONF" ] || return 1
+      m=$(awk -v s="$MASTER_SET" '$1 == "sentinel" && $2 == "monitor" && $3 == s { print $4; exit }' "$SENTINEL_CONF")
+      [ -n "$m" ] && echo "$m"
+    }
+
+  kvrocks.sh: |
+    #!/bin/sh
+    # Starts Kvrocks. With Sentinel, first decides whether this member is the master or a replica.
+    set -eu
+    . /scripts/common.sh
+    CONF=/etc/kvrocks/kvrocks.conf
+
+    cp /config/kvrocks.conf "$CONF"
+    if [ -n "${KVROCKS_PASSWORD:-}" ]; then
+      printf 'requirepass %s\nmasterauth %s\n' "$KVROCKS_PASSWORD" "$KVROCKS_PASSWORD" >> "$CONF"
+    fi
+
+    if [ "$SENTINEL" = "true" ]; then
+      has_data() { [ -f "$DATA/db/CURRENT" ]; }
+
+      # 1. The other members' Sentinels. After a restart of the whole cluster, give them time to start.
+      source=peers
+      if ! master=$(master_from_peers) && has_data; then
+        n=0
+        while [ $n -lt 12 ] && ! master=$(master_from_peers); do sleep 5; n=$((n + 1)); done
+      fi
+      # 2. The master this member's Sentinel saw last. 3. Member 0 on the first install.
+      if [ -z "${master:-}" ]; then
+        source=fallback
+        master=$(master_from_disk) || master=$(host_of 0)
+      fi
+
+      # A member that lost its data must never be master: its replicas would copy the empty database.
+      # If another member has data, stay down until Sentinel has promoted a replica, then join it.
+      # On a new cluster all members are empty, and this member starts as master.
+      if [ "$master" = "$ME" ] && [ "$source" = peers ] && ! has_data; then
+        n=0 told=
+        while [ "$master" = "$ME" ]; do
+          state=$(peers_data)
+          [ "$state" = empty ] && break
+          if [ "$state" = data ]; then
+            [ -n "$told" ] || log "Sentinel still names this member master, but its data volume is empty and other members have keys. Waiting for a failover to a replica."
+            told=1
+          elif [ $n -ge 100 ]; then
+            log "No other member answered for 5 minutes. Starting as master with an empty database."
+            break
+          fi
+          sleep 3; n=$((n + 1))
+          master=$(master_from_peers) || master=$ME
+        done
+      fi
+
+      printf 'replica-announce-ip %s\nreplica-announce-port %s\n' "$ME" "$PORT" >> "$CONF"
+      if [ "$master" = "$ME" ]; then
+        log "Starting as master ($source)."
+      else
+        log "Starting as replica of $master ($source)."
+        printf 'slaveof %s %s\n' "$master" "$PORT" >> "$CONF"
+      fi
+    fi
+
+    exec kvrocks -c "$CONF"
+
+  sentinel.sh: |
+    #!/bin/sh
+    # Starts Sentinel. It monitors the master known to the other Sentinels, else the one it saw last, else member 0.
+    set -eu
+    . /scripts/common.sh
+    mkdir -p "$DATA/sentinel"
+    master=$(master_from_peers) || master=$(master_from_disk) || master=$(host_of 0)
+    log "Monitoring master $master."
+    # Keep what Sentinel learned before a restart: its ID, the epochs and the known replicas and Sentinels.
+    kept=
+    if [ -f "$SENTINEL_CONF" ]; then
+      kept=$(grep -E "^sentinel (myid |current-epoch |(config-epoch|leader-epoch|known-sentinel|known-replica) $MASTER_SET )" "$SENTINEL_CONF" \
+        | grep -v "^sentinel known-replica $MASTER_SET $master ") || true
+    fi
+    {
+      echo "port $SENTINEL_PORT"
+      echo "dir $DATA/sentinel"
+      echo "sentinel resolve-hostnames yes"
+      echo "sentinel announce-hostnames yes"
+      echo "sentinel announce-ip $ME"
+      echo "sentinel announce-port $SENTINEL_PORT"
+      echo "sentinel monitor $MASTER_SET $master $PORT $QUORUM"
+      echo "sentinel down-after-milliseconds $MASTER_SET $DOWN_AFTER"
+      echo "sentinel failover-timeout $MASTER_SET $FAILOVER_TIMEOUT"
+      echo "sentinel parallel-syncs $MASTER_SET $PARALLEL_SYNCS"
+      if [ -n "${KVROCKS_PASSWORD:-}" ]; then
+        echo "requirepass $KVROCKS_PASSWORD"
+        echo "sentinel auth-pass $MASTER_SET $KVROCKS_PASSWORD"
+        echo "sentinel sentinel-pass $KVROCKS_PASSWORD"
+      fi
+      [ -z "$kept" ] || echo "$kept"
+    } > "$SENTINEL_CONF.new"
+    mv "$SENTINEL_CONF.new" "$SENTINEL_CONF"
+    exec valkey-sentinel "$SENTINEL_CONF"
+
+  ready.sh: |
+    #!/bin/sh
+    # Ready: a master that answers, or a replica whose link is up and that isn't in a full sync.
+    . /scripts/common.sh
+    info=$(cli 127.0.0.1 "$PORT" info replication) || exit 1
+    case $info in
+      *role:master*) exit 0 ;;
+      *role:slave*)
+        echo "$info" | grep -q 'master_link_status:up' || { echo "link to master down"; exit 1; }
+        echo "$info" | grep -q 'master_sync_in_progress:1' && { echo "full sync running"; exit 1; }
+        exit 0 ;;
+    esac
+    exit 1
+
+  alive.sh: |
+    #!/bin/sh
+    . /scripts/common.sh
+    cli 127.0.0.1 "$PORT" ping | grep -q PONG
+
+  prestop.sh: |
+    #!/bin/sh
+    # Before a master stops, hand the role to a replica without losing writes:
+    # pause writes here, let Sentinel promote a replica, step down, then let the paused clients go on.
+    . /scripts/common.sh
+    [ "$SENTINEL" = "true" ] && [ "$FAILOVER_ON_SHUTDOWN" = "true" ] || exit 0
+    [ "$(cli 127.0.0.1 "$PORT" role | head -1)" = "master" ] || exit 0
+    cli 127.0.0.1 "$PORT" client pause 30000 write >/dev/null
+    sleep 0.5
+    i=0 asked=
+    while [ "$i" -lt "$REPLICAS" ] && [ -z "$asked" ]; do
+      h=$(host_of "$i")
+      if [ "$h" != "$ME" ] && cli "$h" "$SENTINEL_PORT" sentinel failover "$MASTER_SET" | grep -q OK; then asked=$h; fi
+      i=$((i + 1))
+    done
+    if [ -n "$asked" ]; then
+      n=0
+      while [ $n -lt 150 ]; do
+        new=$(cli "$asked" "$SENTINEL_PORT" sentinel get-master-addr-by-name "$MASTER_SET" | head -1)
+        if [ -n "$new" ] && [ "$new" != "$ME" ]; then
+          cli 127.0.0.1 "$PORT" slaveof "$new" "$PORT" >/dev/null
+          break
+        fi
+        sleep 0.2; n=$((n + 1))
+      done
+    fi
+    cli 127.0.0.1 "$PORT" client unpause >/dev/null
