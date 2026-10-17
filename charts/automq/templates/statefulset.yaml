@@ -1,0 +1,318 @@
+{{- include "automq.validate" . }}
+{{- include "automq.statefulset" (dict "root" . "role" "controller") }}
+{{- if gt (int .Values.broker.replicas) 0 }}
+---
+{{- include "automq.statefulset" (dict "root" . "role" "broker") }}
+{{- end }}
+
+{{- define "automq.statefulset" -}}
+{{- $ := .root }}
+{{- $role := .role }}
+{{- $v := index $.Values $role }}
+{{- $isBroker := or (eq $role "broker") (not $.Values.controller.controllerOnly) }}
+{{- $isController := eq $role "controller" }}
+{{- $protocol := ternary "SASL_PLAINTEXT" "PLAINTEXT" $.Values.auth.enabled }}
+{{- $authSecret := default (include "automq.secretName" $) $.Values.auth.existingSecret }}
+{{- $s3Secret := default (include "automq.secretName" $) $.Values.s3.existingSecret }}
+{{- $dataBucket := include "automq.bucketUrl" (list $ 0 $.Values.s3.dataBucket) }}
+{{- /* Server properties as environment variables; `config` overrides them. */}}
+{{- $props := dict
+  "controller.listener.names" "CONTROLLER"
+  "controller.quorum.voters" (include "automq.quorumVoters" $)
+  "listener.security.protocol.map" (printf "CLIENT:%s,INTERNAL:%s,CONTROLLER:%s" $protocol $protocol $protocol)
+  "log.dirs" "/var/lib/kafka/data"
+  "elasticstream.enable" "true"
+  "s3.data.buckets" $dataBucket
+  "s3.ops.buckets" (include "automq.bucketUrl" (list $ 1 (default $.Values.s3.dataBucket $.Values.s3.opsBucket)))
+  "autobalancer.client.listener.name" "INTERNAL"
+}}
+{{- if $isBroker }}
+{{- $_ := set $props "process.roles" (ternary "broker,controller" "broker" $isController) }}
+{{- $_ := set $props "listeners" (ternary "CLIENT://:9092,INTERNAL://:9094,CONTROLLER://:9093" "CLIENT://:9092,INTERNAL://:9094" $isController) }}
+{{- $_ := set $props "inter.broker.listener.name" "INTERNAL" }}
+{{- $_ := set $props "s3.wal.path" $dataBucket }}
+{{- $_ := set $props "metric.reporters" "kafka.autobalancer.metricsreporter.AutoBalancerMetricsReporter" }}
+{{- else }}
+{{- $_ := set $props "process.roles" "controller" }}
+{{- $_ := set $props "listeners" "CONTROLLER://:9093" }}
+{{- end }}
+{{- if $.Values.metrics.enabled }}
+{{- $_ := set $props "s3.telemetry.metrics.exporter.uri" "prometheus://?host=0.0.0.0&port=9090" }}
+{{- end }}
+{{- if $.Values.auth.enabled }}
+{{- $_ := set $props "sasl.enabled.mechanisms" "PLAIN" }}
+{{- $_ := set $props "sasl.mechanism.controller.protocol" "PLAIN" }}
+{{- $_ := set $props "sasl.mechanism.inter.broker.protocol" "PLAIN" }}
+{{- $_ := set $props "autobalancer.client.auth.security.protocol" "SASL_PLAINTEXT" }}
+{{- $_ := set $props "autobalancer.client.auth.sasl.mechanism" "PLAIN" }}
+{{- end }}
+{{- range $key, $value := $.Values.config }}
+{{- $_ := set $props $key (toString $value) }}
+{{- end }}
+{{- $probePort := ternary 9092 9093 $isBroker }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "automq.fullname" $ }}-{{ $role }}
+  labels:
+    {{- include "automq.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $role }}
+spec:
+  replicas: {{ $v.replicas }}
+  serviceName: {{ include "automq.headlessName" $ }}
+  # Controllers must start together to form the quorum.
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "automq.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $role }}
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: automq
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") $ | sha256sum }}
+        {{- with $v.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "automq.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $role }}
+        {{- if $isBroker }}
+        automq.upstreamyard.io/broker: "true"
+        {{- end }}
+        {{- with $v.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "automq.serviceAccountName" $ }}
+      automountServiceAccountToken: {{ $.Values.serviceAccount.automountToken }}
+      {{- with $.Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ $.Values.terminationGracePeriodSeconds }}
+      initContainers:
+        # The root filesystem is read-only: start the writable config folder from the image's files.
+        - name: config
+          image: {{ include "automq.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          command: ["/bin/bash", "-ec", "cp -R /opt/kafka/config/. /config/"]
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 64Mi }
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      containers:
+        - name: automq
+          image: {{ include "automq.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          command: ["/bin/bash", "-ec"]
+          args:
+            - |
+              # Node ID from the pod's ordinal; controllers use 0..n, broker-only nodes 1000+.
+              export KAFKA_NODE_ID=$(( NODE_ID_OFFSET + ${HOSTNAME##*-} ))
+              if [ "$IS_BROKER" = true ]; then
+                export KAFKA_ADVERTISED_LISTENERS="CLIENT://${HOSTNAME}.${POD_DOMAIN}:9092,INTERNAL://${HOSTNAME}.${POD_DOMAIN}:9094"
+              fi
+              {{- if $.Values.auth.enabled }}
+              # SASL/PLAIN logins, built here so passwords stay in the Secret.
+              module='org.apache.kafka.common.security.plain.PlainLoginModule required'
+              self="username=\"${INTER_BROKER_USER}\" password=\"${INTER_BROKER_PASSWORD}\""
+              internal="user_${INTER_BROKER_USER}=\"${INTER_BROKER_PASSWORD}\""
+              users="$internal"
+              for i in $(seq 0 $(( AUTH_USER_COUNT - 1 ))); do
+                name_var="AUTH_USER_${i}_NAME"; password_var="AUTH_USER_${i}_PASSWORD"
+                users="$users user_${!name_var}=\"${!password_var}\""
+              done
+              export KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG="$module $self $internal;"
+              export KAFKA_AUTOBALANCER_CLIENT_AUTH_SASL_JAAS_CONFIG="$module $self;"
+              if [ "$IS_BROKER" = true ]; then
+                export KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG="$module $self $internal;"
+                export KAFKA_LISTENER_NAME_CLIENT_PLAIN_SASL_JAAS_CONFIG="$module $users;"
+              fi
+              {{- end }}
+              exec /etc/kafka/docker/run
+          env:
+            - name: CLUSTER_ID
+              value: {{ include "automq.clusterId" $ | quote }}
+            - name: NODE_ID_OFFSET
+              value: {{ ternary "0" "1000" $isController | quote }}
+            - name: IS_BROKER
+              value: {{ $isBroker | quote }}
+            - name: POD_DOMAIN
+              value: {{ include "automq.podDomain" $ | quote }}
+            - name: KAFKA_HEAP_OPTS
+              value: {{ $v.heapOpts | quote }}
+            {{- range $key, $value := $props }}
+            - name: {{ include "automq.propertyEnv" $key }}
+              value: {{ $value | replace "$(" "$$(" | quote }}
+            {{- end }}
+            {{- if eq $.Values.s3.authType "static" }}
+            - name: KAFKA_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $s3Secret }}
+                  key: {{ ternary $.Values.s3.existingSecretAccessKeyKey "s3-access-key" (not (empty $.Values.s3.existingSecret)) }}
+            - name: KAFKA_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $s3Secret }}
+                  key: {{ ternary $.Values.s3.existingSecretSecretKeyKey "s3-secret-key" (not (empty $.Values.s3.existingSecret)) }}
+            {{- end }}
+            {{- if $.Values.auth.enabled }}
+            - name: INTER_BROKER_USER
+              value: {{ $.Values.auth.interBrokerUser | quote }}
+            - name: INTER_BROKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $authSecret }}
+                  key: inter-broker-password
+            - name: AUTH_USER_COUNT
+              value: {{ len $.Values.auth.users | quote }}
+            {{- range $i, $user := $.Values.auth.users }}
+            - name: AUTH_USER_{{ $i }}_NAME
+              value: {{ $user.name | quote }}
+            - name: AUTH_USER_{{ $i }}_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $authSecret }}
+                  key: {{ ternary $user.name (printf "user-%s" $user.name) (not (empty $.Values.auth.existingSecret)) }}
+            {{- end }}
+            {{- end }}
+            {{- with $.Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with $.Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            {{- if $isBroker }}
+            - name: client
+              containerPort: 9092
+            - name: internal
+              containerPort: 9094
+            {{- end }}
+            {{- if $isController }}
+            - name: controller
+              containerPort: 9093
+            {{- end }}
+            {{- if $.Values.metrics.enabled }}
+            - name: metrics
+              containerPort: 9090
+            {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: {{ $probePort }}
+            periodSeconds: {{ $.Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ $.Values.probes.startup.failureThreshold }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ $probePort }}
+            periodSeconds: {{ $.Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ $.Values.probes.liveness.failureThreshold }}
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: {{ $probePort }}
+            periodSeconds: {{ $.Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ $.Values.probes.readiness.failureThreshold }}
+            timeoutSeconds: 5
+          {{- with $v.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/kafka/data
+            # The image writes its final configuration and log files here.
+            - name: config
+              mountPath: /opt/kafka/config
+            - name: logs
+              mountPath: /opt/kafka/logs
+            - name: tmp
+              mountPath: /tmp
+            {{- with $.Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        {{- if not $v.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- with $.Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $v.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $v.affinity }}
+      affinity:
+        {{- toYaml $v.affinity | nindent 8 }}
+      {{- else if $v.podAntiAffinityPreset }}
+      affinity:
+        podAntiAffinity:
+          {{- if eq $v.podAntiAffinityPreset "hard" }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  {{- include "automq.selectorLabels" $ | nindent 18 }}
+                  app.kubernetes.io/component: {{ $role }}
+          {{- else }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "automq.selectorLabels" $ | nindent 20 }}
+                    app.kubernetes.io/component: {{ $role }}
+          {{- end }}
+      {{- end }}
+      {{- with $v.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $v.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if $v.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        {{- with $v.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml $v.persistence.accessModes | nindent 10 }}
+        {{- with $v.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $v.persistence.size }}
+  {{- end }}
+{{- end }}
