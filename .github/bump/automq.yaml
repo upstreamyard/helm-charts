@@ -1,0 +1,4 @@
+# Releases the automq chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: AutoMQ/automq
+  image: docker.io/automqinc/automq
+  tag_suffix: -kafka

@@ -9,18 +9,28 @@ permissions:
   contents: read
 
 jobs:
+  # One matrix entry per item in .github/bump/<chart>.yaml (a chart can follow several images).
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.list.outputs.include }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: list
+        run: |
+          include=$(for f in .github/bump/*.yaml; do
+            CHART=$(basename "$f" .yaml) yq -o=json -I=0 '[.[] | .chart = strenv(CHART)]' "$f"
+          done | jq -sc 'add')
+          echo "include=$include" >> "$GITHUB_OUTPUT"
+
   bump:
+    needs: list
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - chart: aegra
-            upstream: aegra/aegra
-            image: ghcr.io/upstreamyard/aegra
-          - chart: conductor
-            upstream: conductor-oss/conductor
-            image: ghcr.io/upstreamyard/conductor
+        include: ${{ fromJSON(needs.list.outputs.include) }}
     env:
       # A GitHub App or fine-grained PAT (contents + pull requests: write).
       # The default GITHUB_TOKEN would work, but PRs it opens don't trigger CI,
@@ -33,13 +43,21 @@ jobs:
 
       - name: Check for a new release
         id: bump
-        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.upstream }}" "${{ matrix.image }}"
+        env:
+          RELEASE_PREFIX: ${{ matrix.release_prefix }}
+          TAG_PREFIX: ${{ matrix.tag_prefix }}
+          TAG_SUFFIX: ${{ matrix.tag_suffix }}
+          VALUES_PATH: ${{ matrix.values_path }}
+        run: scripts/bump-chart.sh "${{ matrix.chart }}" "${{ matrix.project }}" "${{ matrix.image }}"
 
       - name: Skip if a PR for this version already exists
         if: steps.bump.outputs.changed == 'true'
         id: branch
+        env:
+          IMAGE: ${{ matrix.image }}
         run: |
-          branch="bump/${{ matrix.chart }}-${{ steps.bump.outputs.version }}"
+          # The image name keeps branches apart when a chart follows several images.
+          branch="bump/${{ matrix.chart }}-${IMAGE##*/}-${{ steps.bump.outputs.version }}"
           echo "name=$branch" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
             echo "Branch $branch already exists, nothing to do."; echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -54,14 +72,22 @@ jobs:
         env:
           BRANCH: ${{ steps.branch.outputs.name }}
           CHART: ${{ matrix.chart }}
+          IMAGE: ${{ matrix.image }}
           VERSION: ${{ steps.bump.outputs.version }}
+          REVIEW: ${{ steps.bump.outputs.review }}
         run: |
           git config user.name "upstreamyard-bot"
           git config user.email "bot@users.noreply.github.com"
           git switch -c "$BRANCH"
-          git commit -am "Update $CHART to $VERSION"
+          git add -A charts
+          title="Update ${IMAGE##*/} to $VERSION in the $CHART chart"
+          git commit -m "$title"
           git push origin "$BRANCH"
-          gh pr create --base main --head "$BRANCH" \
-            --title "Update $CHART to $VERSION" \
-            --body "Automated: the $CHART project released $VERSION and the image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
-          gh pr merge "$BRANCH" --auto --squash
+          if [ "$REVIEW" = "true" ]; then
+            gh pr create --base main --head "$BRANCH" --title "$title" \
+              --body "Automated: ${IMAGE##*/} $VERSION is released and its image is published. The release changed files bundled with the chart (e.g. a database schema), so this PR needs a review and does not merge itself."
+          else
+            gh pr create --base main --head "$BRANCH" --title "$title" \
+              --body "Automated: ${IMAGE##*/} $VERSION is released and its image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
+            gh pr merge "$BRANCH" --auto --squash
+          fi
