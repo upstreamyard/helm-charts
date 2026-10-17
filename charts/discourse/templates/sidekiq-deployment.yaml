@@ -34,6 +34,9 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "discourse.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      {{- /* Discourse reads every DISCOURSE_* variable as a setting, so the variables Kubernetes
+      adds for Services (e.g. DISCOURSE_<release>_PORT for a Service named discourse-<release>) break it. */}}
+      enableServiceLinks: false
       # Sidekiq waits up to 5 s for running jobs on SIGTERM.
       terminationGracePeriodSeconds: 30
       securityContext:

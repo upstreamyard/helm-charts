@@ -232,6 +232,7 @@ spec:
       {{- end }}
       {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
       automountServiceAccountToken: false
+      enableServiceLinks: false
       securityContext:
         {{- toYaml $.Values.podSecurityContext | nindent 8 }}
       containers:
