@@ -1,0 +1,52 @@
+# Two configurations from values, one with a Python action; two replicas.
+replicaCount: 2
+defaultConfigId: self_check
+telemetry:
+  enabled: false
+chatUI:
+  enabled: true
+llm:
+  baseUrl: http://llm.example.invalid/v1
+configs:
+  self_check:
+    config.yml: |
+      models:
+        - type: main
+          engine: openai
+          model: gpt-4o-mini
+      rails:
+        input:
+          flows:
+            - self check input
+    prompts.yml: |
+      prompts:
+        - task: self_check_input
+          content: |
+            Should the user message "{{ user_input }}" be blocked (Yes or No)?
+            Answer:
+  custom_action:
+    config.yml: |
+      models:
+        - type: main
+          engine: openai
+          model: gpt-4o-mini
+      rails:
+        input:
+          flows:
+            - check blocked words
+    rails.co: |
+      define flow check blocked words
+        $allowed = execute check_blocked_words(text=$user_message)
+        if not $allowed
+          bot refuse blocked word
+          stop
+
+      define bot refuse blocked word
+        "Blocked by a custom action."
+    actions.py: |
+      from nemoguardrails.actions import action
+
+
+      @action(name="check_blocked_words")
+      async def check_blocked_words(text: str) -> bool:
+          return "CUSTOM-BLOCK" not in text

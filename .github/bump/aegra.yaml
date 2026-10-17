@@ -1,0 +1,3 @@
+# Releases the aegra chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: aegra/aegra
+  image: ghcr.io/upstreamyard/aegra
