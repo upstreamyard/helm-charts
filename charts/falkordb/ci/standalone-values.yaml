@@ -1,0 +1,5 @@
+# Single instance with a volume, metrics.
+metrics:
+  enabled: true
+persistence:
+  size: 1Gi

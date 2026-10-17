@@ -1,0 +1,67 @@
+# Test services for the saleor chart in kind; CI starts them when the chart changes. Not for production.
+# The database "saleor" on the shared PostgreSQL and S3-compatible storage (SeaweedFS) for the saleor chart.
+# S3-compatible object storage without authentication. Buckets are created on startup.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: seaweedfs }
+  template:
+    metadata:
+      labels: { app: seaweedfs }
+    spec:
+      containers:
+        - name: seaweedfs
+          image: chrislusf/seaweedfs:4.48
+          command: ["sh", "-c"]
+          args:
+            - |
+              # Small volumes, so every bucket (collection) gets some on a small CI disk.
+              weed server -dir=/data -s3 -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=64 &
+              for bucket in saleor-media saleor-private; do
+                until echo "s3.bucket.create -name $bucket" | weed shell -master=localhost:9333 2>&1 | grep -q "created bucket"; do sleep 2; done
+              done
+              touch /tmp/buckets-ready
+              wait
+          ports:
+            - containerPort: 8333
+          readinessProbe:
+            exec:
+              command: ["test", "-f", "/tmp/buckets-ready"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs
+  namespace: deps
+spec:
+  selector: { app: seaweedfs }
+  ports:
+    - port: 8333
+---
+# Creates the database "saleor" on the shared PostgreSQL (.github/ci/deps/shared.yaml).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: saleor-database
+  namespace: deps
+spec:
+  backoffLimit: 30
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: psql
+          image: pgvector/pgvector:pg18
+          env:
+            - { name: PGHOST, value: postgres.deps.svc }
+            - { name: PGUSER, value: aegra }
+            - { name: PGPASSWORD, value: aegra }
+            - { name: PGDATABASE, value: aegra }
+          command: ["sh", "-ec"]
+          args:
+            - psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'saleor'" | grep -q 1 || psql -c 'CREATE DATABASE saleor'

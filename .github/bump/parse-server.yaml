@@ -1,0 +1,3 @@
+# Releases the parse-server chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: parse-community/parse-server
+  image: docker.io/parseplatform/parse-server

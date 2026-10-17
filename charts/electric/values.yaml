@@ -1,0 +1,180 @@
+image:
+  # -- Image repository. Electric's official image.
+  repository: electricsql/electric
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+electric:
+  # -- Secret that every shape request must carry (`ELECTRIC_SECRET`), usually added by your auth proxy, never by browsers. E.g. from `openssl rand -hex 32`. Stored in a Secret created by this chart. Required unless `existingSecret` is set or `insecure` is true.
+  secret: ""
+  # -- Name of an existing Secret that holds the API secret.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the API secret.
+  existingSecretKey: electric-secret
+  # -- Run without an API secret (`ELECTRIC_INSECURE`). Anyone who can reach the Service can then read any table Electric's database role can read. Only for development.
+  insecure: false
+  # -- Suffix of the replication slot and publication names in PostgreSQL (`ELECTRIC_REPLICATION_STREAM_ID`), e.g. `myapp` gives `electric_slot_myapp`. Empty uses Electric's default `default`. Each Electric installation on the same database needs its own.
+  replicationStreamId: ""
+  # -- Log level (`ELECTRIC_LOG_LEVEL`): `error`, `warning`, `info` or `debug`. Empty keeps Electric's default (`info`).
+  logLevel: ""
+
+# PostgreSQL connection. Required. PostgreSQL needs `wal_level = logical`, and the role
+# needs the REPLICATION attribute (or superuser). See "Requirements".
+database:
+  # -- Connection URL, e.g. `postgresql://electric:password@postgres:5432/app` (`DATABASE_URL`). Used for logical replication, so it must reach PostgreSQL directly, not through a connection pooler. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  url: ""
+  # -- Optional URL for all queries except replication, e.g. through PgBouncer (`ELECTRIC_POOLED_DATABASE_URL`). Empty uses `url`. Ignored when `existingSecret` is set.
+  pooledUrl: ""
+  # -- Name of an existing Secret that holds the connection URL(s) (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the connection URL.
+  existingSecretKey: database-url
+  # -- Key in `existingSecret` that holds the pooled connection URL. Empty: no pooled URL.
+  existingSecretPooledUrlKey: ""
+
+# Electric keeps its shape logs and metadata on disk. They must survive restarts and stay
+# in step with the replication slot in PostgreSQL. See "Storage and upgrades".
+persistence:
+  # -- Store shape data on a PersistentVolumeClaim. If false, an emptyDir is used and Electric uses a temporary replication slot, so every restart makes all clients re-fetch their shapes.
+  enabled: true
+  # -- Use an existing PersistentVolumeClaim instead of creating one. Set `accessModes` to match it, since they pick the rollout strategy.
+  existingClaim: ""
+  # -- StorageClass for the claim. Empty uses the cluster's default. Electric is disk-heavy: prefer fast local SSDs.
+  storageClass: ""
+  # -- Access modes of the claim. With `ReadWriteMany`, upgrades roll over without downtime (see `rolloutStrategy`).
+  accessModes:
+    - ReadWriteOnce
+  # -- Size of the claim. How much Electric needs depends on your shapes and write volume.
+  size: 10Gi
+  # -- Annotations for the claim.
+  annotations: {}
+  # -- Keep the claim when the release is uninstalled (`helm.sh/resource-policy: keep`), so shape data and the replication slot stay in step after a reinstall.
+  keep: true
+
+# -- How the pod is replaced on upgrades: `Recreate` or `RollingUpdate`. Empty picks `RollingUpdate` (start the new pod before stopping the old one) when `persistence.accessModes` includes `ReadWriteMany`, otherwise `Recreate`. `RollingUpdate` needs storage both pods can mount at once.
+rolloutStrategy: ""
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port.
+  port: 3000
+
+ingress:
+  # -- Create an Ingress. Clients usually reach Electric through your auth proxy or CDN, not directly.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. Long-poll requests stay open for up to 20 seconds, so keep the proxy's read timeout above that.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: electric.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+metrics:
+  # -- Expose Prometheus metrics on `/metrics` (`ELECTRIC_PROMETHEUS_PORT`). Only enable it if something scrapes it: unscraped, Electric buffers metrics in memory without limit.
+  enabled: false
+  # -- Port of the metrics endpoint, on the pod and the Service.
+  port: 9090
+  serviceMonitor:
+    # -- Create a ServiceMonitor for the Prometheus Operator.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the one your Prometheus selects ServiceMonitors by.
+    labels: {}
+
+# -- Extra environment variables. Every Electric option is an environment variable, e.g. `ELECTRIC_MANUAL_TABLE_PUBLISHING`, `ELECTRIC_OTLP_ENDPOINT`, `ELECTRIC_DB_POOL_SIZE`. See https://electric.ax/docs/sync/api/config
+extraEnv: []
+# - name: ELECTRIC_OTLP_ENDPOINT
+#   value: http://otel-collector:4318
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+
+# -- Extra volumes for the pod, e.g. a CA certificate for `ELECTRIC_DATABASE_CA_CERTIFICATE_FILE`.
+extraVolumes: []
+# -- Extra volume mounts for the Electric container.
+extraVolumeMounts: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Electric does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits for Electric to stop before killing it. Electric stopped in under a second in our tests.
+terminationGracePeriodSeconds: 60
+
+# -- Startup probe on `/v1/health`. Electric answers 202 while it loads shapes and 200 once active; both count as started.
+startupProbe:
+  httpGet:
+    path: /v1/health
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 60
+# -- Liveness probe on `/v1/health` (200 or 202).
+livenessProbe:
+  httpGet:
+    path: /v1/health
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 6
+# -- Readiness probe. Empty picks one that matches the rollout strategy. With `Recreate`, the pod is ready only once `/v1/health` returns 200 (active). With `RollingUpdate` it accepts 202 too, because the new pod can't become active while the old one still holds the replication lock.
+readinessProbe: {}
+
+# -- Resources for the Electric container. Electric used about 260 MiB idle in our tests; memory grows with the number of active shapes.
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 2Gi
+
+# -- Pod security context. The image has no user of its own, so the chart picks UID 10001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. Electric's runtime files go to an emptyDir, so the root filesystem is read-only.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}

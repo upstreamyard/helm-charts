@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "electric.fullname" . }}-test-api
+  labels:
+    {{- include "electric.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: api
+      # The Electric image already contains curl, so no extra image is pulled.
+      image: {{ include "electric.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+          base="http://{{ include "electric.fullname" . }}:{{ .Values.service.port }}"
+          for i in $(seq 1 20); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/v1/health")" = 200 ] && break
+            sleep 3
+          done
+          health=$(curl -s "$base/v1/health")
+          echo "$health" | grep -q '"active"' || { echo "expected an active Electric, got: $health"; exit 1; }
+          # A shape for a table that doesn't exist: Electric must check the secret first,
+          # then look the table up in PostgreSQL and answer 400.
+          shape="$base/v1/shape?table=helm_test_no_such_table&offset=-1"
+          {{- if not .Values.electric.insecure }}
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$shape")
+          [ "$code" = 401 ] || { echo "expected 401 without the secret, got $code"; exit 1; }
+          {{- end }}
+          out=$(curl -s -w ' %{http_code}' "$shape&secret=$ELECTRIC_SECRET")
+          case "$out" in
+            *helm_test_no_such_table*" 400") ;;
+            *) echo "expected 400 for a missing table, got: $out"; exit 1 ;;
+          esac
+          echo "Electric is active, requires the secret and can query PostgreSQL"
+      {{- if not .Values.electric.insecure }}
+      env:
+        - name: ELECTRIC_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ default (include "electric.fullname" .) .Values.electric.existingSecret }}
+              key: {{ ternary .Values.electric.existingSecretKey "electric-secret" (not (empty .Values.electric.existingSecret)) }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

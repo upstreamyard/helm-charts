@@ -1,0 +1,13 @@
+# Used by chart-testing (ct install) in CI. MongoDB is deployed into the "deps"
+# namespace by the workflow before the chart is installed.
+replicaCount: 2
+parse:
+  appId: ci-app
+  masterKey: ci-master-key
+  publicServerURL: http://parse.example.com/parse
+database:
+  uri: mongodb://mongo.deps.svc:27017/parse
+cloudCode:
+  enabled: true
+  main: |
+    Parse.Cloud.define('hello', req => `hello ${req.params.name || 'world'}`);

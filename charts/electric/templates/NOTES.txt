@@ -1,0 +1,29 @@
+Electric {{ default .Chart.AppVersion .Values.image.tag }} is deployed as "{{ include "electric.fullname" . }}" (rollout strategy: {{ include "electric.rolloutStrategy" . }}).
+
+Inside the cluster it is reachable at:
+
+  http://{{ include "electric.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+Check that it is up ({"status":"active"}):
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "electric.fullname" . }} 3000:{{ .Values.service.port }}
+  curl http://localhost:3000/v1/health
+{{- if .Values.electric.insecure }}
+
+WARNING: electric.insecure=true. Shape requests need no secret, so anyone who can reach
+this Service can read every table Electric's database role can read. Use it for development only.
+{{- else }}
+
+Shape requests must carry the secret (?secret=...) from {{ if .Values.electric.existingSecret }}Secret "{{ .Values.electric.existingSecret }}"{{ else }}electric.secret{{ end }}.
+Add it in your backend or auth proxy, never in browser code.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+persistence.enabled=false: shape data lives in an emptyDir and Electric uses a temporary
+replication slot. Every pod restart makes all clients re-fetch their shapes.
+{{- end }}
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics are on port {{ .Values.metrics.port }} (/metrics). Make sure they are scraped:
+unscraped, Electric buffers metrics in memory without limit.
+{{- end }}

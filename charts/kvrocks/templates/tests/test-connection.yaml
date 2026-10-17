@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "kvrocks.fullname" . }}-test
+  labels:
+    {{- include "kvrocks.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      # The Kvrocks image contains redis-cli, so no extra image is pulled.
+      image: {{ include "kvrocks.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        {{- if .Values.auth.enabled }}
+        {{- include "kvrocks.passwordEnv" . | nindent 8 }}
+        - name: REDISCLI_AUTH
+          value: $(KVROCKS_PASSWORD)
+        {{- end }}
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          key=helm-test-$(date +%s) svc={{ include "kvrocks.fullname" . }}.{{ .Release.Namespace }}.svc
+          cli() { timeout 5 redis-cli --no-auth-warning "$@"; }
+          # Services can lag behind ready pods for a few seconds after an install.
+          retry() { n=0; until "$@"; do n=$((n + 1)); [ $n -lt 30 ] || return 1; sleep 2; done; }
+          {{- if .Values.sentinel.enabled }}
+          ask() { master=$(cli -h {{ include "kvrocks.fullname" . }}-sentinel -p {{ .Values.sentinel.port }} sentinel get-master-addr-by-name {{ .Values.sentinel.masterSet }} | head -1) && [ -n "$master" ]; }
+          retry ask
+          echo "Sentinel names master $master"
+          [ "$(cli -h "$master" -p {{ .Values.port }} role | head -1)" = master ]
+          {{- if .Values.proxy.enabled }}
+          retry sh -c "timeout 5 redis-cli --no-auth-warning -h $svc -p {{ .Values.port }} set $key ok | grep -q OK"
+          echo "wrote $key through the proxy ($svc)"
+          {{- else }}
+          cli -h "$master" -p {{ .Values.port }} set "$key" ok | grep -q OK
+          echo "wrote $key to the master"
+          {{- end }}
+          for i in $(seq 0 {{ sub (int .Values.replicaCount) 1 }}); do
+            h={{ include "kvrocks.fullname" . }}-$i.{{ include "kvrocks.headless" . }}
+            n=0
+            until [ "$(cli -h "$h" -p {{ .Values.port }} get "$key")" = ok ]; do
+              n=$((n + 1)); [ $n -lt 30 ] || { echo "$h doesn't have the key"; exit 1; }; sleep 1
+            done
+            echo "$h has the key"
+          done
+          {{- else }}
+          retry sh -c "timeout 5 redis-cli --no-auth-warning -h $svc -p {{ .Values.port }} set $key ok | grep -q OK"
+          [ "$(cli -h "$svc" -p {{ .Values.port }} get "$key")" = ok ]
+          echo "wrote and read $key through $svc"
+          {{- end }}
+          cli -h "$svc" -p {{ .Values.port }} del "$key" >/dev/null 2>&1 || true
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

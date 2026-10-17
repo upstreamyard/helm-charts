@@ -1,0 +1,39 @@
+{{- $svc := printf "%s.%s.svc" (include "falkordb.fullname" .) .Release.Namespace }}
+FalkorDB {{ default .Chart.AppVersion .Values.image.tag }} is starting ({{ if include "falkordb.replication" . }}{{ .Values.replicaCount }} pods: one primary, {{ sub (int .Values.replicaCount) 1 }} replicas, Sentinel failover{{ else }}single instance{{ end }}).
+{{- if .Values.auth.enabled }}
+
+Password:
+  kubectl get secret -n {{ .Release.Namespace }} {{ include "falkordb.secretName" . }} -o jsonpath='{.data.{{ include "falkordb.secretKey" . }}}' | base64 -d
+{{- end }}
+
+Clients in the cluster:
+{{- if include "falkordb.replication" . }}
+  Sentinel: {{ $svc }}:26379 (primary name "{{ .Values.sentinel.masterSet }}")
+
+  Connect through Sentinel to always write to the current primary. The FalkorDB
+  Python client detects Sentinel by itself:
+    FalkorDB(host="{{ $svc }}", port=26379{{ if .Values.auth.enabled }}, password=...{{ end }})
+
+  Read-only queries (GRAPH.RO_QUERY) may also use {{ $svc }}:6379,
+  which spreads them over all pods. Writes there fail on replicas (READONLY).
+{{- else }}
+  {{ $svc }}:6379
+    FalkorDB(host="{{ $svc }}", port=6379{{ if .Values.auth.enabled }}, password=...{{ end }})
+{{- end }}
+
+From your machine:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "falkordb.fullname" . }} 6379:6379
+{{- if not .Values.auth.enabled }}
+
+WARNING: auth.enabled=false. Anyone who can reach the pods can read and change every graph.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence.enabled=false. Graphs are lost when a pod is deleted.
+{{- end }}
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics: port 9121 (/metrics) on every pod{{ if .Values.metrics.serviceMonitor.enabled }}, scraped by the ServiceMonitor{{ end }}.
+{{- end }}
+
+Check it: helm test -n {{ .Release.Namespace }} {{ .Release.Name }}
