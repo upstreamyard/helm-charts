@@ -1,0 +1,10 @@
+# Used by chart-testing (ct install) in CI: two pods behind a context path, with a set
+# admin password. Shares the database with the single-replica test.
+replicaCount: 2
+contextPath: /xxl-job-admin
+database:
+  host: xxl-job-mysql.deps.svc
+  username: xxljob
+  password: xxljob
+admin:
+  password: ci-admin-password
