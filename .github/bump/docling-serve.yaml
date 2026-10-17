@@ -1,0 +1,4 @@
+# Releases the docling-serve chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: docling-project/docling-serve
+  image: ghcr.io/docling-project/docling-serve-cpu
+  tag_prefix: v
