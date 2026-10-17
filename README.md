@@ -1,6 +1,6 @@
 # upstreamyard Helm charts
 
-Helm charts for the container images maintained by [upstreamyard](https://github.com/upstreamyard).
+Helm charts maintained by [upstreamyard](https://github.com/upstreamyard), for our own container images and for projects' official images.
 
 | Chart | App | Image |
 |---|---|---|
@@ -27,9 +27,9 @@ cosign verify ghcr.io/upstreamyard/charts/aegra:<chart-version> \
 
 ## How releases work
 
-1. **Daily** ([`bump.yml`](.github/workflows/bump.yml)): if the packaged project (e.g. `aegra/aegra`) released a new version and our image for it is published, a bot opens a PR that updates `appVersion` and bumps the chart's patch version.
-2. **On every PR** ([`lint-test.yml`](.github/workflows/lint-test.yml)): lint, README check, then a real install in a kind cluster against PostgreSQL (pgvector), Redis and S3-compatible storage, with `helm test`.
-3. Bot PRs **merge themselves** once `lint-test` passes. If it fails, the PR stays open for a human.
+1. **Daily** ([`bump.yml`](.github/workflows/bump.yml)): if a packaged project (listed per chart in [`.github/bump/`](.github/bump)) released a new version and the image for it is published, a bot opens a PR that updates `appVersion` and bumps the chart's patch version.
+2. **On every PR** ([`lint-test.yml`](.github/workflows/lint-test.yml)): lint, README check, then a real install in a kind cluster against PostgreSQL (pgvector), Redis and the services the changed chart needs, with `helm test`.
+3. Bot PRs **merge themselves** once `lint-test` passes. If it fails, the PR stays open for a human. PRs that also change files bundled with a chart (e.g. a database schema, via `scripts/bump-hooks/<chart>.sh`) always wait for a review.
 4. **On merge to `main`** ([`release.yml`](.github/workflows/release.yml)): a GitHub Release, the `index.yaml` on GitHub Pages, the OCI chart on GHCR (cosign-signed) and Artifact Hub metadata. Artifact Hub re-scans the repository on its own.
 
 ## Contributing

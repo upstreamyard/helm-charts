@@ -13,10 +13,13 @@ Instructions for AI agents and coding assistants working with this repository or
 
 Layout:
 
-- `charts/<chart>/`: one chart per image published by `upstreamyard/<image>`
+- `charts/<chart>/`: one chart per packaged project, using our `upstreamyard/<image>` or the project's official image
 - `charts/<chart>/ci/*-values.yaml`: values used by `ct install` in CI
-- `.github/ci/deps.yaml`: throwaway PostgreSQL (pgvector), Redis and S3-compatible storage (bucket `automq`) for CI, reachable at `*.deps.svc`
+- `.github/bump/<chart>.yaml`: the releases and images a chart follows (`project`, `image`, optional `tag_prefix`, `tag_suffix`, `release_prefix`, `values_path`), read by `bump.yml`
+- `.github/ci/deps/shared.yaml`: throwaway PostgreSQL (pgvector, logical replication on) and Redis for CI, reachable at `*.deps.svc`
+- `.github/ci/deps/<chart>.yaml`: test services only that chart needs; CI starts them when the chart changes
 - `scripts/bump-chart.sh`: version bump logic used by `bump.yml`, which can run locally with `DRY_RUN=1`
+- `scripts/bump-hooks/<chart>.sh`: optional per-chart step of a bump (e.g. refreshing a bundled database schema); bump PRs that change `charts/<chart>/files` don't merge themselves
 
 Rules:
 
@@ -25,6 +28,7 @@ Rules:
 - Regenerate chart READMEs after changing `values.yaml` or `README.md.gotmpl`: `helm-docs --chart-search-root charts`. Write a `# --` comment above every value.
 - Follow the app's own project documentation for deployment behaviour (probes, migrations, required services), and link to it rather than restating it.
 - Charts never bundle databases or other stateful services; users bring their own.
+- A new chart adds its own `.github/bump/<chart>.yaml` (and `.github/ci/deps/<chart>.yaml` if CI needs extra services), a row in the `README.md` table and a line under "Installing a chart" here.
 
 Checks before opening a PR:
 
