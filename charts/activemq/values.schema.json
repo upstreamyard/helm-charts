@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 1 },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "adminUser": { "type": "string", "pattern": "^[A-Za-z0-9._@-]+$" },
+        "adminPassword": { "type": "string" },
+        "appUser": { "type": "string", "pattern": "^([A-Za-z0-9._@-]+)?$" },
+        "appPassword": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "adminPasswordKey": { "type": "string", "minLength": 1 },
+        "appPasswordKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "transports": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["openwire", "amqp", "stomp", "mqtt", "ws"] }
+    },
+    "broker": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "scheduler": { "type": "boolean" },
+        "storeLimit": { "type": "string" },
+        "tempLimit": { "type": "string" }
+      }
+    },
+    "store": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["kahadb", "jdbc"] }
+      }
+    },
+    "jdbc": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "pattern": "^(jdbc:.+)?$" },
+        "user": { "type": "string" },
+        "password": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretPasswordKey": { "type": "string", "minLength": 1 },
+        "driver": { "type": "string" }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClass": { "type": "string" },
+        "accessModes": { "type": "array", "items": { "type": "string" } },
+        "size": { "type": "string" },
+        "annotations": { "type": "object" }
+      }
+    },
+    "webConsole": { "type": "object", "properties": { "enabled": { "type": "boolean" } } },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "serviceMonitor": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "interval": { "type": "string" },
+            "labels": { "type": "object" }
+          }
+        }
+      }
+    },
+    "memoryOpts": { "type": "string" },
+    "javaOpts": { "type": "string" },
+    "configFiles": { "type": "object", "additionalProperties": { "type": "string" } },
+    "configSecrets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "annotations": { "type": "object" }
+      }
+    },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 },
+    "podAntiAffinityPreset": { "type": "string", "enum": ["", "soft", "hard"] },
+    "podDisruptionBudget": { "type": "object", "properties": { "enabled": { "type": "boolean" } } }
+  }
+}

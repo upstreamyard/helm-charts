@@ -1,0 +1,134 @@
+{{- if .Values.schemaSetup.enabled }}
+{{- /*
+Helm hooks run before the release's normal resources exist, so the Job cannot use
+the regular Secret on first install. Short-lived hook copies of the Secret and the
+schema ConfigMap are created first (weight -10) and deleted together with the Job
+once it succeeded.
+*/}}
+{{- $hookName := printf "%s-schema" (include "xxl-job.fullname" .) }}
+{{- if include "xxl-job.createSecret" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookName }}
+  labels:
+    {{- include "xxl-job.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- include "xxl-job.secretData" . | nindent 2 }}
+---
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $hookName }}
+  labels:
+    {{- include "xxl-job.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+data:
+  schema.sql: |-
+    {{- .Files.Get "files/schema.sql" | nindent 4 }}
+  setup.sh: |
+    set -eu
+    m() { mysql --protocol=TCP -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" --default-character-set=utf8mb4 "$DB_NAME" "$@"; }
+    until m -e 'SELECT 1' >/dev/null; do echo "Waiting for MySQL at $DB_HOST:$DB_PORT ..."; sleep 3; done
+    # Tables are created only if missing; existing tables are never altered.
+    m < /setup/schema.sql
+    m -e "INSERT IGNORE INTO xxl_job_lock (lock_name) VALUES ('schedule_lock')"
+    if [ "$(m -N -e 'SELECT COUNT(*) FROM xxl_job_user')" = 0 ]; then
+      if [ -z "${ADMIN_PASSWORD:-}" ]; then echo "No users yet, but no admin password is configured." >&2; exit 1; fi
+      # XXL-JOB stores the SHA-256 hex digest of the password.
+      hash=$(printf '%s' "$ADMIN_PASSWORD" | sha256sum | cut -d' ' -f1)
+      m -e "INSERT INTO xxl_job_user (username, password, role) VALUES ('$ADMIN_USER', '$hash', 1)"
+      echo "Created admin user '$ADMIN_USER'."
+    else
+      echo "Users exist; admin user not touched."
+    fi
+    echo "Schema of XXL-JOB {{ .Chart.AppVersion }} is set up in $DB_NAME."
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $hookName }}
+  labels:
+    {{- include "xxl-job.labels" . | nindent 4 }}
+    app.kubernetes.io/component: schema-setup
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.schemaSetup.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.schemaSetup.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "xxl-job.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: schema-setup
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: schema-setup
+          image: "{{ .Values.schemaSetup.image.repository }}:{{ .Values.schemaSetup.image.tag }}"
+          imagePullPolicy: {{ .Values.schemaSetup.image.pullPolicy }}
+          command: ["sh", "/setup/setup.sh"]
+          env:
+            - name: DB_HOST
+              value: {{ .Values.database.host | quote }}
+            - name: DB_PORT
+              value: {{ .Values.database.port | quote }}
+            - name: DB_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: DB_USER
+              value: {{ .Values.database.username | quote }}
+            {{- include "xxl-job.dbPasswordEnv" (list . $hookName "MYSQL_PWD") | nindent 12 }}
+            - name: ADMIN_USER
+              value: {{ .Values.admin.username | quote }}
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.admin.existingSecret }}
+                  name: {{ .Values.admin.existingSecret }}
+                  key: {{ .Values.admin.existingSecretKey }}
+                  {{- else }}
+                  name: {{ $hookName }}
+                  key: admin-password
+                  {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.schemaSetup.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: setup
+              mountPath: /setup
+              readOnly: true
+      volumes:
+        - name: setup
+          configMap:
+            name: {{ $hookName }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

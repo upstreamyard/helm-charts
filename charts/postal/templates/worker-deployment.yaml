@@ -1,0 +1,10 @@
+{{- /* Workers: deliver and process messages, send webhooks, run housekeeping; health server on 9090. */}}
+{{ include "postal.deployment" (dict
+  "root" .
+  "component" "worker"
+  "replicas" .Values.worker.replicaCount
+  "command" (list "bundle" "exec" "ruby" "script/worker.rb")
+  "ports" (list (dict "name" "health" "containerPort" 9090 "protocol" "TCP"))
+  "grace" .Values.worker.terminationGracePeriodSeconds
+  "probes" (dict "livenessProbe" (include "postal.probe" .Values.worker.livenessProbe))
+  "resources" .Values.worker.resources) }}
