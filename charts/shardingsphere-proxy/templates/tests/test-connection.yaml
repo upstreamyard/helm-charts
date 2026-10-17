@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "shardingsphere-proxy.fullname" . }}-test-connection
+  labels:
+    {{- include "shardingsphere-proxy.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: connection
+      # Uses the proxy image (bash), so no extra image is pulled.
+      image: {{ include "shardingsphere-proxy.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["bash", "-c"]
+      args:
+        - |
+          set -euo pipefail
+          host={{ include "shardingsphere-proxy.fullname" . }}
+          port={{ .Values.service.port }}
+          # With MySQL backends the proxy greets new connections with its version
+          # (e.g. "5.7.22-ShardingSphere-Proxy 5.5.3"); with PostgreSQL backends it waits for the client.
+          # dd does a single read, so the greeting is printed although it is shorter than 256 bytes.
+          raw=$(timeout 5 bash -c "exec 3<>/dev/tcp/$host/$port; dd bs=256 count=1 status=none <&3" | tr -cd '[:print:]' || true)
+          version=$(grep -o '[0-9.]*-ShardingSphere-Proxy [0-9.]*' <<<"$raw" || true)
+          if [ -n "$raw" ] && [ -z "$version" ]; then
+            echo "Unexpected greeting from $host:$port"; exit 1
+          fi
+          timeout 5 bash -c "exec 3<>/dev/tcp/$host/$port"
+          echo "ShardingSphere-Proxy accepts connections on $host:$port ${version:+($version)}"
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}

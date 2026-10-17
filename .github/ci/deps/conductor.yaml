@@ -1,0 +1,38 @@
+# Test services for the conductor chart in kind; CI starts them when the chart changes. Not for production.
+# PostgreSQL 16 for the conductor chart (the version the Conductor image is tested with).
+# PostgreSQL 16 for the conductor chart (the version the Conductor image is tested with).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conductor-postgres
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: conductor-postgres }
+  template:
+    metadata:
+      labels: { app: conductor-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - { name: POSTGRES_USER, value: conductor }
+            - { name: POSTGRES_PASSWORD, value: conductor }
+            - { name: POSTGRES_DB, value: conductor }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "conductor", "-d", "conductor"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: conductor-postgres
+  namespace: deps
+spec:
+  selector: { app: conductor-postgres }
+  ports:
+    - port: 5432

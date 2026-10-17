@@ -1,0 +1,12 @@
+# Single broker with KahaDB on a volume, all transports, metrics.
+transports: [openwire, amqp, stomp, mqtt, ws]
+metrics:
+  enabled: true
+persistence:
+  size: 1Gi
+resources:
+  requests:
+    cpu: 50m
+    memory: 512Mi
+  limits:
+    memory: 768Mi
