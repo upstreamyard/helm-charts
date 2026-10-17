@@ -1,0 +1,15 @@
+# Primary and two standbys, with a database, an application user and the NetworkPolicy.
+replicaCount: 3
+auth:
+  database: app
+  username: app
+networkPolicy:
+  enabled: true
+persistence:
+  size: 1Gi
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 1Gi

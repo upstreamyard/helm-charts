@@ -1,0 +1,163 @@
+{{- include "dolt.validate" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dolt.fullname" . }}
+  labels:
+    {{- include "dolt.labels" . | nindent 4 }}
+data:
+  {{- range $i := until (int .Values.replicaCount) }}
+  server-{{ $i }}.yaml: |
+    {{- include "dolt.serverConfig" (list $ $i) | nindent 4 }}
+  {{- end }}
+  start.sh: |
+    #!/bin/bash
+    # Starts the sql-server with the config of this pod's ordinal (server-<n>.yaml).
+    set -euo pipefail
+    ordinal=${POD_NAME##*-}
+    {{- if not .Values.usageMetrics }}
+    # Don't send anonymous usage events to DoltHub.
+    dolt config --global --set metrics.disabled true >/dev/null
+    {{- end }}
+    {{- if include "dolt.ha" . }}
+    # Every database needs a remote per peer with the URL from the config. Databases created
+    # before replication was turned on (e.g. when scaling up from one server) don't have one,
+    # and older chart versions used other URLs. New databases get them by themselves.
+    cd /var/lib/dolt
+    for db in */; do
+      db=${db%/}
+      [ -d "$db/.dolt/noms" ] || continue
+      remotes=$(cd "$db" && dolt remote -v 2>/dev/null)
+      {{- range $j := until (int .Values.replicaCount) }}
+      want="http://{{ include "dolt.replicationHost" (list $ $j) }}:50051/$db"
+      if [ "$ordinal" != "{{ $j }}" ] && ! grep -qx "{{ include "dolt.fullname" $ }}-{{ $j }} $want.*" <<< "$remotes"; then
+        echo "Setting remote {{ include "dolt.fullname" $ }}-{{ $j }} of database $db to $want"
+        (cd "$db" && { dolt remote remove "{{ include "dolt.fullname" $ }}-{{ $j }}" 2>/dev/null || true; dolt remote add "{{ include "dolt.fullname" $ }}-{{ $j }}" "$want"; })
+      fi
+      {{- end }}
+    done
+    {{- else }}
+    # A single server has no role. Forget one saved while replication was on, so scaling up
+    # again starts cleanly with server 0 as the primary.
+    if grep -q '"sqlserver.cluster.dolt_cluster_role' /home/dolt/.dolt/config_global.json 2>/dev/null; then
+      dolt config --global --unset sqlserver.cluster.dolt_cluster_role sqlserver.cluster.dolt_cluster_role_epoch >/dev/null 2>&1 || true
+    fi
+    {{- end }}
+    exec dolt sql-server --config "/etc/dolt/server-$ordinal.yaml"
+  {{- if include "dolt.ha" . }}
+  role-labeler.sh: |
+    #!/bin/bash
+    # Keeps this pod's dolthub.com/cluster_role label equal to the server's current role,
+    # so the Service only sends clients to the primary. Unknown role: label removed.
+    set -uo pipefail
+    trap 'exit 0' TERM
+    sa=/var/run/secrets/kubernetes.io/serviceaccount
+    url="https://kubernetes.default.svc/api/v1/namespaces/$POD_NAMESPACE/pods/$POD_NAME"
+    last=unset
+    while true; do
+      # A hung server counts as unknown, so it loses the label.
+      role=$(timeout 5 dolt --host 127.0.0.1 --port 3306 --user root --no-tls sql -r csv \
+        -q 'select @@global.dolt_cluster_role' 2>/dev/null | tail -n 1)
+      case "$role" in
+        primary|standby) value="\"$role\"" ;;
+        *) role=unknown; value=null ;;
+      esac
+      if [ "$role" != "$last" ]; then
+        if curl -sf -o /dev/null --cacert "$sa/ca.crt" -H "Authorization: Bearer $(cat "$sa/token")" \
+          -H 'Content-Type: application/merge-patch+json' -X PATCH "$url" \
+          -d "{\"metadata\":{\"labels\":{\"dolthub.com/cluster_role\":$value}}}"; then
+          echo "$(date -u +%FT%TZ) role: $role"
+          last=$role
+        else
+          echo "$(date -u +%FT%TZ) could not update the pod label (role $role), retrying" >&2
+        fi
+      fi
+      sleep {{ .Values.cluster.roleLabeler.intervalSeconds }} & wait $!
+    done
+  promote.sh: |
+    #!/bin/bash
+    # Makes a server the primary. Run it in the pod of the server to promote:
+    #   promote.sh             planned switch: the current primary first hands over its last
+    #                          writes (no data loss). Aborts if a server can't be reached.
+    #   promote.sh --force     the primary is down: promote anyway. Writes it hadn't replicated
+    #                          yet are lost; it rejoins as a standby when it comes back.
+    #   promote.sh --handover  run in the primary's pod: hand the role to a reachable standby
+    #                          (used before the pod stops). Does nothing on a standby.
+    set -euo pipefail
+    mode=${1:-planned}
+    # Not set for the container: dolt sql-server refuses to start with it.
+    export DOLT_CLI_PASSWORD=$DOLT_ROOT_PASSWORD
+    # sql HOST QUERY [TIMEOUT]: last output line; fails on errors and when the server hangs.
+    sql() {
+      local out
+      out=$(timeout "${3:-10}" dolt --host "$1" --port 3306 --user root --no-tls sql -r csv -q "$2" 2>&1) || { echo "${out:-timed out}" | tail -n 1; return 1; }
+      echo "$out" | tail -n 1
+    }
+    self={{ include "dolt.fullname" . }}-${POD_NAME##*-}.{{ include "dolt.headlessName" . }}.{{ .Release.Namespace }}.svc
+    hosts=({{ range $j := until (int .Values.replicaCount) }}{{ include "dolt.podHost" (list $ $j) }} {{ end }})
+    epoch=0; primaries=(); standbys=(); unreachable=()
+    for h in "${hosts[@]}"; do
+      if r=$(sql "$h" 'select concat(@@global.dolt_cluster_role, ":", @@global.dolt_cluster_role_epoch)') && [[ $r == *:* ]]; then
+        echo "${h%%.*}: ${r%:*} (epoch ${r#*:})"
+        [ "${r#*:}" -gt "$epoch" ] && epoch=${r#*:}
+        case "${r%:*}" in
+          primary) primaries+=("$h") ;;
+          standby) [ "$h" = "$self" ] || standbys+=("$h") ;;
+        esac
+      else
+        echo "${h%%.*}: unreachable"; unreachable+=("$h")
+      fi
+    done
+    next=$((epoch + 1))
+    promote() {
+      echo "Promoting ${1%%.*} to primary (epoch $2)..."
+      local out
+      out=$(sql "$1" "call dolt_assume_cluster_role('primary', $2)") || true
+      [ "$out" = 0 ] || { echo "Promotion of ${1%%.*} failed: $out" >&2; return 1; }
+      echo "Done. The Service follows within {{ .Values.cluster.roleLabeler.intervalSeconds }} seconds."
+    }
+    if [ "$mode" = --handover ]; then
+      [[ " ${primaries[*]} " == *" $self "* ]] || exit 0
+      [ ${#standbys[@]} -gt 0 ] || { echo "No standby is reachable; staying primary." >&2; exit 1; }
+      # Dolt blocks writes while it waits (up to 10 s) for every standby during the demotion.
+      # Wait here first, still writable, until all standbys are caught up (up to 30 s), e.g.
+      # one that just restarted in a rolling update.
+      for i in $(seq 1 30); do
+        lagging=$(sql "$self" "select count(*) from dolt_cluster.dolt_cluster_status
+          where current_error is not null or replication_lag_millis is null or replication_lag_millis > 500") || lagging=unknown
+        [ "$lagging" = 0 ] && break
+        [ "$i" = 1 ] && echo "Waiting for standbys to catch up ($lagging behind)..."
+        sleep 1
+      done
+      # Demotes as soon as one standby has every write, and lists
+      # which standbys are caught up: caught_up,database,remote,remote_url.
+      echo "Handing over: demoting ${self%%.*} to standby (epoch $next)..."
+      out=$(timeout 60 dolt --host "$self" --port 3306 --user root --no-tls sql -r csv \
+        -q "call dolt_cluster_transition_to_standby($next, 1)" 2>&1) || {
+        echo "Handover failed, ${self%%.*} stays primary: $(tail -n 1 <<< "$out")" >&2; exit 1; }
+      # Candidates: caught-up standbys. A rolling update restarts pods from the highest
+      # ordinal down, so higher ordinals than ours are already updated (highest first). If
+      # there are none, the lowest ordinal: it restarts last, so the role rests there longest.
+      caught=$(awk -F, 'NR > 1 && $1 == 1 { split($4, u, "/"); split(u[3], h, ":"); print h[1] }' <<< "$out" | sort -u)
+      mine=${self%%.*}; mine=${mine##*-}
+      candidates=()
+      for h in $(for h in "${standbys[@]}"; do o=${h%%.*}; o=${o##*-}
+          if [ "$o" -gt "$mine" ]; then echo "$((1000 - o)) $h"; else echo "$((1000 + o)) $h"; fi
+        done | sort -n | cut -d' ' -f2); do
+        r=${h%%.*}; grep -q "^$r-replication\." <<< "$caught" && candidates+=("$h")
+      done
+      for h in "${candidates[@]}" "${standbys[@]}"; do promote "$h" "$next" && exit 0; done
+      echo "No standby took over; making ${self%%.*} the primary again." >&2
+      promote "$self" $((next + 1)); exit 1
+    fi
+    if [ "$mode" != --force ] && [ ${#unreachable[@]} -gt 0 ]; then
+      echo "${unreachable[0]%%.*} is unreachable. If the primary is down, run again with --force." >&2; exit 1
+    fi
+    [[ " ${primaries[*]} " == *" $self "* ]] && { echo "${self%%.*} is already the primary."; exit 0; }
+    for h in "${primaries[@]}"; do
+      echo "Demoting ${h%%.*} to standby (epoch $next), waiting until every standby has its writes..."
+      out=$(sql "$h" "call dolt_assume_cluster_role('standby', $next)" 60) || true
+      [ "$out" = 0 ] || { echo "Demotion failed, ${h%%.*} stays primary: $out" >&2; exit 1; }
+    done
+    promote "$self" "$next"
+  {{- end }}
