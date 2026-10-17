@@ -1,0 +1,24 @@
+{{- range $name := list "uploads" "backups" }}
+{{- $p := index $.Values.persistence $name }}
+{{- if and $p.enabled (not $p.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "discourse.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "discourse.labels" $ | nindent 4 }}
+  annotations:
+    # Keep uploads and backups when the release is uninstalled.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- toYaml $p.accessModes | nindent 4 }}
+  {{- with $p.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $p.size }}
+{{- end }}
+{{- end }}

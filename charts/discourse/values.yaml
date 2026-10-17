@@ -1,0 +1,262 @@
+# -- Number of web pods. More than 1 needs uploads and backups on ReadWriteMany volumes (or S3).
+replicaCount: 1
+
+image:
+  # -- Image repository.
+  repository: upstreamyard/discourse
+  # -- Image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+discourse:
+  # -- Public hostname of the forum (`DISCOURSE_HOSTNAME`), used in links and emails. Required.
+  hostname: ""
+  # -- Secret used to sign sessions and cookies (`DISCOURSE_SECRET_KEY_BASE`), e.g. from `openssl rand -hex 64`. Required unless `existingSecret` is set. Stored in a Secret created by this chart.
+  secretKeyBase: ""
+  # -- Name of an existing Secret that holds the secret key base.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the secret key base.
+  existingSecretKey: secret-key-base
+  # -- Comma-separated emails that Discourse makes admins when they sign up (`DISCOURSE_DEVELOPER_EMAILS`). Optional; the first admin can also be created with `rake admin:create`.
+  developerEmails: ""
+  # -- Sender address of Discourse's emails (`DISCOURSE_NOTIFICATION_EMAIL`).
+  notificationEmail: ""
+
+# PostgreSQL 18 with the pgvector extension (e.g. the pgvector/pgvector:pg18 image). Required.
+database:
+  # -- PostgreSQL host. Required.
+  host: ""
+  # -- PostgreSQL port.
+  port: 5432
+  # -- Database name.
+  name: discourse
+  # -- Database user.
+  username: discourse
+  # -- Database password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the database password (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the database password.
+  existingSecretKey: database-password
+
+# Redis 7. Required. Use persistence and no key eviction (maxmemory-policy noeviction).
+redis:
+  # -- Redis host. Required.
+  host: ""
+  # -- Redis port.
+  port: 6379
+  # -- Redis database number. Discourse uses this one and the next one (for Sidekiq).
+  db: 0
+  # -- Redis password, if any. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the Redis password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the Redis password.
+  existingSecretKey: redis-password
+
+# Outgoing email. Without it Discourse can't send sign-up, password reset or notification emails.
+smtp:
+  # -- SMTP server. Leave empty to not configure email.
+  address: ""
+  # -- SMTP port.
+  port: 587
+  # -- SMTP user name.
+  username: ""
+  # -- SMTP password. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the SMTP password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the SMTP password.
+  existingSecretKey: smtp-password
+  # -- Use STARTTLS.
+  enableStartTls: true
+
+web:
+  # -- Web worker processes per pod (`UNICORN_WORKERS`). Each needs roughly 250-300 MiB of memory.
+  workers: 2
+
+sidekiq:
+  # -- Run Sidekiq (background jobs, emails, scheduled tasks) in its own Deployment. If false, every web pod runs one Sidekiq process (`UNICORN_SIDEKIQS=1`). True needs ReadWriteMany volumes or S3, since Sidekiq also writes uploads and backups.
+  enabled: false
+  # -- Sidekiq pods.
+  replicaCount: 1
+  # -- Threads per Sidekiq process (`DISCOURSE_SIDEKIQ_WORKERS`).
+  concurrency: 5
+  # -- Startup probe: waits for Sidekiq's first heartbeat in Redis (`sidekiq-alive` in the image).
+  startupProbe:
+    exec:
+      command: ["sidekiq-alive"]
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 18
+  # -- Liveness probe: fails when Sidekiq stopped sending its heartbeat to Redis (after about 60 s), so a hung Sidekiq is restarted after 3 failed checks.
+  livenessProbe:
+    exec:
+      command: ["sidekiq-alive"]
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  # -- Resources for the Sidekiq container.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 768Mi
+    limits:
+      memory: 1536Mi
+
+migrations:
+  # -- Run migrations in Jobs (Helm hooks) and disable migrations on pod startup: regular migrations before every install and upgrade, post-deployment migrations (which remove old columns) after it. If false, every web pod runs all migrations on startup (safe for concurrent pods, Discourse locks them).
+  enabled: true
+  # -- Retries of each migration Job before the install/upgrade fails.
+  backoffLimit: 3
+  # -- Maximum runtime of each migration Job in seconds.
+  activeDeadlineSeconds: 1800
+  # -- Resources for the migration Jobs.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 768Mi
+    limits:
+      memory: 1536Mi
+
+persistence:
+  uploads:
+    # -- Persist uploads (`public/uploads`). Disable only when uploads go to S3 (configure it with `extraEnv`).
+    enabled: true
+    # -- Use an existing PersistentVolumeClaim.
+    existingClaim: ""
+    # -- Storage class. Empty uses the cluster default.
+    storageClass: ""
+    # -- Access modes. Use `[ReadWriteMany]` for more than one pod.
+    accessModes: ["ReadWriteOnce"]
+    # -- Volume size.
+    size: 10Gi
+  backups:
+    # -- Persist backups (`public/backups`).
+    enabled: true
+    # -- Use an existing PersistentVolumeClaim.
+    existingClaim: ""
+    # -- Storage class. Empty uses the cluster default.
+    storageClass: ""
+    # -- Access modes. Use `[ReadWriteMany]` for more than one pod.
+    accessModes: ["ReadWriteOnce"]
+    # -- Volume size.
+    size: 10Gi
+
+# -- Extra environment variables for all Discourse containers, e.g. any `DISCOURSE_<SETTING>` from Discourse's `config/discourse_defaults.conf` (https://github.com/discourse/discourse/blob/main/config/discourse_defaults.conf).
+extraEnv: []
+# - name: DISCOURSE_CDN_URL
+#   value: https://cdn.example.com
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+# - secretRef:
+#     name: discourse-s3
+
+# -- Extra volumes for the web and Sidekiq pods.
+extraVolumes: []
+# -- Extra volume mounts for the Discourse containers.
+extraVolumeMounts: []
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port. Discourse listens on 3000 inside the container.
+  port: 80
+
+ingress:
+  # -- Create an Ingress.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. Allow request bodies as large as your upload limit, e.g. `nginx.ingress.kubernetes.io/proxy-body-size: 20m`.
+  annotations: {}
+  # -- Ingress hosts and paths. The host should match `discourse.hostname`.
+  hosts:
+    - host: forum.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. Discourse does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM. The web server finishes requests in flight (request timeout 30 s).
+terminationGracePeriodSeconds: 40
+
+# -- Startup probe on `/srv/status`. Boot takes about 20 s without migrations.
+startupProbe:
+  httpGet:
+    path: /srv/status
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 60
+# -- Liveness probe on `/srv/status`.
+livenessProbe:
+  httpGet:
+    path: /srv/status
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+# -- Readiness probe on `/srv/status`.
+readinessProbe:
+  httpGet:
+    path: /srv/status
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Resources for the web container (includes one Sidekiq process when `sidekiq.enabled` is false).
+resources:
+  requests:
+    cpu: 500m
+    memory: 1536Mi
+  limits:
+    memory: 3Gi
+
+# -- Pod security context. The image runs as non-root UID 10001; `fsGroup` makes the volumes writable.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. Discourse writes to its app directory, so the root filesystem stays writable.
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity.
+affinity: {}
