@@ -1,0 +1,16 @@
+# Two brokers in JDBC master/slave mode on the throwaway PostgreSQL from .github/ci/deps.yaml.
+replicaCount: 2
+store:
+  type: jdbc
+jdbc:
+  url: jdbc:postgresql://postgres.deps.svc:5432/aegra
+  user: aegra
+  password: aegra
+persistence:
+  enabled: false
+resources:
+  requests:
+    cpu: 50m
+    memory: 512Mi
+  limits:
+    memory: 768Mi

@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}-scripts
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+data:
+  tigerbeetle.sh: |
+    #!/bin/sh
+    # Usage: tigerbeetle.sh prepare|start|addresses
+    set -eu
+
+    i=${HOSTNAME##*-}
+    file=/data/replica-$i.tigerbeetle
+    dev=""
+    [ "$DEVELOPMENT" = "true" ] && dev="--development"
+
+    # TigerBeetle only accepts IP addresses. Each peer is reached through its own
+    # Service, whose ClusterIP stays the same when the pod moves. The replica
+    # listens on its own entry, so that one is the wildcard address.
+    addresses() {
+      list=""
+      j=0
+      while [ "$j" -lt "$REPLICA_COUNT" ]; do
+        if [ "$j" = "$i" ]; then
+          case ${POD_IP:-} in *:*) addr="::" ;; *) addr="0.0.0.0" ;; esac
+        else
+          host="$FULLNAME-$j.$NAMESPACE.svc.$CLUSTER_DOMAIN"
+          addr=""
+          while [ -z "$addr" ]; do
+            addr=$(getent hosts "$host" | awk '{ print $1; exit }') || true
+            [ -n "$addr" ] || { echo "waiting for DNS name $host" >&2; sleep 2; }
+          done
+        fi
+        case $addr in *:*) addr="[$addr]" ;; esac
+        list="$list${list:+,}$addr:$PORT"
+        j=$((j + 1))
+      done
+      echo "$list"
+    }
+
+    # A lost data file must be replaced with "recover", never "format": a freshly
+    # formatted replica forgets what it promised and the cluster could lose
+    # committed transfers. "format" is only right for the very first start.
+    prepare() {
+      if [ -f "$file" ]; then
+        echo "replica $i: data file $file exists"
+        return
+      fi
+      mode=$ON_MISSING
+      if [ "$mode" = auto ]; then
+        if [ -f /bootstrap/bootstrapped ]; then mode=recover; else mode=format; fi
+      fi
+      rm -f "$file.new"
+      if [ "$mode" = format ]; then
+        echo "replica $i: formatting a new data file (cluster $CLUSTER_ID, $REPLICA_COUNT replicas)"
+        /tigerbeetle format --cluster="$CLUSTER_ID" --replica="$i" \
+          --replica-count="$REPLICA_COUNT" $dev "$file.new"
+      else
+        echo "replica $i: data file missing, recovering it from the other replicas"
+        echo "replica $i: this waits until the other replicas run. If ALL volumes are new (a fresh cluster)," \
+          "delete the ConfigMaps $FULLNAME-bootstrapped and $FULLNAME and reinstall."
+        /tigerbeetle recover --cluster="$CLUSTER_ID" --addresses="$(addresses)" \
+          --replica="$i" --replica-count="$REPLICA_COUNT" $dev "$file.new"
+      fi
+      mv "$file.new" "$file"
+    }
+
+    case ${1:-} in
+      prepare) prepare ;;
+      addresses) addresses ;;
+      start)
+        shift
+        addrs=$(addresses)
+        echo "replica $i: starting with --addresses=$addrs"
+        exec /tigerbeetle start --addresses="$addrs" --cache-grid="$CACHE_GRID" $dev "$@" "$file"
+        ;;
+      *) echo "usage: $0 prepare|start|addresses" >&2; exit 2 ;;
+    esac

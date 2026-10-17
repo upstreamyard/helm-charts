@@ -1,0 +1,41 @@
+# Test services for the xxl-job chart in kind; CI starts them when the chart changes. Not for production.
+# MySQL 8.4 for the xxl-job chart: an empty database "xxl_job" and a non-root user.
+# MySQL 8.4 for the xxl-job chart: an empty database "xxl_job" and a non-root user.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xxl-job-mysql
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: xxl-job-mysql }
+  template:
+    metadata:
+      labels: { app: xxl-job-mysql }
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          env:
+            - { name: MYSQL_ROOT_PASSWORD, value: rootpw }
+            - { name: MYSQL_DATABASE, value: xxl_job }
+            - { name: MYSQL_USER, value: xxljob }
+            - { name: MYSQL_PASSWORD, value: xxljob }
+          args: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            # Over TCP: MySQL's first-start initialization runs without networking.
+            exec:
+              command: ["mysql", "-h", "127.0.0.1", "-uxxljob", "-pxxljob", "-e", "USE xxl_job"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xxl-job-mysql
+  namespace: deps
+spec:
+  selector: { app: xxl-job-mysql }
+  ports:
+    - port: 3306
