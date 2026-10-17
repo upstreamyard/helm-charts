@@ -31,7 +31,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       # Unpack the PGP signing key (Helm provenance, shown as "signed" on Artifact Hub).
       # Public key: pgp_keys.asc in this repo, served at upstreamyard.github.io/helm-charts.
