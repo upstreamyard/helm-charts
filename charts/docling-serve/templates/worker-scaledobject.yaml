@@ -1,0 +1,45 @@
+{{- if and (include "docling-serve.rq" .) .Values.worker.autoscaling.enabled }}
+{{- $as := .Values.worker.autoscaling }}
+{{- if $as.redisPasswordSecret }}
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "docling-serve.fullname" . }}-worker
+  labels:
+    {{- include "docling-serve.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: {{ $as.redisPasswordSecret }}
+      key: {{ $as.redisPasswordSecretKey }}
+---
+{{- end }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "docling-serve.fullname" . }}-worker
+  labels:
+    {{- include "docling-serve.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    name: {{ include "docling-serve.fullname" . }}-worker
+  minReplicaCount: {{ $as.minReplicaCount }}
+  maxReplicaCount: {{ $as.maxReplicaCount }}
+  cooldownPeriod: {{ $as.cooldownPeriod }}
+  pollingInterval: {{ $as.pollingInterval }}
+  triggers:
+    # RQ keeps waiting jobs in the Redis list rq:queue:<name>.
+    - type: redis
+      metadata:
+        address: {{ $as.redisAddress | quote }}
+        listName: {{ printf "rq:queue:%s" (first (splitList "," .Values.engine.rq.queueName)) | quote }}
+        databaseIndex: {{ $as.redisDatabase | quote }}
+        listLength: {{ $as.listLength | quote }}
+        enableTLS: {{ $as.redisTLS | quote }}
+      {{- if $as.redisPasswordSecret }}
+      authenticationRef:
+        name: {{ include "docling-serve.fullname" . }}-worker
+      {{- end }}
+{{- end }}
