@@ -1,0 +1,38 @@
+{{- if and .Values.adminIngress.enabled (not .Values.adminConsole.enabled) }}
+{{- fail "logto: adminIngress.enabled requires adminConsole.enabled" }}
+{{- end }}
+{{- if .Values.adminIngress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "logto.fullname" . }}-admin
+  labels:
+    {{- include "logto.labels" . | nindent 4 }}
+  {{- with .Values.adminIngress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.adminIngress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.adminIngress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.adminIngress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "logto.fullname" $ }}
+                port:
+                  name: admin
+          {{- end }}
+    {{- end }}
+{{- end }}
