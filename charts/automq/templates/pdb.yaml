@@ -1,0 +1,20 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- range $role := list "controller" "broker" }}
+{{- if gt (int (index $.Values $role).replicas) 1 }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "automq.fullname" $ }}-{{ $role }}
+  labels:
+    {{- include "automq.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $role }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "automq.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $role }}
+{{- end }}
+{{- end }}
+{{- end }}

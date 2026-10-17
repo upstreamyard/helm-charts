@@ -1,0 +1,39 @@
+NeMo Guardrails {{ .Chart.AppVersion }} is deployed as "{{ include "nemo-guardrails.fullname" . }}".
+
+In-cluster endpoint (OpenAI-compatible, use it as base_url):
+
+  http://{{ include "nemo-guardrails.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/v1
+
+Try it:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "nemo-guardrails.fullname" . }} 8000:{{ .Values.service.port }}
+  curl http://localhost:8000/v1/rails/configs
+  curl http://localhost:8000/v1/chat/completions -H 'Content-Type: application/json' \
+    -d '{"model": "<model>", "messages": [{"role": "user", "content": "Hello"}]}'
+
+Requests without "guardrails": {"config_id": ...} use the configuration "{{ include "nemo-guardrails.defaultConfigId" . }}".
+{{- if not (include "nemo-guardrails.hasConfigs" .) }}
+This is the image's default configuration: self check rails with gpt-4o-mini on OpenAI.
+{{- end }}
+{{- if and (not .Values.llm.existingSecret) (not .Values.llm.openaiApiKey) (not .Values.llm.nvidiaApiKey) (not .Values.llm.baseUrl) (not .Values.extraEnvFrom) }}
+
+WARNING: no LLM credentials are set (llm.openaiApiKey, llm.existingSecret or llm.baseUrl).
+Requests will fail until the server can reach a model.
+{{- end }}
+
+NOTE: NeMo Guardrails has NO authentication. Anyone who can reach the service can use
+your LLM through it.
+{{- if .Values.networkPolicy.enabled }} The NetworkPolicy only lets {{ if .Values.networkPolicy.allowFrom }}networkPolicy.allowFrom{{ else }}pods labelled nemo-guardrails-client=true{{ end }} connect.
+{{- else }} Set networkPolicy.enabled=true to limit who can connect.
+{{- end }}
+{{- if .Values.ingress.enabled }}
+The Ingress exposes it outside the cluster: add authentication at the ingress controller or gateway.
+{{- end }}
+{{- if .Values.chatUI.enabled }}
+
+The Chat UI is on at /chat. NVIDIA recommends it for internal testing only.
+{{- end }}
+{{- if eq (upper .Values.logLevel) "INFO" "DEBUG" }}
+
+logLevel={{ .Values.logLevel }} writes every message, prompt and answer to the logs.
+{{- end }}
