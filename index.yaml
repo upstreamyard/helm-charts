@@ -4,6 +4,58 @@ entries:
   - annotations:
       artifacthub.io/category: streaming-messaging
       artifacthub.io/changes: |
+        - kind: changed
+          description: Added the upstreamyard logo as the chart icon
+      artifacthub.io/images: |
+        - name: activemq
+          image: upstreamyard/activemq:6.3.2
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache ActiveMQ
+          url: https://github.com/apache/activemq
+        - name: Container image
+          url: https://github.com/upstreamyard/activemq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 6.3.2
+    created: "2026-10-17T11:51:25.688300496Z"
+    description: Apache ActiveMQ Classic Helm chart for Kubernetes. Secure JMS, AMQP,
+      STOMP and MQTT message broker with high availability (JDBC or shared storage
+      master/slave), Prometheus metrics and ActiveMQ 6.3, 6.2 and 5.19 images. Community
+      chart by upstreamyard, not an official Apache ActiveMQ chart.
+    digest: efe207a986791fa5685a9ec522883afecc92b4facf3e41f73ef081763f4f5d9b
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/activemq
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - activemq
+    - activemq-classic
+    - apache-activemq
+    - jms
+    - message-broker
+    - messaging
+    - queue
+    - amqp
+    - stomp
+    - mqtt
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: activemq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/activemq
+    - https://github.com/apache/activemq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/activemq-0.1.1/activemq-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
         - kind: added
           description: Apache ActiveMQ Classic chart with single-broker and master/slave modes
       artifacthub.io/images: |
@@ -53,6 +105,50 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/activemq-0.1.0/activemq-0.1.0.tgz
     version: 0.1.0
   aegra:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Added the upstreamyard logo as the chart icon
+      artifacthub.io/images: |
+        - name: aegra
+          image: upstreamyard/aegra:0.10.8
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Aegra project
+          url: https://github.com/aegra/aegra
+        - name: Container image
+          url: https://github.com/upstreamyard/aegra
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.10.8
+    created: "2026-10-17T11:51:25.806762872Z"
+    description: Aegra, the open-source self-hosted alternative to LangGraph Platform.
+      Community chart by upstreamyard, not an official Aegra chart.
+    digest: b96948fe21403087350ce8ea5c7619a62f64eb63b281cb66e048218215f46e1a
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - aegra
+    - langgraph
+    - agents
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: aegra
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/aegra
+    - https://github.com/aegra/aegra
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/aegra-0.1.4/aegra-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -230,6 +326,56 @@ entries:
   - annotations:
       artifacthub.io/category: streaming-messaging
       artifacthub.io/changes: |
+        - kind: changed
+          description: Added the upstreamyard logo as the chart icon
+      artifacthub.io/images: |
+        - name: automq
+          image: automqinc/automq:1.7.4-kafka
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: AutoMQ
+          url: https://github.com/AutoMQ/automq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.7.4
+    created: "2026-10-17T11:51:25.942263866Z"
+    description: AutoMQ Helm chart for Kubernetes. Kafka-compatible streaming with
+      messages stored in S3 (diskless Kafka) on the open-source AutoMQ edition, with
+      combined or separate KRaft controllers, scalable stateless brokers, SASL authentication
+      by default and Prometheus metrics. Replaces the Bitnami Kafka chart setup for
+      AutoMQ. Community chart by upstreamyard, not an official AutoMQ chart.
+    digest: b886696e9e5aface1afd48a5b069e338136349ae7cf764c2f1cc02343a2740d9
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/automq
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - automq
+    - kafka
+    - apache-kafka
+    - diskless-kafka
+    - kafka-on-s3
+    - s3
+    - streaming
+    - message-broker
+    - kraft
+    - event-streaming
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: automq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/AutoMQ/automq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/automq-0.1.1/automq-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
         - kind: added
           description: AutoMQ chart with combined or separate controllers, broker-only nodes, SASL/PLAIN authentication and Prometheus metrics
       artifacthub.io/images: |
@@ -279,6 +425,51 @@ entries:
   conductor:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Added the upstreamyard logo as the chart icon
+      artifacthub.io/images: |
+        - name: conductor
+          image: upstreamyard/conductor:3.32.5
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Conductor project
+          url: https://github.com/conductor-oss/conductor
+        - name: Container image
+          url: https://github.com/upstreamyard/conductor
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.32.5
+    created: "2026-10-17T11:51:26.074528415Z"
+    description: Conductor OSS, the open-source workflow orchestration engine originally
+      built at Netflix, with UI. Community chart by upstreamyard, not an official
+      Conductor chart.
+    digest: d8208d2b3e0a7a8b1ee7c6a36891635d228e643129cde53d0a3fa9180c7a00de
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - conductor
+    - workflow
+    - orchestration
+    - microservices
+    - netflix
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: conductor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/conductor
+    - https://github.com/conductor-oss/conductor
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.1/conductor-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: First release
       artifacthub.io/images: |
@@ -322,6 +513,61 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.0/conductor-0.1.0.tgz
     version: 0.1.0
   nemo-guardrails:
+  - annotations:
+      artifacthub.io/category: security
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Added the upstreamyard logo as the chart icon
+      artifacthub.io/images: |
+        - name: nemo-guardrails
+          image: upstreamyard/nemo-guardrails:0.24.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: NeMo Guardrails project
+          url: https://github.com/NVIDIA-NeMo/Guardrails
+        - name: Container image
+          url: https://github.com/upstreamyard/nemo-guardrails
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.24.1
+    created: "2026-10-17T11:51:26.202595763Z"
+    description: NeMo Guardrails Helm chart for Kubernetes. NVIDIA NeMo Guardrails
+      server, an OpenAI-compatible LLM guardrails API with input, output and dialog
+      rails, your configurations from values or ConfigMaps, a config check before
+      rollout, autoscaling, NetworkPolicy and OpenTelemetry. Community chart by upstreamyard,
+      not an official NVIDIA chart.
+    digest: 5bae911ae7e6f68c0f00494c97b591d495399300cc3194452eea7acb4ac1bdef
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/nemo-guardrails
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - nemo-guardrails
+    - nemoguardrails
+    - nvidia-nemo
+    - guardrails
+    - llm-guardrails
+    - llm-security
+    - ai-safety
+    - prompt-injection
+    - jailbreak-detection
+    - content-moderation
+    - openai-compatible
+    - llm
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: nemo-guardrails
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/nemo-guardrails
+    - https://github.com/NVIDIA-NeMo/Guardrails
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.1/nemo-guardrails-0.1.1.tgz
+    version: 0.1.1
   - annotations:
       artifacthub.io/category: security
       artifacthub.io/changes: |
@@ -379,6 +625,48 @@ entries:
   xxl-job:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Added the upstreamyard logo as the chart icon
+      artifacthub.io/images: |
+        - name: xxl-job-admin
+          image: xuxueli/xxl-job-admin:3.5.0
+      artifacthub.io/license: GPL-3.0
+      artifacthub.io/links: |
+        - name: XXL-JOB project
+          url: https://github.com/xuxueli/xxl-job
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.5.0
+    created: "2026-10-17T11:51:26.353304055Z"
+    description: XXL-JOB admin (scheduling center), the distributed job scheduler
+      for Java services. Sets up the MySQL schema and its own admin password. Community
+      chart by upstreamyard, not an official XXL-JOB chart.
+    digest: 80ca1bfd4cdb26a77941776bb456a7ea6e133b97a3bf0c311af7787f086f1c2e
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - xxl-job
+    - scheduler
+    - cron
+    - job-scheduler
+    - distributed
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: xxl-job
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/xuxueli/xxl-job
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.1/xxl-job-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: First release
       artifacthub.io/images: |
@@ -418,4 +706,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T11:22:40.843303127Z"
+generated: "2026-10-17T11:51:26.353342948Z"
