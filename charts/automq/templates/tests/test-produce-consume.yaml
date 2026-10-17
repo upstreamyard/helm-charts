@@ -1,0 +1,67 @@
+{{- $authSecret := default (include "automq.secretName" .) .Values.auth.existingSecret }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "automq.fullname" . }}-test
+  labels:
+    {{- include "automq.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: produce-consume
+      image: {{ include "automq.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      env:
+        - name: BOOTSTRAP
+          value: {{ include "automq.bootstrap" . | quote }}
+        - name: KAFKA_HEAP_OPTS
+          value: "-Xmx256m"
+        - name: LOG_DIR
+          value: /tmp/logs
+        {{- if .Values.auth.enabled }}
+        {{- $user := first .Values.auth.users }}
+        - name: KAFKA_USER
+          value: {{ $user.name | quote }}
+        - name: KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $authSecret }}
+              key: {{ ternary $user.name (printf "user-%s" $user.name) (not (empty .Values.auth.existingSecret)) }}
+        {{- end }}
+      command: ["/bin/bash", "-ec"]
+      args:
+        - |
+          cd /opt/kafka/bin
+          props=/tmp/client.properties
+          : > "$props"
+          if [ -n "${KAFKA_USER:-}" ]; then
+            printf 'security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="%s" password="%s";\n' \
+              "$KAFKA_USER" "$KAFKA_PASSWORD" > "$props"
+          fi
+          topic="helm-test-$(date +%s)"
+          ./kafka-topics.sh --bootstrap-server "$BOOTSTRAP" --command-config "$props" --create --topic "$topic" --partitions 3
+          seq 1 10 | ./kafka-console-producer.sh --bootstrap-server "$BOOTSTRAP" --producer.config "$props" --topic "$topic"
+          received=$(./kafka-console-consumer.sh --bootstrap-server "$BOOTSTRAP" --consumer.config "$props" --topic "$topic" \
+            --from-beginning --max-messages 10 --timeout-ms 60000 | wc -l)
+          ./kafka-topics.sh --bootstrap-server "$BOOTSTRAP" --command-config "$props" --delete --topic "$topic"
+          echo "Received $received of 10 messages."
+          [ "$received" -eq 10 ]
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}
