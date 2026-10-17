@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "conductor.fullname" . }}
+  labels:
+    {{- include "conductor.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "conductor.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      annotations:
+        {{- if include "conductor.createSecret" . }}
+        checksum/secret: {{ include "conductor.secretData" . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "conductor.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "conductor.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: conductor
+          image: {{ include "conductor.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: ui
+              containerPort: 5000
+              protocol: TCP
+          env:
+            # PostgreSQL for persistence, queues, search index, payloads and the
+            # workflow lock (the lock must be shared when several pods run).
+            - name: CONDUCTOR_DB_TYPE
+              value: postgres
+            - name: CONDUCTOR_QUEUE_TYPE
+              value: postgres
+            - name: CONDUCTOR_INDEXING_ENABLED
+              value: "true"
+            - name: CONDUCTOR_INDEXING_TYPE
+              value: postgres
+            - name: CONDUCTOR_ELASTICSEARCH_VERSION
+              value: "0"
+            - name: CONDUCTOR_EXTERNAL_PAYLOAD_STORAGE_TYPE
+              value: postgres
+            - name: CONDUCTOR_WORKFLOW_EXECUTION_LOCK_TYPE
+              value: postgres
+            # The image contains an Elasticsearch client, whose health check would
+            # fail /actuator/health (the readiness probe) when Elasticsearch isn't used.
+            - name: MANAGEMENT_HEALTH_ELASTICSEARCH_ENABLED
+              value: "false"
+            - name: SPRING_DATASOURCE_URL
+              value: {{ .Values.database.url | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.database.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.database.existingSecret }}
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.existingSecretPasswordKey }}
+                  {{- else }}
+                  name: {{ include "conductor.fullname" . }}
+                  key: database-password
+                  {{- end }}
+            - name: JAVA_OPTS
+              value: {{ .Values.javaOpts | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

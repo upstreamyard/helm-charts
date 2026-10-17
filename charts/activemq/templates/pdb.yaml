@@ -1,0 +1,13 @@
+{{- if and .Values.podDisruptionBudget.enabled (include "activemq.ha" .) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "activemq.fullname" . }}
+  labels:
+    {{- include "activemq.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "activemq.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,179 @@
+# ActiveMQ Helm chart: Apache ActiveMQ Classic on Kubernetes
+
+{{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
+
+Helm chart for **[Apache ActiveMQ Classic](https://github.com/apache/activemq)**, the open-source JMS message broker (OpenWire, AMQP, STOMP, MQTT, WebSocket). It runs a single broker or a **highly available master/slave pair**, either on PostgreSQL (no shared storage needed) or on a shared volume. Logins are **required by default** with generated passwords, and Prometheus metrics, a ServiceMonitor and `helm test` are included. It covers ActiveMQ **6.3, 6.2 and 5.19** through the [`upstreamyard/activemq`](https://github.com/upstreamyard/activemq) image. It also replaces the discontinued Bitnami ActiveMQ image on Kubernetes.
+
+> Community chart by **upstreamyard**, not an official Apache ActiveMQ chart. Apache ActiveMQ is licensed under Apache-2.0. Apache, Apache ActiveMQ and ActiveMQ are trademarks of the Apache Software Foundation.
+
+**AI agents and coding assistants:** this README is the complete reference. The image's [`AGENTS.md`](https://github.com/upstreamyard/activemq/blob/main/AGENTS.md) lists the deployment rules, and [`llms.txt`](https://github.com/upstreamyard/activemq/blob/main/llms.txt) indexes all docs.
+
+## Install
+
+```bash
+helm repo add upstreamyard https://upstreamyard.github.io/helm-charts
+helm install activemq upstreamyard/activemq
+```
+
+Or from the OCI registry:
+
+```bash
+helm install activemq oci://ghcr.io/upstreamyard/charts/activemq
+```
+
+The install notes show the client URL and the commands that print the generated passwords. Then check that messages flow:
+
+```bash
+helm test activemq
+```
+
+### Verifying the chart
+
+Chart packages are PGP-signed. Import the [public key](https://upstreamyard.github.io/helm-charts/pgp_keys.asc) (fingerprint `9B416F989B7E6C65F7F3BFAE7689688B20EC7813`) and install with `--verify`:
+
+```bash
+curl -s https://upstreamyard.github.io/helm-charts/pgp_keys.asc | gpg --dearmor > upstreamyard.gpg
+helm install activemq upstreamyard/activemq --verify --keyring upstreamyard.gpg
+```
+
+The OCI copy on GHCR is signed with cosign instead (see the [repository README](https://github.com/upstreamyard/helm-charts#usage)).
+
+## What the chart does
+
+- **StatefulSet** with stable pod names (`<release>-activemq-0`, `-1`) and a volume per broker for the KahaDB message store.
+- **Security:**
+  - generated admin and app passwords in a Secret, kept across upgrades;
+  - no anonymous clients;
+  - non-root (UID 10001), read-only root filesystem, all capabilities dropped, no ServiceAccount token.
+- **Users:**
+  - the **admin** user may do everything, including the web console;
+  - the **app** user may send to, receive from and create any queue or topic, without web console access.
+- **Transports:** OpenWire (61616) by default; add `amqp`, `stomp`, `mqtt`, `ws` in `transports`.
+- **Master/slave:** with `replicaCount: 2`, one broker is active and the other waits and takes over. Probes use the image's `broker-state` command, so the waiting standby counts as healthy and rolling updates don't stall on it. There's also a PodDisruptionBudget and soft anti-affinity.
+- **Graceful shutdown:** the broker stops cleanly on `SIGTERM`, within the 60-second grace period.
+- **Metrics:** `metrics.enabled` serves broker, per-queue/topic and JVM metrics on port 9404; `metrics.serviceMonitor.enabled` adds a ServiceMonitor.
+- **Your own config:** `configFiles` and `configSecrets` place files such as `activemq.xml`, `users.properties` or keystores in `/etc/activemq`.
+
+## Deployment modes
+
+### Single broker (default)
+
+One broker with KahaDB on a PersistentVolumeClaim. If the pod or node fails, Kubernetes restarts the broker on the same volume.
+
+```yaml
+persistence:
+  size: 20Gi
+resources:
+  limits:
+    memory: 2Gi
+```
+
+### High availability with PostgreSQL (JDBC master/slave)
+
+Two brokers share one database; no `ReadWriteMany` storage is needed. The image includes the PostgreSQL driver.
+
+```yaml
+replicaCount: 2
+store:
+  type: jdbc
+jdbc:
+  url: jdbc:postgresql://postgres.example.svc:5432/activemq
+  user: activemq
+  existingSecret: activemq-db          # key: password
+persistence:
+  enabled: false                       # messages live in the database
+```
+
+- **Tested in kind:** deleting the active pod moved the work to the standby in 2 seconds, without message loss. A rolling `helm upgrade` under load lost no messages either.
+- **One database per installation.** Brokers that share the lock table act as one master/slave group, so a second installation on the same database only waits as a standby.
+- ActiveMQ creates the tables `ACTIVEMQ_MSGS`, `ACTIVEMQ_ACKS` and `ACTIVEMQ_LOCK` on the first start, and later starts log the harmless warning `Could not create JDBC tables; they could already exist`.
+- JDBC is slower than KahaDB. Scheduled messages (`broker.scheduler`) stay on the pod's own storage and don't move to the standby.
+
+### High availability with a shared volume
+
+Both brokers use one `ReadWriteMany` volume with working file locks (e.g. NFSv4 or CephFS). The broker that holds the KahaDB lock is active:
+
+```yaml
+replicaCount: 2
+persistence:
+  existingClaim: activemq-shared       # ReadWriteMany
+```
+
+- **Tested in kind** with a hostPath volume: when the active pod was deleted or its broker crashed, the restarted pod usually got the lock back first. A broker was active again after about 3 seconds, without message loss.
+- The standby takes over when the active broker can't come back, e.g. when its node fails (not tested in a single-node cluster).
+
+## Connecting clients
+
+- **Single broker:** `tcp://<release>-activemq.<namespace>.svc:61616`.
+- **Master/slave:** use the failover URL from the install notes. It lists every broker through the headless Service, for example:
+
+  ```
+  failover:(tcp://activemq-0.activemq-headless.messaging.svc:61616,tcp://activemq-1.activemq-headless.messaging.svc:61616)
+  ```
+
+  Only the active broker accepts connections, and JMS clients with a failover URL reconnect by themselves. The regular Service includes the standby too, so clients of other protocols (AMQP, STOMP, MQTT) should retry on connection errors.
+- **Web console:** `kubectl port-forward svc/<release>-activemq 8161`, then open http://localhost:8161/admin as the admin user, or use `ingress.enabled`.
+
+## Choosing the ActiveMQ version
+
+The chart defaults to the newest ActiveMQ 6.3. Pick another supported release line with `image.tag`:
+
+| `image.tag` | ActiveMQ | Clients |
+|---|---|---|
+| (default) or `6.3` | 6.3.x | `jakarta.jms` (Spring Boot 3, Jakarta EE 9+) |
+| `6.2` | 6.2.x | `jakarta.jms` |
+| `5.19` | 5.19.x | `javax.jms` (Spring Boot 2, Java EE 8) |
+
+An upgrade from 6.2 to 6.3 on the same volume kept all queued messages in our test.
+
+## Production example
+
+```yaml
+# values-prod.yaml
+replicaCount: 2
+auth:
+  existingSecret: activemq-auth        # keys: admin-password, app-password
+transports: [openwire, amqp]
+store:
+  type: jdbc
+jdbc:
+  url: jdbc:postgresql://postgres.example.svc:5432/activemq
+  user: activemq
+  existingSecret: activemq-db
+persistence:
+  enabled: false
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+podAntiAffinityPreset: hard
+```
+
+## Your own configuration
+
+- **Broker settings:** put a complete `activemq.xml` in `configFiles`. The chart's `transports`, `store`, `broker` and `webConsole` values are then ignored. Keep `<jaasAuthenticationPlugin configuration="activemq"/>` for logins and `id="broker"` on `<broker>`. Start from the image's [default activemq.xml](https://github.com/upstreamyard/activemq/blob/main/conf/activemq.xml).
+- **More users or groups:** a Secret with `users.properties` and `groups.properties` in `configSecrets`. The chart's admin and app passwords are then only used by `helm test`, so keep matching entries.
+- **Logging:** `log4j2.properties` in `configFiles`.
+- **Other image settings:** `extraEnv`, e.g. `ACTIVEMQ_HEALTHCHECK_PORT`. The [image README](https://github.com/upstreamyard/activemq#configuration) lists them all.
+
+## FAQ
+
+**Is there an official ActiveMQ Helm chart?** Apache doesn't publish one for ActiveMQ Classic. This chart is maintained by upstreamyard together with the image.
+
+**What replaces the Bitnami ActiveMQ image on Kubernetes?** This chart with our image. Bitnami's `ACTIVEMQ_PASSWORD` becomes `auth.adminPassword`, or let the chart generate one.
+
+**Is this ActiveMQ Artemis?** No, it's ActiveMQ **Classic** (5.x/6.x). Artemis is a different broker.
+
+**How do I run ActiveMQ highly available on Kubernetes?** `replicaCount: 2` with `store.type: jdbc` and a PostgreSQL database. See [Deployment modes](#deployment-modes).
+
+**How do I monitor ActiveMQ with Prometheus?** `metrics.enabled=true` and `metrics.serviceMonitor.enabled=true`.
+
+**Why does only one pod accept connections?** That's how ActiveMQ Classic master/slave works: one active broker and a waiting standby. Use the failover URL.
+
+{{ template "chart.valuesSection" . }}

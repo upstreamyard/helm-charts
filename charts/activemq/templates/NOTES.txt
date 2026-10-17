@@ -1,0 +1,48 @@
+Apache ActiveMQ {{ default .Chart.AppVersion .Values.image.tag }} is starting ({{ .Values.replicaCount }} broker{{ if include "activemq.ha" . }}s, master/slave with {{ ternary "a shared volume" "a JDBC store" (eq .Values.store.type "kahadb") }}{{ end }}).
+
+{{- $secret := default (include "activemq.secretName" .) .Values.auth.existingSecret }}
+
+Credentials:
+  admin user: {{ .Values.auth.adminUser }}
+    kubectl get secret -n {{ .Release.Namespace }} {{ $secret }} -o jsonpath='{.data.{{ ternary .Values.auth.adminPasswordKey "admin-password" (not (empty .Values.auth.existingSecret)) }}}' | base64 -d
+{{- if .Values.auth.appUser }}
+  app user:   {{ .Values.auth.appUser }} (for your applications)
+    kubectl get secret -n {{ .Release.Namespace }} {{ $secret }} -o jsonpath='{.data.{{ ternary .Values.auth.appPasswordKey "app-password" (not (empty .Values.auth.existingSecret)) }}}' | base64 -d
+{{- end }}
+
+Clients in the cluster:
+{{- if has "openwire" .Values.transports }}
+  JMS (OpenWire): {{ include "activemq.clientUrl" . }}
+{{- end }}
+{{- range .Values.transports }}
+{{- if ne . "openwire" }}
+  {{ upper . }}: {{ include "activemq.fullname" $ }}.{{ $.Release.Namespace }}.svc:{{ include "activemq.transportPort" . }}
+{{- end }}
+{{- end }}
+{{- if include "activemq.ha" . }}
+
+  Only the active broker accepts connections; the others wait and take over when it
+  stops. Use the failover URL above (JMS clients reconnect by themselves). Clients of
+  other protocols should retry on connection errors.
+{{- end }}
+{{- if .Values.webConsole.enabled }}
+
+Web console (admin user):
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "activemq.fullname" . }} 8161:8161
+  then open http://localhost:8161/admin
+{{- end }}
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics: port 9404 (/metrics) on every broker pod{{ if .Values.metrics.serviceMonitor.enabled }}, scraped by the ServiceMonitor{{ end }}.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence.enabled=false. {{ if eq .Values.store.type "kahadb" }}Persistent messages are lost when a pod is deleted.{{ else }}Scheduled messages and temporary storage are lost when a pod is deleted.{{ end }}
+{{- end }}
+{{- if hasKey .Values.configFiles "activemq.xml" }}
+
+NOTE: your own activemq.xml is used, so transports, store, broker and webConsole
+settings of this chart are ignored by the broker.
+{{- end }}
+
+Check it: helm test -n {{ .Release.Namespace }} {{ .Release.Name }}
