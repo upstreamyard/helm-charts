@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "cube.fullname" . }}-test-api
+  labels:
+    {{- include "cube.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: check
+      # The Cube image has no curl or wget; Node is used instead, so no extra image is pulled.
+      image: {{ include "cube.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: URL
+          value: http://{{ include "cube.fullname" . }}:{{ .Values.service.port }}
+        - name: CUBEJS_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ default (include "cube.fullname" .) .Values.apiSecret.existingSecret }}
+              key: {{ ternary .Values.apiSecret.existingSecretKey "api-secret" (not (empty .Values.apiSecret.existingSecret)) }}
+      # 1. /readyz: the data source and Cube Store respond.
+      # 2. /cubejs-api/v1/meta with a token signed by the API secret: auth works and the model compiled.
+      command:
+        - node
+        - -e
+        - |
+          const crypto = require('crypto');
+          const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const body = b64({ alg: 'HS256', typ: 'JWT' }) + '.' + b64({ iat: now, exp: now + 300 });
+          const token = body + '.' + crypto.createHmac('sha256', process.env.CUBEJS_API_SECRET).update(body).digest('base64url');
+          (async () => {
+            for (let i = 0; ; i++) {
+              const r = await fetch(process.env.URL + '/readyz').catch(() => null);
+              if (r && r.ok) break;
+              if (i === 20) throw new Error('readyz not OK');
+              await new Promise((res) => setTimeout(res, 3000));
+            }
+            const meta = await fetch(process.env.URL + '/cubejs-api/v1/meta', { headers: { Authorization: token } });
+            if (!meta.ok) throw new Error('meta returned ' + meta.status);
+            const cubes = (await meta.json()).cubes || [];
+            if (cubes.length === 0) throw new Error('no cubes in the data model');
+            console.log('OK: ' + cubes.map((c) => c.name).join(', '));
+          })().catch((e) => { console.error(e.message); process.exit(1); });
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

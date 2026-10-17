@@ -1,0 +1,53 @@
+# Used by chart-testing (ct install) in CI. The data source is the PostgreSQL in the
+# "deps" namespace; the sample model reads from a VALUES list, so no table is needed.
+apiSecret:
+  value: ci-test-secret
+datasource:
+  type: postgres
+  host: postgres.deps.svc
+  name: aegra
+  user: aegra
+  password: aegra
+model:
+  files:
+    orders.yml: |
+      cubes:
+        - name: orders
+          sql: >
+            SELECT * FROM (VALUES (1, 'new', 10), (2, 'paid', 20), (3, 'paid', 30))
+            AS t (id, status, amount)
+          measures:
+            - name: count
+              type: count
+            - name: total
+              sql: amount
+              type: sum
+          dimensions:
+            - name: status
+              sql: status
+              type: string
+          pre_aggregations:
+            - name: by_status
+              measures: [count, total]
+              dimensions: [status]
+cubestore:
+  workers: 2
+  storage:
+    type: sharedVolume
+    sharedVolume:
+      create: true
+      size: 1Gi
+      # kind has a single node, so ReadWriteOnce is enough for the test.
+      accessModes: ["ReadWriteOnce"]
+  router:
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+  worker:
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+api:
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+refreshWorker:
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}

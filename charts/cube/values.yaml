@@ -1,0 +1,254 @@
+image:
+  # -- Image repository for the Cube API and refresh worker.
+  repository: cubejs/cube
+  # -- Image tag. Defaults to `v` + the chart's appVersion (Cube's tags start with `v`).
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# Secret that signs and verifies API tokens (JWT, HS256). Required.
+apiSecret:
+  # -- The secret (`CUBEJS_API_SECRET`), e.g. from `openssl rand -hex 32`. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  value: ""
+  # -- Name of an existing Secret that holds the API secret (recommended for production).
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the API secret.
+  existingSecretKey: api-secret
+
+# The data source Cube queries. Required. Host-based databases are configured here;
+# for others (e.g. BigQuery, Snowflake key pairs) set `type` and pass the driver's
+# `CUBEJS_DB_*` variables through `extraEnv` / `extraEnvFrom`.
+datasource:
+  # -- Database type (`CUBEJS_DB_TYPE`), e.g. `postgres`, `mysql`, `clickhouse`, `snowflake`, `bigquery`. See https://docs.cube.dev/admin/connect-to-data/data-sources
+  type: ""
+  # -- Database host (`CUBEJS_DB_HOST`).
+  host: ""
+  # -- Database port (`CUBEJS_DB_PORT`). Empty uses the driver's default.
+  port: ""
+  # -- Database name (`CUBEJS_DB_NAME`).
+  name: ""
+  # -- Database user (`CUBEJS_DB_USER`).
+  user: ""
+  # -- Database password (`CUBEJS_DB_PASS`). Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  password: ""
+  # -- Name of an existing Secret that holds the password.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the password.
+  existingSecretPasswordKey: password
+
+# Your data model: YAML (or JS) files mounted into `/cube/conf/model`.
+model:
+  # -- Model files as `filename: content`. The chart stores them in a ConfigMap. Ignored when `existingConfigMap` is set.
+  files: {}
+  # orders.yml: |
+  #   cubes:
+  #     - name: orders
+  #       sql_table: public.orders
+  #       measures:
+  #         - name: count
+  #           type: count
+  # -- Name of an existing ConfigMap with your model files (each key becomes a file).
+  existingConfigMap: ""
+
+# -- Extra environment variables for the API and refresh worker, e.g. `CUBEJS_DB_SSL`, JWT settings (`CUBEJS_JWK_URL`, …) or driver settings. See https://docs.cube.dev/reference/configuration/environment-variables
+extraEnv: []
+# -- Extra environment variables from Secrets or ConfigMaps for the API and refresh worker.
+extraEnvFrom: []
+# -- Extra volumes for the API and refresh worker pods, e.g. a ConfigMap with `cube.js`.
+extraVolumes: []
+# -- Extra volume mounts for the API and refresh worker, e.g. `cube.js` at `/cube/conf/cube.js` (with `subPath`).
+extraVolumeMounts: []
+
+api:
+  # -- Number of API pods.
+  replicaCount: 1
+  # -- Resources for the API.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  # -- Startup probe: the API port accepts connections.
+  startupProbe:
+    tcpSocket:
+      port: http
+    periodSeconds: 2
+    failureThreshold: 60
+  # -- Liveness probe: the API port accepts connections. Not `/livez`, which fails while the data source is down and would restart healthy pods.
+  livenessProbe:
+    tcpSocket:
+      port: http
+    periodSeconds: 10
+  # -- Readiness probe on `/readyz`, which tests the data source and Cube Store.
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  # -- Extra pod annotations.
+  podAnnotations: {}
+
+refreshWorker:
+  # -- Run a refresh worker, which builds and refreshes pre-aggregations in Cube Store. Cube's production setup has exactly one.
+  enabled: true
+  # -- Resources for the refresh worker.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  # -- Extra pod annotations.
+  podAnnotations: {}
+
+cubestore:
+  # -- Deploy Cube Store (a router and workers). If false, set `cubestore.external.host` to an existing Cube Store.
+  enabled: true
+  image:
+    # -- Cube Store image repository.
+    repository: cubejs/cubestore
+    # -- Cube Store image tag. Defaults to `v` + the chart's appVersion, plus `-<variant>`.
+    tag: ""
+    # -- Image variant. Cube Store has no multi-arch images: use `arm64v8` on arm64 nodes and `non-avx` on CPUs without AVX. Empty means amd64.
+    variant: ""
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+
+  # -- Number of Cube Store workers.
+  workers: 2
+
+  # Shared storage for pre-aggregations, used by the router and all workers. Required.
+  storage:
+    # -- `s3`, `gcs`, `minio` (any S3-compatible store) or `sharedVolume`. Cube recommends S3 or GCS for production; credentials go into `cubestore.extraEnvFrom` (see README).
+    type: ""
+    s3:
+      # -- S3 bucket (`CUBESTORE_S3_BUCKET`).
+      bucket: ""
+      # -- S3 region (`CUBESTORE_S3_REGION`).
+      region: ""
+      # -- Path prefix in the bucket (`CUBESTORE_S3_SUB_PATH`).
+      subPath: ""
+    gcs:
+      # -- GCS bucket (`CUBESTORE_GCS_BUCKET`).
+      bucket: ""
+      # -- Path prefix in the bucket (`CUBESTORE_GCS_SUB_PATH`).
+      subPath: ""
+    minio:
+      # -- Endpoint of the S3-compatible server (`CUBESTORE_MINIO_SERVER_ENDPOINT`), e.g. `http://minio:9000`.
+      endpoint: ""
+      # -- Bucket (`CUBESTORE_MINIO_BUCKET`).
+      bucket: ""
+      # -- Region (`CUBESTORE_MINIO_REGION`).
+      region: ""
+      # -- Path prefix in the bucket (`CUBESTORE_MINIO_SUB_PATH`). Must not be empty: without it, Cube Store 1.8 can't find its own uploads on S3-compatible servers ("can't be listed after upload").
+      subPath: cubestore
+    sharedVolume:
+      # -- Existing PersistentVolumeClaim mounted by the router and all workers (`CUBESTORE_REMOTE_DIR`). Must be `ReadWriteMany` when Cube Store pods run on several nodes. Cube doesn't recommend this for production.
+      existingClaim: ""
+      # -- Create the claim instead (for tests and small single-node setups).
+      create: false
+      # -- Size of the created claim.
+      size: 10Gi
+      # -- Storage class of the created claim. Empty uses the cluster default.
+      storageClass: ""
+      # -- Access modes of the created claim.
+      accessModes: ["ReadWriteMany"]
+
+  external:
+    # -- Host of an existing Cube Store router, when `cubestore.enabled` is false (`CUBEJS_CUBESTORE_HOST`).
+    host: ""
+    # -- HTTP port of the existing Cube Store router (`CUBEJS_CUBESTORE_PORT`).
+    port: 3030
+
+  router:
+    # -- Resources for the Cube Store router.
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+  worker:
+    # -- Resources for each Cube Store worker.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        memory: 4Gi
+
+  # -- Extra environment variables for all Cube Store pods, e.g. `CUBESTORE_LOG_LEVEL`.
+  extraEnv: []
+  # -- Extra environment variables from Secrets for all Cube Store pods, e.g. storage credentials (`CUBESTORE_AWS_ACCESS_KEY_ID`, `CUBESTORE_AWS_SECRET_ACCESS_KEY`, `CUBESTORE_MINIO_ACCESS_KEY_ID`, `CUBESTORE_MINIO_SECRET_ACCESS_KEY`, `CUBESTORE_GCP_CREDENTIALS`).
+  extraEnvFrom: []
+  # -- Seconds Kubernetes waits after SIGTERM. Cube Store doesn't handle SIGTERM, so a long grace period only slows down rollouts.
+  terminationGracePeriodSeconds: 10
+
+service:
+  # -- Service type of the Cube API.
+  type: ClusterIP
+  # -- Port of the Cube API (REST, GraphQL and SQL-over-HTTP APIs).
+  port: 4000
+
+ingress:
+  # -- Create an Ingress for the Cube API.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: cube.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+serviceAccount:
+  # -- Create a ServiceAccount (used by all Cube pods).
+  create: true
+  # -- Mount the ServiceAccount token. Cube does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations, e.g. for cloud workload identity to reach S3 or GCS.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM for the API and refresh worker. They stop within a second.
+terminationGracePeriodSeconds: 30
+
+# -- Pod security context for all pods. The images default to root; the chart runs them as UID 10001.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context for all containers.
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# -- Extra labels for all pods.
+podLabels: {}
+# -- Node selector for all pods.
+nodeSelector: {}
+# -- Tolerations for all pods.
+tolerations: []
+# -- Affinity for all pods.
+affinity: {}

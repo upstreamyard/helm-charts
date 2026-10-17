@@ -1,0 +1,87 @@
+{{- if .Values.cubestore.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cube.workerHeadless" . }}
+  labels:
+    {{- include "cube.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubestore-worker
+spec:
+  clusterIP: None
+  # Workers and the router must find each other while they are still starting.
+  publishNotReadyAddresses: true
+  ports:
+    - name: worker
+      port: 10001
+      targetPort: worker
+  selector:
+    {{- include "cube.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: cubestore-worker
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "cube.workerName" . }}
+  labels:
+    {{- include "cube.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubestore-worker
+spec:
+  replicas: {{ .Values.cubestore.workers }}
+  serviceName: {{ include "cube.workerHeadless" . }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "cube.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: cubestore-worker
+  template:
+    metadata:
+      labels:
+        {{- include "cube.labels" . | nindent 8 }}
+        app.kubernetes.io/component: cubestore-worker
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "cube.cubestorePodCommon" . | nindent 6 }}
+      containers:
+        - name: cubestore
+          image: {{ include "cube.cubestoreImage" . }}
+          imagePullPolicy: {{ .Values.cubestore.image.pullPolicy }}
+          ports:
+            - name: worker
+              containerPort: 10001
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CUBESTORE_SERVER_NAME
+              value: "$(POD_NAME).{{ include "cube.workerHeadless" . }}:10001"
+            - name: CUBESTORE_WORKER_PORT
+              value: "10001"
+            - name: CUBESTORE_META_ADDR
+              value: "{{ include "cube.routerName" . }}:9999"
+            {{- include "cube.cubestoreEnv" . | nindent 12 }}
+          {{- with .Values.cubestore.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          # Workers have no status endpoint, and every TCP probe connection is logged as
+          # "Network error: Connection closed unexpectedly". So only the start is checked;
+          # Kubernetes still restarts a worker whose process exits.
+          startupProbe:
+            tcpSocket:
+              port: worker
+            periodSeconds: 2
+            failureThreshold: 60
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.cubestore.worker.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "cube.cubestoreVolumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "cube.cubestoreVolumes" . | nindent 8 }}
+{{- end }}

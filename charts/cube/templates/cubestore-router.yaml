@@ -1,0 +1,97 @@
+{{- if .Values.cubestore.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cube.routerName" . }}
+  labels:
+    {{- include "cube.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubestore-router
+spec:
+  type: ClusterIP
+  # Workers connect to the meta port while the router is still starting.
+  publishNotReadyAddresses: true
+  ports:
+    - name: http
+      port: 3030
+      targetPort: http
+    - name: meta
+      port: 9999
+      targetPort: meta
+  selector:
+    {{- include "cube.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: cubestore-router
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "cube.routerName" . }}
+  labels:
+    {{- include "cube.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cubestore-router
+spec:
+  replicas: 1
+  serviceName: {{ include "cube.routerName" . }}
+  selector:
+    matchLabels:
+      {{- include "cube.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: cubestore-router
+  template:
+    metadata:
+      labels:
+        {{- include "cube.labels" . | nindent 8 }}
+        app.kubernetes.io/component: cubestore-router
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "cube.cubestorePodCommon" . | nindent 6 }}
+      containers:
+        - name: cubestore
+          image: {{ include "cube.cubestoreImage" . }}
+          imagePullPolicy: {{ .Values.cubestore.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3030
+            - name: meta
+              containerPort: 9999
+            - name: status
+              containerPort: 3031
+          env:
+            - name: CUBESTORE_SERVER_NAME
+              value: "{{ include "cube.routerName" . }}:9999"
+            - name: CUBESTORE_META_PORT
+              value: "9999"
+            {{- include "cube.cubestoreEnv" . | nindent 12 }}
+          {{- with .Values.cubestore.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: status
+            periodSeconds: 2
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: status
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: status
+            periodSeconds: 10
+            timeoutSeconds: 5
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.cubestore.router.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "cube.cubestoreVolumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "cube.cubestoreVolumes" . | nindent 8 }}
+{{- end }}
