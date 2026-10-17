@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": { "type": "integer", "minimum": 0 },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "users": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["user", "password"],
+        "properties": {
+          "user": { "type": "string", "pattern": "^[^@]+(@.+)?$" },
+          "password": { "type": "string", "minLength": 1 },
+          "admin": { "type": "boolean" }
+        }
+      }
+    },
+    "privilege": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "minLength": 1 }
+      }
+    },
+    "mode": { "type": "string", "enum": ["Standalone", "Cluster"] },
+    "cluster": {
+      "type": "object",
+      "properties": {
+        "zookeeper": {
+          "type": "object",
+          "properties": {
+            "serverLists": { "type": "string" }
+          }
+        },
+        "namespace": { "type": "string", "pattern": "^[A-Za-z0-9_.-]*$" },
+        "props": { "type": "object" }
+      }
+    },
+    "props": { "type": "object" },
+    "globalConfig": { "type": "object" },
+    "databases": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
+      "additionalProperties": { "type": "string" }
+    },
+    "existingSecret": { "type": "string" },
+    "extraEnv": { "type": "array" },
+    "extraEnvFrom": { "type": "array" },
+    "initContainers": { "type": "array" },
+    "extraVolumes": { "type": "array" },
+    "extraVolumeMounts": { "type": "array" },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "maxUnavailable": { "type": ["integer", "string"] }
+      }
+    },
+    "preStopSleepSeconds": { "type": "integer", "minimum": 0 },
+    "terminationGracePeriodSeconds": { "type": "integer", "minimum": 0 }
+  }
+}

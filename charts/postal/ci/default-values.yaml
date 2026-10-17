@@ -1,0 +1,41 @@
+# Used by chart-testing (ct install) in CI. MariaDB is deployed into the "deps" namespace by the
+# workflow before the chart is installed. The keys below are throwaway test values; never use
+# them anywhere else.
+postal:
+  webHostname: postal.example.com
+  secretKey: ci-only-secret-key-b679ad55ad09d55f0376f94987267c79
+  signingKey: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCInsQ/7EwAwFRI
+    XNa0M8ciF/Cu8kvgKUcQEF517pHRG5N7OGk3VhoTZgN8XTXCsvgMKDqBFdiLUAOT
+    67CmbpfrAQLDjeowmqJ+dvl5MvWsF5dO/J6p1RGzhRkdIS5dGo8UCi+jm9UFWzrz
+    H5EpLLc6ijtGfPnsfff6F/gX33OUQbTzPX0qGYxP6yoEUzK1K1h1VK5ZC1lOu2u0
+    7KpMPilsYDYxKQB5QIs1H1PmVhA2LF48ISNLrkcPRu/uWpXXNPMAoC1bAHwaRV8P
+    Y35LLdx/GRzwnDr84qa+jzFEVDLBMFUY7sVMJmQUSD9FvBMP4v8qgol3o9Q88Sm8
+    +N1saH4zAgMBAAECggEADKcTis4CDfHB/H+onMDM2PH5puImt8hq3eh+LxLcq06P
+    /pHvYKIXQSOp//sL7w+vHEUfgfP5fZF3+1uRHSDR7gBGdsDuZvjzQp4XJavcB8eZ
+    ikWoFhd3D7asaD+58QJ0LMlytwbIGDpmP7z1LyiGgaPqsHEDnmzeKenNXryhkiHP
+    DnNXyvv+6WKRCrYpYad0K9uVQ72JP49thjq3UwCnMmqI6LbkWnjlBe17G4CEn/Fr
+    f4ryzgS7RY0FKxCLumbYv1mWCzc95AixMNHpj+1Z+YnI4LG0GtlJ1eVsHdH1gbvw
+    28Gy8NnAHnYOX0kkuGM60MtJj4hXS+M6XIw5QJQN+QKBgQDAVtv2iPR3p6HnBNWv
+    Xa94rpvNuyQm2AFISQkBe+D/h/eZ73y2GAChyLZJwFesNnJPf0ayiizUOj4aTRjN
+    Y3NX4Q/vAOxPKssWpHyisNnjiSKv09rE1oLVB0S9amcUyH9O80wsvTxeXrXLsUm/
+    XedUzq3XUhc3PSLEPe1dUPXCiQKBgQC11sJ7q6KQn7QvsJZqURnRQPxbcmehQveW
+    mmw1cpT09K36ycpGvLk3WuKYb90Fu4XdWUXlRjewGuPl+GizeITtLCkfYWJ5hO6p
+    9DVQZpmnpWQ4KJq1VJsiiuMzM/6QpUPykWs6lVaXC8w+FWfNoX5Ygtdb9pvzxWN2
+    53lszEm72wKBgHT8H5uqny6r6eBuY13fWJvJcABIw+tQVC9YJL8fTrF9TI73R94l
+    aTT9tEnVUD3xe8N4gVKUkkGfDyjGHcDGrWAVBrDy2cgpGg8yipAViuFHBq7050nz
+    wu25FwkyT3InpK8rcfiAPNiVOHOk6FsZzVsavkeJqY8ygxPjKp0oYeIpAoGBAJ9d
+    WdODSBVSMlv9esYwz9yqBMGskZAunckbC60H/+5zJqt+AM5gBj+yYpdQqrekcpzc
+    6boYASRRXNynCjQIcw9dvain8+MmkvjWc4dEdHQOKrhhNb2oKdJrQNYWQovIm7VS
+    p1SPn3T/vP/ISNJaL94oxc/uYR2TKCoEklG89P4zAoGACbduJECLGm0RVAoFynbm
+    u5L78Zc5HvGqDmyKWjnDCIEz5IAUaOnIO/JhRlqT5PhllQQ5TVWrupDcKzs0mXY8
+    nMzivOB+kWzXGS8GnJQUtZOtfd6FugHSFB4SgQtod0lPaksK65S8P2ksRrK5uHCn
+    POs31IJgVDeQnkq6S0pzhjM=
+    -----END PRIVATE KEY-----
+database:
+  host: mariadb.deps.svc
+  password: postal
+admin:
+  email: admin@example.com
+  password: ci-admin-password

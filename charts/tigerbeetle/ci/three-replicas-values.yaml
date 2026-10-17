@@ -1,0 +1,12 @@
+# CI: a 3-replica cluster with a small cache, so it fits on one kind node.
+replicaCount: 3
+tigerbeetle:
+  cacheGrid: 256MiB
+resources:
+  requests:
+    cpu: 100m
+    memory: 3Gi
+  limits:
+    memory: 3Gi
+persistence:
+  size: 2Gi

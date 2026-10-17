@@ -1,0 +1,33 @@
+# Used by chart-testing (ct install) in CI: 2 replicas with conversation state in
+# PostgreSQL, the session cache in Redis and a NetworkPolicy. PostgreSQL, Redis and
+# the mock LLM run in the "deps" namespace (.github/ci/deps.yaml).
+replicaCount: 2
+config:
+  model_providers:
+    - model: openai/gpt-4o-mini
+      access_key: $OPENAI_API_KEY
+      base_url: http://mock-llm.deps.svc:8080
+      default: true
+secretEnv:
+  OPENAI_API_KEY: sk-ci-placeholder
+stateStorage:
+  postgres:
+    url: postgresql://aegra:aegra@postgres.deps.svc:5432/aegra
+sessionCache:
+  redis:
+    url: redis://redis.deps.svc:6379
+networkPolicy:
+  enabled: true
+  from:
+    - podSelector:
+        matchLabels:
+          role: llm-client
+podDisruptionBudget:
+  enabled: true
+tests:
+  chatCompletion:
+    enabled: true
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi

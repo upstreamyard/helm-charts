@@ -1,0 +1,40 @@
+Plano {{ .Chart.AppVersion }} is deployed as "{{ include "plano.fullname" . }}" ({{ if .Values.autoscaling.enabled }}{{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }}{{ else }}{{ .Values.replicaCount }}{{ end }} replica(s)).
+
+OpenAI-compatible endpoint inside the cluster:
+
+  http://{{ include "plano.fullname" . }}.{{ .Release.Namespace }}.svc:{{ include "plano.llmPort" . }}/v1
+{{- range (include "plano.ports" . | fromJsonArray) }}
+{{- if ne .name "llm" }}
+  Listener "{{ .name }}": http://{{ include "plano.fullname" $ }}.{{ $.Release.Namespace }}.svc:{{ int .port }}
+{{- end }}
+{{- end }}
+
+Try it:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "plano.fullname" . }} {{ include "plano.llmPort" . }}
+  curl http://localhost:{{ include "plano.llmPort" . }}/v1/models
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if and (not .Values.existingConfigMap) (not .Values.secretEnv) (not .Values.existingSecret) (not .Values.extraEnvFrom) (not .Values.extraEnv) }}
+
+WARNING: no API keys are set (secretEnv, existingSecret). Requests to your model
+providers will fail until you set the variables your config references, e.g.
+  --set secretEnv.OPENAI_API_KEY=sk-...
+{{- end }}
+
+SECURITY: Plano does not authenticate clients. Anyone who can reach this Service
+uses your provider API keys. Keep the Service internal and limit access with
+networkPolicy.enabled=true and networkPolicy.from{{ if .Values.ingress.enabled }}, and protect the Ingress
+with authentication{{ end }}.
+{{- if and .Values.networkPolicy.enabled .Values.networkPolicy.from }}
+Clients outside networkPolicy.from need the label {{ include "plano.clientLabel" . }}=true.
+{{- end }}
+{{- if and (or (gt (int .Values.replicaCount) 1) .Values.autoscaling.enabled) (not .Values.existingConfigMap) (not (include "plano.redisEnabled" .)) }}
+
+NOTE: with several replicas, model affinity (X-Model-Affinity header) is kept per
+pod. Set sessionCache.redis to share it.
+{{- end }}
+{{- if .Values.existingConfigMap }}
+
+Plano reads ConfigMap "{{ .Values.existingConfigMap }}" at startup. After changing it, run:
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "plano.fullname" . }}
+{{- end }}

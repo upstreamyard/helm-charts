@@ -1,0 +1,22 @@
+{{- include "plano.validate" . }}
+{{- if not .Values.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "plano.fullname" . }}
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+data:
+  plano_config.yaml: |
+    {{- include "plano.config" . | nindent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "plano.fullname" . }}-scripts
+  labels:
+    {{- include "plano.labels" . | nindent 4 }}
+data:
+  start.sh: |
+    {{- .Files.Get "files/start.sh" | nindent 4 }}
