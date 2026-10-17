@@ -1,0 +1,18 @@
+Parse Server {{ .Chart.AppVersion }} is deployed as "{{ include "parse-server.fullname" . }}" ({{ .Values.replicaCount }} pod(s)).
+
+Check that it is up:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "parse-server.fullname" . }} 1337:{{ .Values.service.port }}
+  curl http://localhost:1337/parse/health
+
+Clients connect to {{ .Values.parse.publicServerURL }} with application ID "{{ .Values.parse.appId }}"{{ if not .Values.ingress.enabled }} (no Ingress is created by this release; route that URL to the Service){{ end }}.
+{{- if not .Values.parse.masterKeyIps }}
+
+The master key only works from localhost (Parse Server's default): Cloud Code, kubectl exec
+and kubectl port-forward, not through the Service or Ingress.
+To use it from Parse Dashboard or other services, set parse.masterKeyIps to their IP range.
+{{- end }}
+{{- if .Values.cloudCode.enabled }}
+
+Cloud Code is loaded from ConfigMap "{{ include "parse-server.cloudConfigMap" . }}".
+{{- end }}

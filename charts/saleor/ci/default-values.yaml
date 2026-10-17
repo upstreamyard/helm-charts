@@ -1,0 +1,65 @@
+# Used by chart-testing (ct install) in CI. PostgreSQL, Redis and S3 (SeaweedFS) are
+# deployed into the "deps" namespace by the workflow before the chart is installed.
+# The keys below are throwaway test values; never use them anywhere else.
+saleor:
+  publicUrl: https://api.saleor.example.com/
+  allowedClientHosts: [dashboard.saleor.example.com]
+  usageTelemetry: false
+  secretKey: ci-only-secret-key-6f1d0c2b9a8e7d6c5b4a
+  rsaPrivateKey: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDHAg6OaY+RVws/
+    ysUCWyHEFiho+sxB5QgHpKztGmu71rZCJO8A9PIK3xD2z6IvtvXIPWSKNrvxCO7M
+    chmM9j6mrKvVbXNHXa+z4um0tp0VAvS2SeXI00ODw2XrfYros4RL0MtPWRjFRw6/
+    4PbNcqRTv0sWtSpFEGc3P2FafI4HpQ5KvYwvLNr+WG0DI611A4w8G9gL4g8PXnyP
+    9or6tL2RxM8IgjNtq00D6F5tT4O1mB5PvZcHYxYW+998Ce133pmGNSGwRFdOWN60
+    8tWElILfOW6AmPqzVsAsHmsZxLLwqysuAuFJG7KxKQR226j3zEn7eHBfF1YHk263
+    vxqw8gi9AgMBAAECggEALMvbe3arFNAHbfdmk/JwHhvPwlvMHTwhK9lHfMLRA/If
+    yjFWpHw+vLA8ORaBf2SbnFSnfE44TZhRaq93bWnjrfCZ6HvP8n1WBvPZ4C4oG1n0
+    PFFTmnplzPPvzgvPODTqn4dTMJwRbZziZtJMs+/tqhVaIXUr2+qGlWLctvnpHbKF
+    5Ddo1doZq1nrbpraV1Y1Dlojh2E2FlLQyj8Gko39bSdxYksTmm/LEeIw2kPmlfqC
+    4KJ2PjJAJ5UnuXSIxWQc3co92KtCirHHW8Nv0PrFpPzlfxoZPEGPH0tvjN8ExEZF
+    z9Q0Uw9Kkw52wi4zLsm8sOwxQ/ApRv+OpyzglSE/MQKBgQDow56aHVC3nBqHA1y1
+    Mk0bIhPG4EGdLwZFV2dNIRiL0BoWOoh8l2M0J3f73nxnd7k4H67zDxqderox7rqX
+    nL7MvItHyNPlkYrsJBVMQKmRkuT9R+ewDo84etp9ir6MA4MoRLvL0jfM8tayd0ZL
+    312MkAfun4cpZaWUXmvoiVT3bQKBgQDa38lfDXLu/Z4CT4K4YT6zn92HDigdBt/6
+    J1XTup23qjvJOJYGlXXRjangbSemQSPeMsaYnAC1jtmgbBzoOlXEvwYnwKBz7ME1
+    lEZGX8o4hkjnEVD4fLAu7bgGLXv+7j+1yp5URAV6YZ2FBwzokX6syKZ8PIITTXpW
+    kYF2xzb0kQKBgQDUSfXRIYOIsnsPQGXBbMseQApBjC7LqSPTAlBY7CJzAa2JMIFj
+    AL+dxZGMyfI0e+EV6u+pBtGDZ3eCKvVLac4q9JsjMWrxKbjGfnJeRWtiNdNbncUV
+    sXG2VXYIog3/rQRmKaoNzwDNj31474fRkzrDBGn3nM+tVeOaWjOYtggkUQKBgQDY
+    ohsL66HQjlGwc8YsfIO1AgwfOpHVeRKC5B/8+n5UZTfbiBhl19TPXmm/agqOcXbw
+    3EzYi7/f883PDHLoH6T4oSGUgwHM+46YW3Pa/8CFhdPucKM17yPqrvsvkiFiR6nj
+    YvKm8NSDNs7T9hB+uFMq7UZrPPB57nuh506+o5rvIQKBgQDN4FNFuW/UNHbEC3YK
+    +HQCdAC2BHaVS3qSCAKAqpCbZh+yEDAemi+RfNsOcuDP32ZifiacwPrFfYaqftYj
+    HCIIObdmjuTRD7IGWWaZEmaUNXlSShJ+ioTSuWU0cVxo/ZIoWJUG0dVFFAjFd7VV
+    GVx2eG3Tb8ORMGr6bhtckF2Few==
+    -----END PRIVATE KEY-----
+admin:
+  email: admin@example.com
+  password: ci-admin-password
+database:
+  url: postgres://aegra:aegra@postgres.deps.svc:5432/saleor
+celery:
+  brokerUrl: redis://redis.deps.svc:6379/5
+cache:
+  url: redis://redis.deps.svc:6379/4
+storage:
+  s3:
+    mediaBucket: saleor-media
+    privateBucket: saleor-private
+    region: us-east-1
+    endpointUrl: http://seaweedfs.deps.svc:8333
+    customDomain: seaweedfs.deps.svc:8333/saleor-media
+    urlProtocol: "http:"
+    accessKeyId: ci
+    secretAccessKey: ci-secret
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+worker:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
