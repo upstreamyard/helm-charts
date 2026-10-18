@@ -1198,6 +1198,53 @@ entries:
   saleor:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Update saleor to 3.23.42
+      artifacthub.io/images: |
+        - name: saleor
+          image: ghcr.io/saleor/saleor:3.23.42
+        - name: saleor-dashboard
+          image: ghcr.io/saleor/saleor-dashboard:3.23.39
+      artifacthub.io/license: BSD-3-Clause
+      artifacthub.io/links: |
+        - name: Saleor project
+          url: https://github.com/saleor/saleor
+        - name: Saleor dashboard
+          url: https://github.com/saleor/saleor-dashboard
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.23.42
+    created: "2026-10-18T09:57:55.300547436Z"
+    description: Saleor, the headless GraphQL commerce platform (API, Celery worker
+      and beat, dashboard). Community chart by upstreamyard, not an official Saleor
+      chart.
+    digest: 55ad38a6b6a15e03424ccad650aedb8bcdb5f0576c248dc11cdf56695ddbf406
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - saleor
+    - ecommerce
+    - commerce
+    - headless
+    - graphql
+    - shop
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: saleor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/saleor/saleor
+    - https://github.com/saleor/saleor-dashboard
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/saleor-0.1.1/saleor-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Initial release
       artifacthub.io/images: |
@@ -1468,4 +1515,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-18T09:56:11.707226769Z"
+generated: "2026-10-18T09:57:55.300579163Z"
