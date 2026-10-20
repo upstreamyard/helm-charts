@@ -169,7 +169,7 @@ dashboard:
     # -- Dashboard image repository.
     repository: ghcr.io/saleor/saleor-dashboard
     # -- Dashboard image tag. Released separately from the API; keep its minor version equal to the API's.
-    tag: "3.23.39"
+    tag: "3.23.41"
     # -- Image pull policy.
     pullPolicy: IfNotPresent
   # -- GraphQL URL the dashboard calls from the browser (`API_URL`). Defaults to `saleor.publicUrl` + `graphql/`.

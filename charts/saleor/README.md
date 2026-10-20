@@ -1,6 +1,6 @@
 # Saleor Helm chart
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 3.23.42](https://img.shields.io/badge/AppVersion-3.23.42-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 3.23.42](https://img.shields.io/badge/AppVersion-3.23.42-informational?style=flat-square)
 
 Helm chart for [Saleor](https://github.com/saleor/saleor), the headless GraphQL commerce platform. It runs the GraphQL API, the Celery worker and beat for background tasks, and the [Saleor dashboard](https://github.com/saleor/saleor-dashboard), using Saleor's official images `ghcr.io/saleor/saleor` and `ghcr.io/saleor/saleor-dashboard`.
 
@@ -159,7 +159,7 @@ dashboard:
 | dashboard.enabled | bool | `true` | Deploy the Saleor dashboard (the admin UI, a static web app). |
 | dashboard.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
 | dashboard.image.repository | string | `"ghcr.io/saleor/saleor-dashboard"` | Dashboard image repository. |
-| dashboard.image.tag | string | `"3.23.39"` | Dashboard image tag. Released separately from the API; keep its minor version equal to the API's. |
+| dashboard.image.tag | string | `"3.23.41"` | Dashboard image tag. Released separately from the API; keep its minor version equal to the API's. |
 | dashboard.ingress.annotations | object | `{}` | Ingress annotations. |
 | dashboard.ingress.className | string | `""` | Ingress class name. |
 | dashboard.ingress.enabled | bool | `false` | Create an Ingress for the dashboard. It is served under `/dashboard/`. |
