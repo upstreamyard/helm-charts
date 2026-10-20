@@ -2,7 +2,7 @@ apiVersion: v2
 name: saleor
 description: Saleor, the headless GraphQL commerce platform (API, Celery worker and beat, dashboard). Community chart by upstreamyard, not an official Saleor chart.
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "3.23.42"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
@@ -27,7 +27,7 @@ annotations:
     - name: saleor
       image: ghcr.io/saleor/saleor:3.23.42
     - name: saleor-dashboard
-      image: ghcr.io/saleor/saleor-dashboard:3.23.39
+      image: ghcr.io/saleor/saleor-dashboard:3.23.41
   artifacthub.io/links: |
     - name: Saleor project
       url: https://github.com/saleor/saleor
@@ -38,4 +38,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update saleor to 3.23.42
+      description: Update saleor-dashboard to 3.23.41
