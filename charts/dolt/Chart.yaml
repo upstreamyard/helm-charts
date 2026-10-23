@@ -2,8 +2,8 @@ apiVersion: v2
 name: dolt
 description: Dolt Helm chart for Kubernetes. The version-controlled, MySQL-compatible SQL database (branch, merge, diff and clone your data like Git) with high availability through primary/standby replication, failover, Prometheus metrics and generated passwords. Community chart by upstreamyard, not an official Dolt chart.
 type: application
-version: 0.1.1
-appVersion: "2.5.0"
+version: 0.1.2
+appVersion: "2.6.0"
 kubeVersion: ">=1.27.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/dolt
 sources:
@@ -29,7 +29,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: dolt-sql-server
-      image: dolthub/dolt-sql-server:2.5.0
+      image: dolthub/dolt-sql-server:2.6.0
   artifacthub.io/links: |
     - name: Dolt
       url: https://github.com/dolthub/dolt
@@ -38,4 +38,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update dolt-sql-server to 2.5.0
+      description: Update dolt-sql-server to 2.6.0
