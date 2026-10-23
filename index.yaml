@@ -1428,6 +1428,50 @@ entries:
   supertokens:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Update supertokens-postgresql to 12.4.1
+      artifacthub.io/images: |
+        - name: supertokens-postgresql
+          image: supertokens/supertokens-postgresql:12.4.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: SuperTokens project
+          url: https://github.com/supertokens/supertokens-core
+        - name: Container image
+          url: https://hub.docker.com/r/supertokens/supertokens-postgresql
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 12.4.1
+    created: "2026-10-23T10:33:48.184279178Z"
+    description: SuperTokens core, the open-source authentication server (sessions,
+      email/password, passwordless, social login, MFA), with PostgreSQL. Community
+      chart by upstreamyard, not an official SuperTokens chart.
+    digest: 3ffc0514271c5d63975d6d98001eb3a796406215cb1aa70455e2100018af94dd
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - supertokens
+    - authentication
+    - auth
+    - session
+    - login
+    - postgresql
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: supertokens
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/supertokens/supertokens-core
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/supertokens-0.1.1/supertokens-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Initial release
       artifacthub.io/images: |
@@ -1604,4 +1648,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-20T10:27:57.781643303Z"
+generated: "2026-10-23T10:33:48.184348438Z"
