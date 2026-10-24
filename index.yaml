@@ -645,6 +645,57 @@ entries:
   - annotations:
       artifacthub.io/category: ai-machine-learning
       artifacthub.io/changes: |
+        - kind: changed
+          description: Update docling-serve-cpu to 1.38.0
+      artifacthub.io/images: |
+        - name: docling-serve-cpu
+          image: ghcr.io/docling-project/docling-serve-cpu:v1.38.0
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Docling Serve
+          url: https://github.com/docling-project/docling-serve
+        - name: Container images
+          url: https://github.com/docling-project/docling-serve#container-images
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.38.0
+    created: "2026-10-24T08:56:18.552146696Z"
+    description: Docling Serve Helm chart for Kubernetes. Document conversion API
+      (PDF, DOCX, PPTX, HTML, images to Markdown and JSON) for RAG pipelines, with
+      API key auth by default, scalable RQ workers on Redis, KEDA queue autoscaling,
+      CPU and CUDA images and Prometheus metrics. Community chart by upstreamyard,
+      not an official Docling chart.
+    digest: 9e1f58a0598da7514799486367e95390ba9f20a466c56631bfef6fd7192512e0
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/docling-serve
+    keywords:
+    - docling
+    - docling-serve
+    - document-conversion
+    - pdf
+    - pdf-to-markdown
+    - ocr
+    - rag
+    - document-parsing
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: docling-serve
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/docling-project/docling-serve
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/docling-serve-0.1.1/docling-serve-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
         - kind: added
           description: Docling Serve chart with a single API server or API servers plus RQ workers on Redis
       artifacthub.io/images: |
@@ -1190,6 +1241,48 @@ entries:
   parse-server:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Update parse-server to 9.10.6
+      artifacthub.io/images: |
+        - name: parse-server
+          image: parseplatform/parse-server:9.10.6
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Parse Server project
+          url: https://github.com/parse-community/parse-server
+        - name: Container image
+          url: https://hub.docker.com/r/parseplatform/parse-server
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 9.10.6
+    created: "2026-10-24T08:56:18.723824794Z"
+    description: Parse Server, the open-source backend for mobile, web and IoT apps.
+      Community chart by upstreamyard, not an official Parse Server chart.
+    digest: 75977265ef8cb3d01f0ba3820ff3a5da67fb0c2a50fc2b787aec2eaab8e16dc5
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - parse
+    - parse-server
+    - backend
+    - baas
+    - mongodb
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: parse-server
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/parse-community/parse-server
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/parse-server-0.1.1/parse-server-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Initial release
       artifacthub.io/images: |
@@ -1328,6 +1421,53 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/postal-0.1.0/postal-0.1.0.tgz
     version: 0.1.0
   saleor:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Update saleor to 3.23.44
+      artifacthub.io/images: |
+        - name: saleor
+          image: ghcr.io/saleor/saleor:3.23.44
+        - name: saleor-dashboard
+          image: ghcr.io/saleor/saleor-dashboard:3.23.41
+      artifacthub.io/license: BSD-3-Clause
+      artifacthub.io/links: |
+        - name: Saleor project
+          url: https://github.com/saleor/saleor
+        - name: Saleor dashboard
+          url: https://github.com/saleor/saleor-dashboard
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.23.44
+    created: "2026-10-24T08:56:18.910650717Z"
+    description: Saleor, the headless GraphQL commerce platform (API, Celery worker
+      and beat, dashboard). Community chart by upstreamyard, not an official Saleor
+      chart.
+    digest: 414c6792534b4481b7d8233757564000a68a4a5d4e07e7b93b25ddd00161773c
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - saleor
+    - ecommerce
+    - commerce
+    - headless
+    - graphql
+    - shop
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: saleor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/saleor/saleor
+    - https://github.com/saleor/saleor-dashboard
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/saleor-0.1.3/saleor-0.1.3.tgz
+    version: 0.1.3
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -1738,4 +1878,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-24T08:55:28.824255722Z"
+generated: "2026-10-24T08:56:18.910739393Z"
