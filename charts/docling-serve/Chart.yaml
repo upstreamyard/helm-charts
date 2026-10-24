@@ -2,10 +2,11 @@ apiVersion: v2
 name: docling-serve
 description: Docling Serve Helm chart for Kubernetes. Document conversion API (PDF, DOCX, PPTX, HTML, images to Markdown and JSON) for RAG pipelines, with API key auth by default, scalable RQ workers on Redis, KEDA queue autoscaling, CPU and CUDA images and Prometheus metrics. Community chart by upstreamyard, not an official Docling chart.
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "1.38.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/docling-serve
+icon: https://upstreamyard.github.io/helm-charts/logo.png
 sources:
   - https://github.com/upstreamyard/helm-charts
   - https://github.com/docling-project/docling-serve
@@ -40,4 +41,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update docling-serve-cpu to 1.38.0
+      description: Added the upstreamyard logo as the chart icon

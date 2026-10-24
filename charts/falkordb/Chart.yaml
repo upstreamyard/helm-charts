@@ -2,10 +2,11 @@ apiVersion: v2
 name: falkordb
 description: FalkorDB Helm chart for Kubernetes. Graph database (openCypher, GraphRAG, knowledge graphs for AI agents) on the official falkordb-server image, as a single instance or highly available with replication and Redis Sentinel failover, password auth by default, AOF persistence, non-root, Prometheus metrics and helm test. Community chart by upstreamyard, not an official FalkorDB chart. FalkorDB is licensed under SSPL-1.0.
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "6.0.3"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/falkordb
+icon: https://upstreamyard.github.io/helm-charts/logo.png
 sources:
   - https://github.com/upstreamyard/helm-charts
   - https://github.com/FalkorDB/FalkorDB
@@ -38,4 +39,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update falkordb-server to 6.0.3
+      description: Added the upstreamyard logo as the chart icon
