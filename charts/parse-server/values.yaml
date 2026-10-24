@@ -44,13 +44,13 @@ database:
   existingSecretKey: database-uri
 
 cloudCode:
-  # -- Load Cloud Code (functions, triggers, jobs) from a ConfigMap mounted at `/parse-server/cloud`.
+  # -- Load Cloud Code (functions, triggers, jobs). Write it in `main` and the chart creates the ConfigMap, or use your own with `existingConfigMap`. Mounted at `/parse-server/cloud`.
   enabled: false
   # -- File that Parse Server loads (`PARSE_SERVER_CLOUD`).
   entrypoint: main.js
   # -- Content of `main.js`. The chart creates a ConfigMap from it. Ignored when `existingConfigMap` is set.
   main: ""
-  # -- Name of an existing ConfigMap with your Cloud Code files (several files are possible; `entrypoint` is loaded).
+  # -- Name of your own ConfigMap with Cloud Code files, e.g. for code split across several files (`entrypoint` is loaded). Takes precedence over `main`.
   existingConfigMap: ""
 
 # -- Extra environment variables. Top-level Parse Server options can be set as `PARSE_SERVER_*` (nested `databaseOptions` only as JSON in `PARSE_SERVER_DATABASE_OPTIONS`, which this chart sets from `parse.schemaCacheTtl` and `parse.enableSchemaHooks`), e.g. `PARSE_SERVER_ALLOW_CLIENT_CLASS_CREATION`, `PARSE_SERVER_LOG_LEVEL`. See https://github.com/parse-community/parse-server/blob/alpha/src/Options/Definitions.js
