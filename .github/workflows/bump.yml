@@ -59,6 +59,7 @@ jobs:
           # The image name keeps branches apart when a chart follows several images.
           branch="bump/${{ matrix.chart }}-${IMAGE##*/}-${{ steps.bump.outputs.version }}"
           echo "name=$branch" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE##*/}" >> "$GITHUB_OUTPUT"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null; then
             echo "Branch $branch already exists, nothing to do."; echo "exists=true" >> "$GITHUB_OUTPUT"
           fi
@@ -91,3 +92,19 @@ jobs:
               --body "Automated: ${IMAGE##*/} $VERSION is released and its image is published. Merges itself when the lint-test check passes; if it fails, this PR stays open for review."
             gh pr merge "$BRANCH" --auto --squash
           fi
+
+      - name: Close older bump PRs for this chart and image
+        if: steps.bump.outputs.changed == 'true' && steps.branch.outputs.exists != 'true'
+        env:
+          PREFIX: bump/${{ matrix.chart }}-${{ steps.branch.outputs.image }}-
+          BRANCH: ${{ steps.branch.outputs.name }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          # They change the same lines (chart version, image tag) as the new PR and would conflict with it.
+          # The version must follow the prefix directly, so "saleor-saleor-" does not match "saleor-saleor-dashboard-".
+          gh pr list --base main --state open --limit 100 --json number,headRefName |
+            jq -r --arg p "$PREFIX" --arg b "$BRANCH" \
+              '.[] | select(.headRefName != $b and (.headRefName | startswith($p)) and (.headRefName[($p | length):] | test("^[0-9]"))) | .number' |
+            while read -r n; do
+              gh pr close "$n" --delete-branch --comment "Superseded by $VERSION."
+            done
