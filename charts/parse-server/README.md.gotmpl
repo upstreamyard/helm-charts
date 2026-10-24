@@ -61,7 +61,7 @@ Parse Server 9 is strict out of the box, and the chart keeps it that way:
 
 ## Cloud Code
 
-Cloud Code (functions, triggers, background jobs) can come from a ConfigMap:
+Write your Cloud Code (functions, triggers, background jobs) directly in the values. The chart stores it in a ConfigMap and loads it:
 
 ```yaml
 cloudCode:
@@ -70,7 +70,7 @@ cloudCode:
     Parse.Cloud.define('hello', req => `hello ${req.params.name || 'world'}`);
 ```
 
-For several files, create your own ConfigMap and set `cloudCode.existingConfigMap`; the file named in `cloudCode.entrypoint` (`main.js`) is loaded. Cloud Code that needs npm packages beyond Parse Server's own needs an image built `FROM parseplatform/parse-server`; set `image.repository` and `image.tag` to it.
+For code split across several files, create your own ConfigMap and set `cloudCode.existingConfigMap` instead; the file named in `cloudCode.entrypoint` (`main.js`) is loaded. Cloud Code that needs npm packages beyond Parse Server's own needs an image built `FROM parseplatform/parse-server`; set `image.repository` and `image.tag` to it.
 
 ## Production example
 
@@ -85,7 +85,8 @@ database:
   existingSecret: parse-db              # key: database-uri
 cloudCode:
   enabled: true
-  existingConfigMap: parse-cloud-code
+  main: |                              # or existingConfigMap: <your ConfigMap>
+    Parse.Cloud.define('hello', req => `hello ${req.params.name || 'world'}`);
 ingress:
   enabled: true
   className: nginx
