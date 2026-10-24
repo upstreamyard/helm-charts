@@ -1,0 +1,24 @@
+{{- if include "localai.distributed" . }}
+# Headless Service: gives each worker pod a stable DNS name that the frontends dial.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "localai.workerName" . }}
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  clusterIP: None
+  # Frontends must reach a worker before it reports ready (it becomes ready only after registering).
+  publishNotReadyAddresses: true
+  ports:
+    - name: http
+      port: 50050
+      targetPort: http
+    - name: grpc
+      port: 50051
+      targetPort: grpc
+  selector:
+    {{- include "localai.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+{{- end }}

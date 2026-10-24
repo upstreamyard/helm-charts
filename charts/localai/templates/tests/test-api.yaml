@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "localai.fullname" . }}-test-api
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      # Uses the LocalAI image's curl, so no extra image is pulled.
+      image: {{ include "localai.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: URL
+          value: "http://{{ include "localai.fullname" . }}:{{ .Values.service.port }}"
+        {{- if .Values.apiKey.enabled }}
+        - name: API_KEY
+          valueFrom:
+            {{- include "localai.secretKeyRef" (list . .Values.apiKey.existingSecret .Values.apiKey.existingSecretKey "api-key") | nindent 12 }}
+        {{- end }}
+      command:
+        - sh
+        - -c
+        - |
+          set -eu
+          fail() { echo "FAIL: $*"; exit 1; }
+          status() { curl -s -o /tmp/body -w '%{http_code}' "$@"; }
+
+          code=$(status "$URL/readyz")
+          echo "GET /readyz: $code"
+          [ "$code" = 200 ] || fail "LocalAI is not ready"
+          {{- if or .Values.apiKey.enabled (include "localai.authOn" .) }}
+
+          code=$(status "$URL/v1/models")
+          echo "GET /v1/models without credentials: $code"
+          [ "$code" = 401 ] || fail "the API answered without credentials"
+          {{- end }}
+          {{- if .Values.apiKey.enabled }}
+          auth="Authorization: Bearer $API_KEY"
+
+          code=$(status -H "$auth" "$URL/v1/models")
+          echo "GET /v1/models with the API key: $code $(cat /tmp/body)"
+          [ "$code" = 200 ] || fail "the API key was refused"
+          {{- if include "localai.distributed" . }}
+
+          # Every worker registers itself and reports healthy.
+          i=0
+          while :; do
+            healthy=$(status -H "$auth" "$URL/api/nodes" >/dev/null; grep -o '"status": *"healthy"' /tmp/body | wc -l)
+            echo "healthy workers: $healthy of {{ .Values.worker.replicaCount }}"
+            [ "$healthy" -ge {{ .Values.worker.replicaCount }} ] && break
+            i=$((i + 1)); [ "$i" -lt 60 ] || fail "workers did not register: $(cat /tmp/body)"
+            sleep 5
+          done
+          {{- end }}
+          {{- with .Values.tests.chatModel }}
+
+          # A real chat completion. In distributed mode the first request installs the backend on a
+          # worker and copies the model there; LocalAI answers 503 with Retry-After meanwhile.
+          body='{"model": "{{ . }}", "messages": [{"role": "user", "content": "Reply with the single word: pong"}], "max_tokens": 64}'
+          i=0
+          while :; do
+            code=$(status -H "$auth" -H 'Content-Type: application/json' -d "$body" "$URL/v1/chat/completions")
+            echo "POST /v1/chat/completions: $code $(head -c 500 /tmp/body)"
+            [ "$code" = 200 ] && break
+            i=$((i + 1)); [ "$i" -lt 60 ] || fail "no chat completion"
+            sleep 10
+          done
+          grep -q '"content"' /tmp/body || fail "the answer has no content"
+          {{- end }}
+          {{- end }}
+          echo OK
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}

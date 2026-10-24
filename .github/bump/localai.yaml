@@ -1,0 +1,4 @@
+# Releases the localai chart follows; read by .github/workflows/bump.yml (see scripts/bump-chart.sh).
+- project: mudler/LocalAI
+  image: localai/localai
+  tag_prefix: v
