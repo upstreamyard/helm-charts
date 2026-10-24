@@ -1,0 +1,28 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "localai.fullname" . }}
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "localai.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- if .Values.apiKey.enabled }}
+      # /metrics requires the API key when one is set.
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ default (include "localai.secretName" .) .Values.apiKey.existingSecret }}
+          key: {{ if .Values.apiKey.existingSecret }}{{ .Values.apiKey.existingSecretKey }}{{ else }}api-key{{ end }}
+      {{- end }}
+{{- end }}

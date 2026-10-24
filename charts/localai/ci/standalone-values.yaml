@@ -1,0 +1,11 @@
+# Standalone server with a small model, user accounts in SQLite and an admin account created by the chart.
+models:
+  install: [qwen3-0.6b]
+auth:
+  enabled: true
+  admin:
+    email: admin@example.com
+persistence:
+  size: 5Gi
+tests:
+  chatModel: qwen3-0.6b

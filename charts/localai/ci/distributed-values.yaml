@@ -1,0 +1,22 @@
+# Distributed mode: 1 frontend and 2 workers on the test PostgreSQL and NATS from .github/ci/deps/localai.yaml.
+mode: distributed
+database:
+  url: postgresql://localai:localai@localai-postgres.deps.svc:5432/localai?sslmode=disable
+distributed:
+  nats:
+    url: nats://localai-nats.deps.svc:4222
+auth:
+  admin:
+    email: admin@example.com
+models:
+  install: [qwen3-0.6b]
+persistence:
+  size: 5Gi
+worker:
+  replicaCount: 2
+  persistence:
+    size: 5Gi
+  labels:
+    tier: cpu
+tests:
+  chatModel: qwen3-0.6b

@@ -1,0 +1,11 @@
+{{- if .Values.models.configs }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "localai.fullname" . }}-models
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+data:
+  models.yaml: |
+    {{- toYaml .Values.models.configs | nindent 4 }}
+{{- end }}

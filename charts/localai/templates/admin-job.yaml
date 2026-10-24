@@ -1,0 +1,86 @@
+{{- if and (include "localai.authOn" .) .Values.auth.admin.email }}
+# Creates the admin account right after install and upgrade, so nobody else becomes the first
+# (and therefore admin) account. Idempotent: an existing account is only checked.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "localai.fullname" . }}-admin
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-account
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "localai.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: admin-account
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: admin-account
+          # Uses the LocalAI image's curl, so no extra image is pulled.
+          image: {{ include "localai.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "Waiting for LocalAI at $URL ..."
+              i=0
+              until curl -fsS -o /dev/null "$URL/readyz"; do
+                i=$((i + 1))
+                if [ "$i" -ge 700 ]; then echo "LocalAI did not become ready"; exit 1; fi
+                sleep 5
+              done
+              esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+              credentials="\"email\":\"$(esc "$ADMIN_EMAIL")\",\"password\":\"$(esc "$ADMIN_PASSWORD")\""
+              code=$(curl -sS -o /tmp/register.json -w '%{http_code}' -X POST "$URL/api/auth/register" \
+                -H 'Content-Type: application/json' -d "{$credentials,\"name\":\"admin\"}")
+              echo "Register $ADMIN_EMAIL: HTTP $code"
+              case "$code" in
+                200|201) ;;
+                *) cat /tmp/register.json; echo; exit 1 ;;
+              esac
+              # The account may have existed already: log in and check its role.
+              code=$(curl -sS -c /tmp/cookies -o /tmp/login.json -w '%{http_code}' -X POST "$URL/api/auth/login" \
+                -H 'Content-Type: application/json' -d "{$credentials}")
+              if [ "$code" != 200 ]; then
+                echo "Login as $ADMIN_EMAIL failed (HTTP $code): $(cat /tmp/login.json)"
+                echo "The account exists with another password. Set auth.admin.password to its password, or remove the account."
+                exit 1
+              fi
+              curl -fsS -b /tmp/cookies -o /tmp/me.json "$URL/api/auth/me"
+              if ! grep -q '"role": *"admin"' /tmp/me.json; then
+                echo "$ADMIN_EMAIL is not an admin: $(cat /tmp/me.json)"
+                exit 1
+              fi
+              echo "Admin account $ADMIN_EMAIL is ready."
+          env:
+            - name: URL
+              value: "http://{{ include "localai.fullname" . }}:{{ .Values.service.port }}"
+            - name: ADMIN_EMAIL
+              value: {{ .Values.auth.admin.email | quote }}
+            {{- include "localai.adminPasswordEnv" . | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

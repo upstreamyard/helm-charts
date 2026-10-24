@@ -1,0 +1,325 @@
+# -- `standalone`: one LocalAI server that also runs the models. `distributed`: API frontends that route requests to worker pods, which run the models; needs PostgreSQL and NATS. See "Deployment modes".
+mode: standalone
+
+# -- Number of server pods. Must be 1 in standalone mode. In distributed mode these are the frontends; more than 1 needs a ReadWriteMany volume (`persistence.accessModes` or `persistence.existingClaim`), because frontends share the models directory.
+replicaCount: 1
+
+image:
+  # -- Image repository. LocalAI's official image on Docker Hub (the same images are on `quay.io/go-skynet/local-ai`).
+  repository: localai/localai
+  # -- Image tag. Defaults to `v` + the chart's appVersion; `image.variant` is appended to it.
+  tag: ""
+  # -- Hardware variant, appended to the tag as `-<variant>`: empty for CPU, or `gpu-nvidia-cuda-12`, `gpu-nvidia-cuda-13`, `gpu-hipblas` (AMD ROCm), `gpu-intel`, `gpu-vulkan`, `nvidia-l4t-arm64` or `nvidia-l4t-arm64-cuda-13` (NVIDIA Jetson). In distributed mode this is the frontends' image; workers use `worker.image`.
+  variant: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# API key (`LOCALAI_API_KEY`). Clients send it as `Authorization: Bearer <key>`. It grants full admin access.
+apiKey:
+  # -- Require an API key for the API, the web UI and `/metrics`. Without it and without user accounts, anyone who reaches the service can run models, install models and backends, and change settings.
+  enabled: true
+  # -- The API key (several keys comma-separated). If empty and no `existingSecret` is set, the chart generates one and keeps it across upgrades.
+  value: ""
+  # -- Name of an existing Secret that holds the API key.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the API key.
+  existingSecretKey: api-key
+
+# User accounts with roles, sessions and per-user API keys (LocalAI's user authentication). Always on in distributed mode.
+auth:
+  # -- Turn on user accounts in standalone mode (`LOCALAI_AUTH`). Accounts are stored in SQLite under `/data`, or in PostgreSQL with `database.url`.
+  enabled: false
+  # -- Who may create an account (`LOCALAI_REGISTRATION_MODE`): `invite` (only with an invite link from an admin), `approval` (an admin approves each new account) or `open` (anyone; LocalAI's own default). The first account is always an admin, see `auth.admin.email`.
+  registrationMode: invite
+  admin:
+    # -- Email of an admin account that the chart creates right after install and upgrade (a hook Job), so nobody else becomes the first admin. Also set as `LOCALAI_ADMIN_EMAIL`. Empty: whoever registers first becomes admin.
+    email: ""
+    # -- Password of that account: 12 to 72 characters, and strong enough for LocalAI's check (zxcvbn score 3). If empty and no `auth.existingSecret` is set, the chart generates one and keeps it across upgrades (Secret key `admin-password`).
+    password: ""
+  # -- Secret that signs sessions and user API keys (`LOCALAI_AUTH_HMAC_SECRET`). Every frontend must have the same one. If empty and no `auth.existingSecret` is set, the chart generates one and keeps it across upgrades.
+  hmacSecret: ""
+  # -- Name of an existing Secret with the keys `hmac-secret` and, when `auth.admin.email` is set, `admin-password`.
+  existingSecret: ""
+
+# PostgreSQL for user accounts and, in distributed mode, for the node registry and model load jobs (`LOCALAI_AUTH_DATABASE_URL`). Required in distributed mode.
+database:
+  # -- PostgreSQL URL, e.g. `postgresql://localai:password@postgres.db.svc:5432/localai?sslmode=disable`. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+  url: ""
+  # -- Name of an existing Secret that holds the URL.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the URL.
+  existingSecretKey: database-url
+
+# Settings for `mode: distributed`.
+distributed:
+  nats:
+    # -- NATS URL (`LOCALAI_NATS_URL`), e.g. `nats://nats.nats.svc:4222`, or `tls://...` for TLS. Plain NATS without JetStream is enough. Stored in a Secret created by this chart. Ignored when `existingSecret` is set.
+    url: ""
+    # -- Name of an existing Secret that holds the NATS URL.
+    existingSecret: ""
+    # -- Key in `existingSecret` that holds the NATS URL.
+    existingSecretKey: nats-url
+  # -- Token that workers present to register with the frontends; it also protects each worker's file transfer port (`LOCALAI_REGISTRATION_TOKEN`). If empty and no `existingSecret` is set, the chart generates one and keeps it across upgrades.
+  registrationToken: ""
+  # -- Name of an existing Secret that holds the registration token.
+  existingSecret: ""
+  # -- Key in `existingSecret` that holds the registration token.
+  existingSecretKey: registration-token
+  # -- Approve new workers automatically (`LOCALAI_AUTO_APPROVE_NODES`). Workers must present the registration token anyway. With `false`, an admin approves each new worker in the web UI before it gets work.
+  autoApproveNodes: true
+
+# Worker pods (distributed mode only). Each registers itself with the frontends, and the frontends place models on it.
+worker:
+  # -- Number of worker pods.
+  replicaCount: 1
+  image:
+    # -- Worker image repository. Defaults to `image.repository`.
+    repository: ""
+    # -- Worker image tag. Defaults to `image.tag` (`v` + the chart's appVersion).
+    tag: ""
+    # -- Hardware variant of the workers, e.g. `gpu-nvidia-cuda-12` (same choices as `image.variant`). Not inherited from `image.variant`: the frontends don't run models and can stay on the CPU image.
+    variant: ""
+  # -- Labels the workers report to LocalAI (`LOCALAI_NODE_LABELS`), for model placement rules, e.g. `{tier: gpu}`. LocalAI adds `gpu.vendor`, `gpu.vram` and `node.name` itself.
+  labels: {}
+  # -- Cap the VRAM each worker offers for model placement (`LOCALAI_VRAM_BUDGET`), e.g. `80%` or `12GB`. Empty: all detected VRAM.
+  vramBudget: ""
+  # -- Resources for a worker. For GPUs add e.g. `nvidia.com/gpu: 1` to limits.
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+  persistence:
+    # -- Keep each worker's backends and staged model files on its own PersistentVolumeClaim, so a restarted worker doesn't download them again.
+    enabled: true
+    # -- Storage class. Empty uses the cluster default.
+    storageClass: ""
+    # -- Access modes of the worker volumes.
+    accessModes: [ReadWriteOnce]
+    # -- Size of each worker volume. It must hold the backends and every model placed on the worker.
+    size: 50Gi
+  # -- Extra environment variables for the workers, e.g. `LOCALAI_MAX_REPLICAS_PER_MODEL`.
+  extraEnv: []
+  # -- Extra environment variables for the workers from Secrets or ConfigMaps.
+  extraEnvFrom: []
+  # -- Extra volumes for the workers.
+  extraVolumes: []
+  # -- Extra volume mounts for the worker container.
+  extraVolumeMounts: []
+  # -- RuntimeClass of the workers, e.g. `nvidia` when the NVIDIA runtime isn't the node default.
+  runtimeClassName: ""
+  # -- Share the process namespace, so the pod's pause process reaps exited child processes (the Kubernetes equivalent of Docker's `init: true`, which LocalAI recommends for NVIDIA workers).
+  shareProcessNamespace: false
+  # -- Seconds Kubernetes waits after SIGTERM before it kills a worker.
+  terminationGracePeriodSeconds: 60
+  # -- Startup probe. The worker answers only after it registered with a frontend, so it waits up to 10 minutes for the frontends.
+  startupProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    periodSeconds: 5
+    failureThreshold: 120
+  # -- Liveness probe on `/healthz` of the worker's file transfer port.
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  # -- Readiness probe on `/readyz`: 503 while the worker's NATS connection is down or one of its model processes doesn't answer.
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  # -- Node selector for the workers, e.g. GPU nodes.
+  nodeSelector: {}
+  # -- Tolerations for the workers.
+  tolerations: []
+  # -- Affinity for the workers.
+  affinity: {}
+  # -- Extra worker pod annotations.
+  podAnnotations: {}
+  # -- Extra worker pod labels.
+  podLabels: {}
+  pdb:
+    # -- Create a PodDisruptionBudget for the workers (only with more than 1 worker).
+    enabled: true
+    # -- Maximum workers that may be unavailable during voluntary disruptions.
+    maxUnavailable: 1
+  networkPolicy:
+    # -- Allow traffic to the workers only from this release's frontends. The workers' file transfer and model ports check the registration token; this keeps every other pod from reaching them at all. Needs a CNI that enforces NetworkPolicies.
+    enabled: true
+    # -- Extra ingress rules for the workers (NetworkPolicy `ingress` entries).
+    extraIngress: []
+
+models:
+  # -- Models to install at startup: gallery names (e.g. `qwen3-0.6b`), `huggingface://`, `ollama://` and `oci://` URIs, or URLs of model YAML files. Installed models stay on the volume. They are passed to `local-ai run`.
+  install: []
+  # -- Model definitions in LocalAI's model YAML format (a list), mounted as a file and loaded with `LOCALAI_MODELS_CONFIG_FILE`. Models defined here can't be edited in the web UI.
+  configs: []
+
+# -- External URL of LocalAI (`LOCALAI_BASE_URL`), e.g. `https://ai.example.com`. Used for OAuth callbacks and links to generated images, audio and videos.
+baseUrl: ""
+
+# -- Settings as environment variables for the server pods, e.g. `LOCALAI_CONTEXT_SIZE`, `LOCALAI_THREADS`, `LOCALAI_MAX_ACTIVE_BACKENDS`, `LOCALAI_WATCHDOG_IDLE`, `LOCALAI_LOG_LEVEL`. See https://localai.io/reference/cli-reference
+extraEnv: []
+# - name: LOCALAI_CONTEXT_SIZE
+#   value: "8192"
+
+# -- Extra environment variables for the server pods from Secrets or ConfigMaps, e.g. `HF_TOKEN` or OIDC client secrets.
+extraEnvFrom: []
+
+# -- Extra volumes for the server pods.
+extraVolumes: []
+# -- Extra volume mounts for the LocalAI container of the server pods.
+extraVolumeMounts: []
+
+persistence:
+  # -- Store models, backends, settings and data on a PersistentVolumeClaim, mounted at `/models`, `/backends`, `/configuration` and `/data`. Without it everything, including downloaded models, is lost when the pod restarts.
+  enabled: true
+  # -- Use an existing PersistentVolumeClaim instead of creating one.
+  existingClaim: ""
+  # -- Storage class. Empty uses the cluster default.
+  storageClass: ""
+  # -- Access modes. Use `[ReadWriteMany]` for more than 1 frontend in distributed mode.
+  accessModes: [ReadWriteOnce]
+  # -- Volume size. It must hold all installed models and backends.
+  size: 50Gi
+  # -- Annotations for the PersistentVolumeClaim.
+  annotations: {}
+
+# -- Update strategy of the server StatefulSet. Pods are replaced one at a time, each after the previous one is ready; with 2 or more frontends the API stays available.
+updateStrategy:
+  type: RollingUpdate
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port. LocalAI listens on 8080.
+  port: 8080
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. Streaming answers and uploads usually need e.g. `nginx.ingress.kubernetes.io/proxy-read-timeout`, `proxy-buffering: "off"` and `proxy-body-size`.
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: localai.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+metrics:
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor for `/metrics` on the server pods. It sends the API key when `apiKey.enabled`.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects on.
+    labels: {}
+
+pdb:
+  # -- Create a PodDisruptionBudget for the frontends (distributed mode with more than 1 frontend).
+  enabled: true
+  # -- Maximum frontends that may be unavailable during voluntary disruptions.
+  maxUnavailable: 1
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. LocalAI doesn't use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds Kubernetes waits after SIGTERM before it kills a server pod.
+terminationGracePeriodSeconds: 60
+
+# -- Startup probe. LocalAI installs `models.install` before its HTTP server starts, so the default waits up to 1 hour; raise `failureThreshold` for very large models.
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+  failureThreshold: 360
+# -- Liveness probe on `/healthz`.
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+# -- Readiness probe on `/readyz`: 503 while LocalAI is still starting.
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# -- Resources for a server pod. In standalone mode it runs the models; size memory (and GPUs, e.g. `nvidia.com/gpu: 1` in limits) for the largest model you load.
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+
+# -- RuntimeClass of the server pods, e.g. `nvidia` when the NVIDIA runtime isn't the node default.
+runtimeClassName: ""
+# -- Share the process namespace, so the pod's pause process reaps exited child processes (the Kubernetes equivalent of Docker's `init: true`, recommended with NVIDIA GPUs).
+shareProcessNamespace: false
+
+# -- Pod security context. The image runs as root; the chart runs it as UID 1000 (user `ubuntu` in the image).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context. The root filesystem is read-only; `/tmp` is an emptyDir.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Size limit of the `/tmp` emptyDir (uploads, generated images and audio, backend scratch files).
+tmpSizeLimit: 10Gi
+
+# -- Extra server pod annotations.
+podAnnotations: {}
+# -- Extra server pod labels.
+podLabels: {}
+# -- Node selector for the server pods.
+nodeSelector: {}
+# -- Tolerations for the server pods.
+tolerations: []
+# -- Affinity for the server pods.
+affinity: {}
+
+tests:
+  # -- Model that `helm test` sends a chat completion to, e.g. one from `models.install`. Empty: the test checks readiness, the API key and (in distributed mode) the workers only.
+  chatModel: ""

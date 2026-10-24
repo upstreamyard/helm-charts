@@ -1,0 +1,73 @@
+# Test services for the localai chart in kind; CI starts them when the chart changes. Not for production.
+# PostgreSQL with pgvector (LocalAI's distributed mode keeps its node registry and jobs there) and a
+# plain NATS server without JetStream.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localai-postgres
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: localai-postgres }
+  template:
+    metadata:
+      labels: { app: localai-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg17
+          env:
+            - { name: POSTGRES_USER, value: localai }
+            - { name: POSTGRES_PASSWORD, value: localai }
+            - { name: POSTGRES_DB, value: localai }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "localai", "-d", "localai"]
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localai-postgres
+  namespace: deps
+spec:
+  selector: { app: localai-postgres }
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localai-nats
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: localai-nats }
+  template:
+    metadata:
+      labels: { app: localai-nats }
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.12-alpine
+          args: ["-m", "8222"]
+          ports:
+            - containerPort: 4222
+            - containerPort: 8222
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8222
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localai-nats
+  namespace: deps
+spec:
+  selector: { app: localai-nats }
+  ports:
+    - port: 4222
