@@ -995,6 +995,48 @@ entries:
   logto:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Update logto to 1.45.0
+      artifacthub.io/images: |
+        - name: logto
+          image: svhd/logto:1.45.0
+      artifacthub.io/license: MPL-2.0
+      artifacthub.io/links: |
+        - name: Logto project
+          url: https://github.com/logto-io/logto
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.45.0
+    created: "2026-10-24T08:55:28.824181643Z"
+    description: Logto, the open-source identity and access management platform (OIDC,
+      SSO, multi-tenancy) for apps and SaaS. Community chart by upstreamyard, not
+      an official Logto chart.
+    digest: 09a356d4ff5dbf4c1dd4dd6573316fe5f88d4ec3648a4c28f67371d260ddcfe5
+    home: https://github.com/upstreamyard/helm-charts
+    keywords:
+    - logto
+    - authentication
+    - identity
+    - oidc
+    - sso
+    - oauth2
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: logto
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/logto-io/logto
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/logto-0.1.1/logto-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: First release
       artifacthub.io/images: |
@@ -1696,4 +1738,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-23T10:34:48.151126531Z"
+generated: "2026-10-24T08:55:28.824255722Z"
