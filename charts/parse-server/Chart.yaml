@@ -2,8 +2,8 @@ apiVersion: v2
 name: parse-server
 description: Parse Server, the open-source backend for mobile, web and IoT apps. Community chart by upstreamyard, not an official Parse Server chart.
 type: application
-version: 0.1.2
-appVersion: "9.10.6"
+version: 0.1.3
+appVersion: "9.10.7"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -24,7 +24,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: parse-server
-      image: parseplatform/parse-server:9.10.6
+      image: parseplatform/parse-server:9.10.7
   artifacthub.io/links: |
     - name: Parse Server project
       url: https://github.com/parse-community/parse-server
@@ -35,4 +35,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Added the upstreamyard logo as the chart icon
+      description: Update parse-server to 9.10.7

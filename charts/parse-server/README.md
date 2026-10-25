@@ -1,6 +1,6 @@
 # Parse Server Helm chart
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 9.10.6](https://img.shields.io/badge/AppVersion-9.10.6-informational?style=flat-square)
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 9.10.7](https://img.shields.io/badge/AppVersion-9.10.7-informational?style=flat-square)
 
 Helm chart for [Parse Server](https://github.com/parse-community/parse-server), the open-source backend for mobile, web and IoT apps. It uses the Parse community's official image [`parseplatform/parse-server`](https://hub.docker.com/r/parseplatform/parse-server).
 
