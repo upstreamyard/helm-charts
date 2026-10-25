@@ -1618,6 +1618,59 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/kvrocks-0.1.0/kvrocks-0.1.0.tgz
     version: 0.1.0
+  localai:
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: added
+          description: LocalAI chart with a single server or distributed frontends and workers on the official image
+      artifacthub.io/images: |
+        - name: localai
+          image: localai/localai:v4.12.1
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: LocalAI
+          url: https://github.com/mudler/LocalAI
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 4.12.1
+    created: "2026-10-25T19:58:28.402297546Z"
+    description: LocalAI Helm chart for Kubernetes. Self-hosted OpenAI-compatible
+      API for LLMs, embeddings, images, speech and agents on CPU or GPU (NVIDIA CUDA,
+      AMD ROCm, Intel, Vulkan), as a single server or in distributed mode with scalable
+      frontends and GPU workers on PostgreSQL and NATS. API key by default, admin
+      account created on install, non-root, Prometheus metrics. Community chart by
+      upstreamyard, not an official LocalAI chart.
+    digest: 365c423b066fec964604bd1df75381049f44d62b62e6a26d8d1049aa88649ebb
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/localai
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - localai
+    - local-ai
+    - llm
+    - openai-api
+    - self-hosted-ai
+    - llm-inference
+    - llama-cpp
+    - gpu
+    - embeddings
+    - ollama-alternative
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: localai
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/mudler/LocalAI
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/localai-0.1.0/localai-0.1.0.tgz
+    version: 0.1.0
   logto:
   - annotations:
       artifacthub.io/changes: |
@@ -2922,4 +2975,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-25T10:16:23.501075677Z"
+generated: "2026-10-25T19:58:28.402371067Z"
