@@ -1,0 +1,180 @@
+{{- if include "localai.distributed" . }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "localai.workerName" . }}
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  serviceName: {{ include "localai.workerName" . }}
+  replicas: {{ .Values.worker.replicaCount }}
+  # Workers don't depend on each other.
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "localai.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include "localai.secretChecksum" . }}
+        {{- with .Values.worker.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "localai.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+        {{- with .Values.worker.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "localai.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      # Service links would add LOCALAI_* variables (e.g. LOCALAI_PORT for a Service named
+      # "localai"), and LocalAI reads LOCALAI_* variables as settings.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      {{- with .Values.worker.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
+      {{- if .Values.worker.shareProcessNamespace }}
+      shareProcessNamespace: true
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ include "localai.workerImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # The worker exits when its backends directory doesn't exist yet.
+          command:
+            - sh
+            - -c
+            - mkdir -p "$LOCALAI_MODELS_PATH" "$LOCALAI_BACKENDS_PATH" && exec /entrypoint.sh worker
+          ports:
+            # File transfer and probes. Each model process gets its own gRPC port from 50051 upwards.
+            - name: http
+              containerPort: 50050
+              protocol: TCP
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LOCALAI_SERVE_ADDR
+              value: "0.0.0.0:50051"
+            - name: LOCALAI_HTTP_ADDR
+              value: "0.0.0.0:50050"
+            # Stable per-pod DNS names from the headless Service; the frontends dial these.
+            - name: LOCALAI_ADVERTISE_ADDR
+              value: "$(POD_NAME).{{ include "localai.workerName" . }}.$(POD_NAMESPACE).svc:50051"
+            - name: LOCALAI_ADVERTISE_HTTP_ADDR
+              value: "$(POD_NAME).{{ include "localai.workerName" . }}.$(POD_NAMESPACE).svc:50050"
+            - name: LOCALAI_REGISTER_TO
+              value: "http://{{ include "localai.fullname" . }}.$(POD_NAMESPACE).svc:{{ .Values.service.port }}"
+            # The pod name is stable, so a restarted worker keeps its node entry and approval.
+            - name: LOCALAI_NODE_NAME
+              value: "$(POD_NAME)"
+            {{- include "localai.registrationTokenEnv" . | nindent 12 }}
+            # The worker keeps staging, cache and data next to the models directory
+            # (<models>/../staging etc.), so all of it lives on the worker volume.
+            - name: LOCALAI_MODELS_PATH
+              value: /var/lib/localai/models
+            - name: LOCALAI_BACKENDS_PATH
+              value: /var/lib/localai/backends
+            - name: HOME
+              value: /tmp
+            {{- with .Values.worker.labels }}
+            - name: LOCALAI_NODE_LABELS
+              value: {{ include "localai.nodeLabels" . | quote }}
+            {{- end }}
+            {{- with .Values.worker.vramBudget }}
+            - name: LOCALAI_VRAM_BUDGET
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.worker.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.worker.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.worker.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.worker.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.worker.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.worker.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /var/lib/localai
+            {{- with .Values.worker.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ .Values.tmpSizeLimit }}
+        {{- if not .Values.worker.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.worker.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.worker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.worker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.worker.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "localai.selectorLabels" . | nindent 10 }}
+          app.kubernetes.io/component: worker
+      spec:
+        accessModes:
+          {{- toYaml .Values.worker.persistence.accessModes | nindent 10 }}
+        {{- with .Values.worker.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.worker.persistence.size }}
+  {{- end }}
+{{- end }}

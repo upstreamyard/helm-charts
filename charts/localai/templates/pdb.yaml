@@ -1,0 +1,15 @@
+{{- if and .Values.pdb.enabled (include "localai.distributed" .) (gt (int .Values.replicaCount) 1) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "localai.fullname" . }}
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "localai.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+{{- end }}

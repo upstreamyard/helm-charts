@@ -1,0 +1,26 @@
+{{- if and (include "localai.distributed" .) .Values.worker.networkPolicy.enabled }}
+# Only this release's frontends may reach the workers. Their file transfer and model ports also
+# check the registration token; this keeps every other pod away from them.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "localai.workerName" . }}
+  labels:
+    {{- include "localai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "localai.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "localai.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: server
+    {{- with .Values.worker.networkPolicy.extraIngress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

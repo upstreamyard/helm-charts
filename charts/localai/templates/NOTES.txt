@@ -1,0 +1,46 @@
+LocalAI {{ .Chart.AppVersion }} is deployed as "{{ include "localai.fullname" . }}"
+{{- if include "localai.distributed" . }} in distributed mode: {{ .Values.replicaCount }} frontend(s) and {{ .Values.worker.replicaCount }} worker(s) ({{ include "localai.workerImage" . }}).
+{{- else }} as a standalone server ({{ include "localai.image" . }}).{{ end }}
+
+In-cluster URL (OpenAI-compatible API under /v1, web UI at /):
+
+  http://{{ include "localai.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+{{- if .Values.apiKey.enabled }}
+
+API key (send it as "Authorization: Bearer <key>"; it has full admin rights):
+
+  export API_KEY=$(kubectl -n {{ .Release.Namespace }} get secret {{ default (include "localai.secretName" .) .Values.apiKey.existingSecret }} -o jsonpath='{.data.{{ if .Values.apiKey.existingSecret }}{{ .Values.apiKey.existingSecretKey }}{{ else }}api-key{{ end }}}' | base64 -d)
+{{- end }}
+{{- if and (include "localai.authOn" .) .Values.auth.admin.email }}
+
+Admin account {{ .Values.auth.admin.email }}, password:
+
+  kubectl -n {{ .Release.Namespace }} get secret {{ default (include "localai.secretName" .) .Values.auth.existingSecret }} -o jsonpath='{.data.admin-password}' | base64 -d; echo
+{{- end }}
+
+Try it:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "localai.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/v1/models{{ if .Values.apiKey.enabled }} -H "Authorization: Bearer $API_KEY"{{ end }}
+
+Then open http://localhost:8080 for the web UI{{ if .Values.apiKey.enabled }} (log in with the API key){{ end }}.
+{{- if not .Values.models.install }}
+No models are installed yet: install them from the gallery in the web UI, or list them in models.install.
+{{- end }}
+Check the installation: helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if and (not .Values.apiKey.enabled) (not (include "localai.authOn" .)) }}
+
+WARNING: there is no authentication. Anyone who can reach the service can run models,
+install models and backends, and change settings. Set apiKey.enabled=true unless something
+in front of the service handles authentication.
+{{- end }}
+{{- if and (include "localai.authOn" .) (not .Values.auth.admin.email) }}
+
+WARNING: user accounts are on, and the first account that registers becomes admin.
+Register yours now, or set auth.admin.email so the chart creates it.
+{{- end }}
+{{- if and (include "localai.authOn" .) (eq .Values.auth.registrationMode "open") }}
+
+WARNING: auth.registrationMode is "open": anyone who reaches LocalAI can create an account
+and use the models.
+{{- end }}
