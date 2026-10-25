@@ -560,6 +560,49 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update cube to 1.8.13
+      artifacthub.io/images: |
+        - name: cube
+          image: cubejs/cube:v1.8.13
+        - name: cubestore
+          image: cubejs/cubestore:v1.8.13
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Cube project
+          url: https://github.com/cube-js/cube
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.13
+    created: "2026-10-25T10:16:23.278211393Z"
+    description: Cube, the open-source semantic layer and data API for BI and AI,
+      with Cube Store. Community chart by upstreamyard, not an official Cube chart.
+    digest: 22855a7a69dd42f4684121aa898ea6b38721fad8393edbc6d4821b63dfe7be30
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - cube
+    - semantic-layer
+    - analytics
+    - olap
+    - bi
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: cube
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/cube-js/cube
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/cube-0.1.3/cube-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Added the upstreamyard logo as the chart icon
       artifacthub.io/images: |
         - name: cube
@@ -1989,6 +2032,60 @@ entries:
       artifacthub.io/category: networking
       artifacthub.io/changes: |
         - kind: changed
+          description: Update plano to 0.4.39
+      artifacthub.io/images: |
+        - name: plano
+          image: katanemo/plano:0.4.39
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Plano
+          url: https://github.com/katanemo/plano
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.4.39
+    created: "2026-10-25T10:16:23.500991019Z"
+    description: Plano Helm chart for Kubernetes. Plano (formerly archgw) is an AI
+      gateway and LLM proxy built on Envoy, with one OpenAI-compatible API for OpenAI,
+      Anthropic, Gemini, Amazon Bedrock, Azure OpenAI, Ollama and other providers,
+      plus model routing, guardrails and agent orchestration. Runs the official image
+      as non-root on a read-only filesystem without internet access at startup, keeps
+      provider API keys away from the Envoy admin API, scales out with PostgreSQL
+      conversation state and a Redis session cache, and ships Prometheus metrics,
+      NetworkPolicy and helm test. Community chart by upstreamyard, not an official
+      Plano chart.
+    digest: 942a2d6d686ab9fe2eb0a2be2fdc76214748bdff86a072ad548b73541c5c89dc
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/plano
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - plano
+    - archgw
+    - ai-proxy
+    - ai-gateway
+    - llm-gateway
+    - llm-proxy
+    - llm-router
+    - openai-compatible
+    - envoy
+    - agents
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: plano
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/katanemo/plano
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/plano-0.1.2/plano-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
+      artifacthub.io/category: networking
+      artifacthub.io/changes: |
+        - kind: changed
           description: Added the upstreamyard logo as the chart icon
       artifacthub.io/images: |
         - name: plano
@@ -2825,4 +2922,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-25T10:14:47.89136556Z"
+generated: "2026-10-25T10:16:23.501075677Z"
