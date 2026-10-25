@@ -1,6 +1,6 @@
 # Plano Helm chart: the Plano AI gateway and LLM proxy on Kubernetes
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 0.4.37](https://img.shields.io/badge/AppVersion-0.4.37-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 0.4.39](https://img.shields.io/badge/AppVersion-0.4.39-informational?style=flat-square)
 
 Helm chart for **[Plano](https://github.com/katanemo/plano)** (formerly archgw), the AI gateway and LLM proxy built on Envoy. Plano gives your apps and agents **one OpenAI-compatible API** for OpenAI, Anthropic, Gemini, Amazon Bedrock, Azure OpenAI, Ollama and other providers, with model routing, model aliases, guardrails and agent orchestration. The chart runs Plano's **official image** `katanemo/plano` and fixes what makes it hard to run in production: it starts **without internet access**, runs **as non-root on a read-only filesystem** (Pod Security `restricted`), keeps the **provider API keys out of Envoy's admin API**, finishes running LLM streams during **rolling upgrades**, and scales out with **PostgreSQL conversation state** (table created for you) and a **Redis session cache**. It also ships **Prometheus metrics**, a **NetworkPolicy**, HPA, PodDisruptionBudget and a `helm test` that sends a real chat completion.
 
