@@ -2,8 +2,8 @@ apiVersion: v2
 name: conductor
 description: Conductor OSS, the open-source workflow orchestration engine originally built at Netflix, with UI. Community chart by upstreamyard, not an official Conductor chart.
 type: application
-version: 0.1.1
-appVersion: "3.32.5"
+version: 0.1.2
+appVersion: "3.33.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -25,7 +25,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: conductor
-      image: upstreamyard/conductor:3.32.5
+      image: upstreamyard/conductor:3.33.0
   artifacthub.io/links: |
     - name: Conductor project
       url: https://github.com/conductor-oss/conductor
@@ -36,4 +36,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Added the upstreamyard logo as the chart icon
+      description: Update conductor to 3.33.0

@@ -1,6 +1,6 @@
 # Conductor Helm chart
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 3.32.5](https://img.shields.io/badge/AppVersion-3.32.5-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 3.33.0](https://img.shields.io/badge/AppVersion-3.33.0-informational?style=flat-square)
 
 Helm chart for [Conductor OSS](https://github.com/conductor-oss/conductor), the open-source workflow orchestration engine originally built at Netflix. It uses the [`upstreamyard/conductor`](https://github.com/upstreamyard/conductor) image, which contains the server and the UI.
 
