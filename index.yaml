@@ -470,6 +470,51 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update conductor to 3.33.0
+      artifacthub.io/images: |
+        - name: conductor
+          image: upstreamyard/conductor:3.33.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Conductor project
+          url: https://github.com/conductor-oss/conductor
+        - name: Container image
+          url: https://github.com/upstreamyard/conductor
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.33.0
+    created: "2026-10-27T11:08:04.148093732Z"
+    description: Conductor OSS, the open-source workflow orchestration engine originally
+      built at Netflix, with UI. Community chart by upstreamyard, not an official
+      Conductor chart.
+    digest: 6f847a64186eba2286e1ea36c68e62243b72345a4001956c22c4d1706c035ea8
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - conductor
+    - workflow
+    - orchestration
+    - microservices
+    - netflix
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: conductor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/conductor
+    - https://github.com/conductor-oss/conductor
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.2/conductor-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Added the upstreamyard logo as the chart icon
       artifacthub.io/images: |
         - name: conductor
@@ -2975,4 +3020,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-25T19:58:28.402371067Z"
+generated: "2026-10-27T11:08:04.148227554Z"
