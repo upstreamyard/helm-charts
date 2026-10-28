@@ -819,6 +819,50 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update discourse to 2026.10.0
+      artifacthub.io/images: |
+        - name: discourse
+          image: upstreamyard/discourse:2026.10.0
+      artifacthub.io/license: GPL-2.0-or-later
+      artifacthub.io/links: |
+        - name: Discourse project
+          url: https://github.com/discourse/discourse
+        - name: Container image
+          url: https://github.com/upstreamyard/discourse
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2026.10.0
+    created: "2026-10-28T11:45:45.9879702Z"
+    description: Discourse, the open-source community forum. Community chart by upstreamyard,
+      not an official Discourse chart.
+    digest: dc393e5db511d7739767593c9717bb9ef716176f233a2474dc7c7b5be30c6aca
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - discourse
+    - forum
+    - community
+    - discussion
+    - chat
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: discourse
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/discourse
+    - https://github.com/discourse/discourse
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.3/discourse-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Update discourse to 2026.9.1
       artifacthub.io/images: |
         - name: discourse
@@ -3164,4 +3208,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-28T11:44:25.173333896Z"
+generated: "2026-10-28T11:45:45.988295948Z"
