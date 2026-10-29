@@ -1,6 +1,6 @@
 # ActiveMQ Helm chart: Apache ActiveMQ Classic on Kubernetes
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 6.3.2](https://img.shields.io/badge/AppVersion-6.3.2-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 6.4.0](https://img.shields.io/badge/AppVersion-6.4.0-informational?style=flat-square)
 
 Helm chart for **[Apache ActiveMQ Classic](https://github.com/apache/activemq)**, the open-source JMS message broker (OpenWire, AMQP, STOMP, MQTT, WebSocket). It runs a single broker or a **highly available master/slave pair**, either on PostgreSQL (no shared storage needed) or on a shared volume. Logins are **required by default** with generated passwords, and Prometheus metrics, a ServiceMonitor and `helm test` are included. It covers ActiveMQ **6.3, 6.2 and 5.19** through the [`upstreamyard/activemq`](https://github.com/upstreamyard/activemq) image. It also replaces the discontinued Bitnami ActiveMQ image on Kubernetes.
 

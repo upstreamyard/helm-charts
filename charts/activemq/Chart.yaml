@@ -2,8 +2,8 @@ apiVersion: v2
 name: activemq
 description: Apache ActiveMQ Classic Helm chart for Kubernetes. Secure JMS, AMQP, STOMP and MQTT message broker with high availability (JDBC or shared storage master/slave), Prometheus metrics and ActiveMQ 6.3, 6.2 and 5.19 images. Community chart by upstreamyard, not an official Apache ActiveMQ chart.
 type: application
-version: 0.1.1
-appVersion: "6.3.2"
+version: 0.1.2
+appVersion: "6.4.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/activemq
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -31,7 +31,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: activemq
-      image: upstreamyard/activemq:6.3.2
+      image: upstreamyard/activemq:6.4.0
   artifacthub.io/links: |
     - name: Apache ActiveMQ
       url: https://github.com/apache/activemq
@@ -42,4 +42,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Added the upstreamyard logo as the chart icon
+      description: Update activemq to 6.4.0
