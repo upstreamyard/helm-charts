@@ -5,6 +5,58 @@ entries:
       artifacthub.io/category: streaming-messaging
       artifacthub.io/changes: |
         - kind: changed
+          description: Update activemq to 6.4.0
+      artifacthub.io/images: |
+        - name: activemq
+          image: upstreamyard/activemq:6.4.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache ActiveMQ
+          url: https://github.com/apache/activemq
+        - name: Container image
+          url: https://github.com/upstreamyard/activemq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 6.4.0
+    created: "2026-10-29T11:51:54.97517271Z"
+    description: Apache ActiveMQ Classic Helm chart for Kubernetes. Secure JMS, AMQP,
+      STOMP and MQTT message broker with high availability (JDBC or shared storage
+      master/slave), Prometheus metrics and ActiveMQ 6.3, 6.2 and 5.19 images. Community
+      chart by upstreamyard, not an official Apache ActiveMQ chart.
+    digest: bdbebbb9c844b7ea34acf4b60e97e5deeb889e8acabea63f9dae055a549358d4
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/activemq
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - activemq
+    - activemq-classic
+    - apache-activemq
+    - jms
+    - message-broker
+    - messaging
+    - queue
+    - amqp
+    - stomp
+    - mqtt
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: activemq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/activemq
+    - https://github.com/apache/activemq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/activemq-0.1.2/activemq-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
+        - kind: changed
           description: Added the upstreamyard logo as the chart icon
       artifacthub.io/images: |
         - name: activemq
@@ -3208,4 +3260,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-28T11:45:45.988295948Z"
+generated: "2026-10-29T11:51:54.975259792Z"
