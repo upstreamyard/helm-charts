@@ -1,6 +1,6 @@
 # Saleor Helm chart
 
-![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 3.23.44](https://img.shields.io/badge/AppVersion-3.23.44-informational?style=flat-square)
+![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![AppVersion: 3.23.45](https://img.shields.io/badge/AppVersion-3.23.45-informational?style=flat-square)
 
 Helm chart for [Saleor](https://github.com/saleor/saleor), the headless GraphQL commerce platform. It runs the GraphQL API, the Celery worker and beat for background tasks, and the [Saleor dashboard](https://github.com/saleor/saleor-dashboard), using Saleor's official images `ghcr.io/saleor/saleor` and `ghcr.io/saleor/saleor-dashboard`.
 
