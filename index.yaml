@@ -657,6 +657,49 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update cube to 1.8.15
+      artifacthub.io/images: |
+        - name: cube
+          image: cubejs/cube:v1.8.15
+        - name: cubestore
+          image: cubejs/cubestore:v1.8.15
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Cube project
+          url: https://github.com/cube-js/cube
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.15
+    created: "2026-10-30T11:45:19.284451566Z"
+    description: Cube, the open-source semantic layer and data API for BI and AI,
+      with Cube Store. Community chart by upstreamyard, not an official Cube chart.
+    digest: 215c87aa7d9ec1ca253b92f46f982d3774fac2b778332cf827e3b9390105dd03
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - cube
+    - semantic-layer
+    - analytics
+    - olap
+    - bi
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: cube
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/cube-js/cube
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/cube-0.1.5/cube-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Update cube to 1.8.14
       artifacthub.io/images: |
         - name: cube
@@ -3308,4 +3351,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-29T11:55:36.977247978Z"
+generated: "2026-10-30T11:45:19.284535072Z"
