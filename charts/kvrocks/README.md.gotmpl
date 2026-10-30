@@ -2,6 +2,8 @@
 
 {{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
 
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+
 Helm chart for **[Apache Kvrocks](https://github.com/apache/kvrocks)**, the Redis-compatible key-value database that stores data on disk in RocksDB instead of in RAM. It runs a single instance or a **highly available master/replica cluster with automatic Redis Sentinel failover**, plus an HAProxy endpoint that always points at the current master, so apps that only take one Redis URL survive a failover too. Password auth is on by default, memory settings fit the pod's limit, and Prometheus metrics (including RocksDB compaction), a ServiceMonitor and `helm test` are included. It uses the **official `apache/kvrocks` image** (Kvrocks {{ template "chart.appVersion" . }}) and tracks every Kvrocks release.
 
 > Community chart by **upstreamyard**, not an official Apache Kvrocks chart. Apache Kvrocks is licensed under Apache-2.0. Apache, Apache Kvrocks and Kvrocks are trademarks of the Apache Software Foundation.
