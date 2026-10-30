@@ -2,6 +2,8 @@
 
 {{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
 
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+
 Helm chart for **[TigerBeetle](https://github.com/tigerbeetle/tigerbeetle)**, the financial transactions database for double-entry accounting (ledgers, payments, balances). It runs a **replicated TigerBeetle cluster of 3 or 6 replicas** (or a single replica for development) on TigerBeetle's **official image** `ghcr.io/tigerbeetle/tigerbeetle`. It handles what makes TigerBeetle hard on Kubernetes: stable IP addresses for every replica, formatting data files once, **safe recovery of a lost replica with `tigerbeetle recover`**, io_uring and seccomp, and **rolling upgrades without downtime**. Replicas run as non-root on a read-only filesystem, with a PodDisruptionBudget, anti-affinity, optional **Prometheus metrics** and a `helm test`.
 
 > Community chart by **upstreamyard**, not an official TigerBeetle chart. TigerBeetle is licensed under Apache-2.0.

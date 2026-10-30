@@ -2,7 +2,7 @@ apiVersion: v2
 name: localai
 description: LocalAI Helm chart for Kubernetes. Self-hosted OpenAI-compatible API for LLMs, embeddings, images, speech and agents on CPU or GPU (NVIDIA CUDA, AMD ROCm, Intel, Vulkan), as a single server or in distributed mode with scalable frontends and GPU workers on PostgreSQL and NATS. API key by default, admin account created on install, non-root, Prometheus metrics. Community chart by upstreamyard, not an official LocalAI chart.
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "4.12.1"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/localai
@@ -40,4 +40,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: added
-      description: LocalAI chart with a single server or distributed frontends and workers on the official image
+      description: Support contact in the README
