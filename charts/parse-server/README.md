@@ -1,6 +1,6 @@
 # Parse Server Helm chart
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 9.10.7](https://img.shields.io/badge/AppVersion-9.10.7-informational?style=flat-square)
+![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 9.10.7](https://img.shields.io/badge/AppVersion-9.10.7-informational?style=flat-square)
 
 Helm chart for [Parse Server](https://github.com/parse-community/parse-server), the open-source backend for mobile, web and IoT apps. It uses the Parse community's official image [`parseplatform/parse-server`](https://hub.docker.com/r/parseplatform/parse-server).
 
@@ -61,7 +61,7 @@ Parse Server 9 is strict out of the box, and the chart keeps it that way:
 
 ## Cloud Code
 
-Cloud Code (functions, triggers, background jobs) can come from a ConfigMap:
+Write your Cloud Code (functions, triggers, background jobs) directly in the values. The chart stores it in a ConfigMap and loads it:
 
 ```yaml
 cloudCode:
@@ -70,7 +70,7 @@ cloudCode:
     Parse.Cloud.define('hello', req => `hello ${req.params.name || 'world'}`);
 ```
 
-For several files, create your own ConfigMap and set `cloudCode.existingConfigMap`; the file named in `cloudCode.entrypoint` (`main.js`) is loaded. Cloud Code that needs npm packages beyond Parse Server's own needs an image built `FROM parseplatform/parse-server`; set `image.repository` and `image.tag` to it.
+For code split across several files, create your own ConfigMap and set `cloudCode.existingConfigMap` instead; the file named in `cloudCode.entrypoint` (`main.js`) is loaded. Cloud Code that needs npm packages beyond Parse Server's own needs an image built `FROM parseplatform/parse-server`; set `image.repository` and `image.tag` to it.
 
 ## Production example
 
@@ -85,7 +85,8 @@ database:
   existingSecret: parse-db              # key: database-uri
 cloudCode:
   enabled: true
-  existingConfigMap: parse-cloud-code
+  main: |                              # or existingConfigMap: <your ConfigMap>
+    Parse.Cloud.define('hello', req => `hello ${req.params.name || 'world'}`);
 ingress:
   enabled: true
   className: nginx
@@ -104,9 +105,9 @@ ingress:
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Affinity. |
-| cloudCode.enabled | bool | `false` | Load Cloud Code (functions, triggers, jobs) from a ConfigMap mounted at `/parse-server/cloud`. |
+| cloudCode.enabled | bool | `false` | Load Cloud Code (functions, triggers, jobs). Write it in `main` and the chart creates the ConfigMap, or use your own with `existingConfigMap`. Mounted at `/parse-server/cloud`. |
 | cloudCode.entrypoint | string | `"main.js"` | File that Parse Server loads (`PARSE_SERVER_CLOUD`). |
-| cloudCode.existingConfigMap | string | `""` | Name of an existing ConfigMap with your Cloud Code files (several files are possible; `entrypoint` is loaded). |
+| cloudCode.existingConfigMap | string | `""` | Name of your own ConfigMap with Cloud Code files, e.g. for code split across several files (`entrypoint` is loaded). Takes precedence over `main`. |
 | cloudCode.main | string | `""` | Content of `main.js`. The chart creates a ConfigMap from it. Ignored when `existingConfigMap` is set. |
 | database.existingSecret | string | `""` | Name of an existing Secret that holds the connection string (recommended for production). |
 | database.existingSecretKey | string | `"database-uri"` | Key in `existingSecret` that holds the connection string. |
