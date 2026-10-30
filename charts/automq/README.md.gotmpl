@@ -2,6 +2,8 @@
 
 {{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
 
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+
 Helm chart for **[AutoMQ](https://github.com/AutoMQ/automq)**, the open-source, Kafka-compatible streaming platform that stores messages in **S3 or S3-compatible object storage** instead of broker disks ("diskless Kafka"). Kafka clients, tools and protocols work unchanged. The chart runs **3 combined KRaft controller + broker nodes** by default, or separate controllers with **stateless broker-only nodes you can scale in seconds**. **SASL authentication is on by default** with generated passwords, and Prometheus metrics, a ServiceMonitor, PodDisruptionBudgets and `helm test` are included. It uses AutoMQ's official open-source image (`automqinc/automq`, AutoMQ {{ template "chart.appVersion" . }}, based on Kafka 3.9) and replaces the Bitnami Kafka chart setup that AutoMQ's own guide relies on.
 
 > Community chart by **upstreamyard**, not an official AutoMQ chart. AutoMQ is licensed under Apache-2.0. Apache Kafka and Kafka are trademarks of the Apache Software Foundation.
