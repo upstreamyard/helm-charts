@@ -1,6 +1,8 @@
 # Logto Helm chart
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 1.45.0](https://img.shields.io/badge/AppVersion-1.45.0-informational?style=flat-square)
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 1.45.0](https://img.shields.io/badge/AppVersion-1.45.0-informational?style=flat-square)
+
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for [Logto](https://github.com/logto-io/logto), the open-source identity and access management platform: sign-in, OIDC and OAuth 2.0, SSO and multi-tenancy for your apps. It uses Logto's official image [`svhd/logto`](https://hub.docker.com/r/svhd/logto).
 
