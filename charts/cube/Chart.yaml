@@ -2,8 +2,8 @@ apiVersion: v2
 name: cube
 description: Cube, the open-source semantic layer and data API for BI and AI, with Cube Store. Community chart by upstreamyard, not an official Cube chart.
 type: application
-version: 0.1.4
-appVersion: "1.8.14"
+version: 0.1.5
+appVersion: "1.8.15"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -24,9 +24,9 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: cube
-      image: cubejs/cube:v1.8.14
+      image: cubejs/cube:v1.8.15
     - name: cubestore
-      image: cubejs/cubestore:v1.8.14
+      image: cubejs/cubestore:v1.8.15
   artifacthub.io/links: |
     - name: Cube project
       url: https://github.com/cube-js/cube
@@ -35,4 +35,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update cube to 1.8.14
+      description: Update cube to 1.8.15
