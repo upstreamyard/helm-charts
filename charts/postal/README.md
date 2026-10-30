@@ -1,6 +1,8 @@
 # Postal Helm chart
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 3.3.7](https://img.shields.io/badge/AppVersion-3.3.7-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 3.3.7](https://img.shields.io/badge/AppVersion-3.3.7-informational?style=flat-square)
+
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for [Postal](https://github.com/postalserver/postal), the open-source mail delivery platform for sending and receiving email: an alternative to Sendgrid, Mailgun or Postmark that you run yourself. It runs the web interface and HTTP API, the SMTP server and the workers, using Postal's official image `ghcr.io/postalserver/postal`.
 
