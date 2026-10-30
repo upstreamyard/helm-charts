@@ -1,6 +1,8 @@
 # NeMo Guardrails Helm chart: NVIDIA NeMo Guardrails on Kubernetes
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 0.24.1](https://img.shields.io/badge/AppVersion-0.24.1-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 0.24.1](https://img.shields.io/badge/AppVersion-0.24.1-informational?style=flat-square)
+
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for **[NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails)**, the open-source toolkit for **LLM guardrails**: input and output rails against jailbreaks, prompt injection and unsafe content, dialog rails, PII masking and fact checking, in front of OpenAI, NVIDIA NIM, Azure OpenAI, vLLM, Ollama or any OpenAI-compatible model. It runs the NeMo Guardrails server as an **OpenAI-compatible API**, so applications only change their `base_url`. Your guardrails configurations come from values or ConfigMaps, and each one is **checked before a rollout**, so a broken config never reaches running pods. It runs **several replicas** with zero failed requests in rolling updates (tested), and adds autoscaling, a NetworkPolicy and **OpenTelemetry** export. Secure by default: non-root, read-only root filesystem, prompts kept out of logs, Chat UI off. It uses the [`upstreamyard/nemo-guardrails`](https://github.com/upstreamyard/nemo-guardrails) image, NeMo Guardrails 0.24.1.
 

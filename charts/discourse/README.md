@@ -1,6 +1,8 @@
 # Discourse Helm chart
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 2026.10.0](https://img.shields.io/badge/AppVersion-2026.10.0-informational?style=flat-square)
+![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 2026.10.0](https://img.shields.io/badge/AppVersion-2026.10.0-informational?style=flat-square)
+
+> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for [Discourse](https://github.com/discourse/discourse), the open-source community forum. It uses the [`upstreamyard/discourse`](https://github.com/upstreamyard/discourse) image, which runs one process per container.
 
