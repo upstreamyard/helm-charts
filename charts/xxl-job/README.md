@@ -1,8 +1,8 @@
 # XXL-JOB Helm chart
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 3.5.0](https://img.shields.io/badge/AppVersion-3.5.0-informational?style=flat-square)
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 3.5.0](https://img.shields.io/badge/AppVersion-3.5.0-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for the admin (scheduling center) of [XXL-JOB](https://github.com/xuxueli/xxl-job), the distributed job scheduler for Java services: a web UI and API that trigger jobs on your executors by cron, with retries, sharding, failover, alerts and logs. It uses XXL-JOB's official image [`xuxueli/xxl-job-admin`](https://hub.docker.com/r/xuxueli/xxl-job-admin).
 
