@@ -1381,6 +1381,50 @@ entries:
   discourse:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: discourse
+          image: upstreamyard/discourse:2026.10.0
+      artifacthub.io/license: GPL-2.0-or-later
+      artifacthub.io/links: |
+        - name: Discourse project
+          url: https://github.com/discourse/discourse
+        - name: Container image
+          url: https://github.com/upstreamyard/discourse
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2026.10.0
+    created: "2026-10-31T13:55:41.629999974Z"
+    description: Discourse, the open-source community forum. Community chart by upstreamyard,
+      not an official Discourse chart.
+    digest: a994a55fe85500335d552a7b89d75c6d62a6445f716eaf39a3e770e15167c22c
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - discourse
+    - forum
+    - community
+    - discussion
+    - chat
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: discourse
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/discourse
+    - https://github.com/discourse/discourse
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.5/discourse-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -1599,6 +1643,58 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.0/discourse-0.1.0.tgz
     version: 0.1.0
   docling-serve:
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: docling-serve-cpu
+          image: ghcr.io/docling-project/docling-serve-cpu:v1.38.2
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Docling Serve
+          url: https://github.com/docling-project/docling-serve
+        - name: Container images
+          url: https://github.com/docling-project/docling-serve#container-images
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.38.2
+    created: "2026-10-31T13:55:41.853730291Z"
+    description: Docling Serve Helm chart for Kubernetes. Document conversion API
+      (PDF, DOCX, PPTX, HTML, images to Markdown and JSON) for RAG pipelines, with
+      API key auth by default, scalable RQ workers on Redis, KEDA queue autoscaling,
+      CPU and CUDA images and Prometheus metrics. Community chart by upstreamyard,
+      not an official Docling chart.
+    digest: 63d9db946122663c80a72fa267eccd1c38bd0a57a089c91e1fc604ce7014a50b
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/docling-serve
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - docling
+    - docling-serve
+    - document-conversion
+    - pdf
+    - pdf-to-markdown
+    - ocr
+    - rag
+    - document-parsing
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: docling-serve
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/docling-project/docling-serve
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/docling-serve-0.1.6/docling-serve-0.1.6.tgz
+    version: 0.1.6
   - annotations:
       artifacthub.io/category: ai-machine-learning
       artifacthub.io/changes: |
@@ -1913,6 +2009,55 @@ entries:
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: dolt-sql-server
+          image: dolthub/dolt-sql-server:2.6.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Dolt
+          url: https://github.com/dolthub/dolt
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2.6.1
+    created: "2026-10-31T13:55:42.053862813Z"
+    description: Dolt Helm chart for Kubernetes. The version-controlled, MySQL-compatible
+      SQL database (branch, merge, diff and clone your data like Git) with high availability
+      through primary/standby replication, failover, Prometheus metrics and generated
+      passwords. Community chart by upstreamyard, not an official Dolt chart.
+    digest: 4f9ba384d97ebb42242f7dca275487d3485197c0102d78959d753f64d2fbb5be
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/dolt
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - dolt
+    - dolthub
+    - dolt-sql-server
+    - database
+    - sql
+    - mysql
+    - version-control
+    - git-for-data
+    - replication
+    - high-availability
+    kubeVersion: '>=1.27.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: dolt
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/dolthub/dolt
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/dolt-0.1.6/dolt-0.1.6.tgz
+    version: 0.1.6
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -2204,6 +2349,52 @@ entries:
   electric:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: electric
+          image: electricsql/electric:1.8.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Electric project
+          url: https://github.com/electric-sql/electric
+        - name: Container image
+          url: https://hub.docker.com/r/electricsql/electric
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.1
+    created: "2026-10-31T13:55:42.252656465Z"
+    description: Electric sync engine, which syncs subsets of your PostgreSQL data
+      to web and mobile apps in real time over HTTP. Community chart by upstreamyard,
+      not an official ElectricSQL chart.
+    digest: 0c752de0a2858a5eb60b3d8a0448da82060a32411cf73e5db2f3aefff9e96462
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - electric
+    - electricsql
+    - sync
+    - postgresql
+    - logical-replication
+    - realtime
+    - local-first
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: electric
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/electric-sql/electric
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/electric-0.1.3/electric-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -2340,6 +2531,57 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/electric-0.1.0/electric-0.1.0.tgz
     version: 0.1.0
   falkordb:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: falkordb-server
+          image: falkordb/falkordb-server:6.0.3
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: FalkorDB
+          url: https://github.com/FalkorDB/FalkorDB
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 6.0.3
+    created: "2026-10-31T13:55:42.459804287Z"
+    description: FalkorDB Helm chart for Kubernetes. Graph database (openCypher, GraphRAG,
+      knowledge graphs for AI agents) on the official falkordb-server image, as a
+      single instance or highly available with replication and Redis Sentinel failover,
+      password auth by default, AOF persistence, non-root, Prometheus metrics and
+      helm test. Community chart by upstreamyard, not an official FalkorDB chart.
+      FalkorDB is licensed under SSPL-1.0.
+    digest: ec179a77a644b26f6dd7400940d1d8dd1bb40096c09655216343f5a181338819
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/falkordb
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - falkordb
+    - graph-database
+    - graphdb
+    - cypher
+    - opencypher
+    - knowledge-graph
+    - graphrag
+    - redis-sentinel
+    - high-availability
+    - database
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: falkordb
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/FalkorDB/FalkorDB
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/falkordb-0.1.4/falkordb-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
@@ -2546,6 +2788,63 @@ entries:
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: kvrocks
+          image: apache/kvrocks:2.17.0
+        - name: valkey
+          image: valkey/valkey:9.0.6-alpine
+        - name: haproxy
+          image: haproxy:3.2.25-alpine
+        - name: kvrocks-exporter
+          image: kvrocks/kvrocks-exporter:1.0.11
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache Kvrocks
+          url: https://github.com/apache/kvrocks
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2.17.0
+    created: "2026-10-31T13:55:42.66904519Z"
+    description: Apache Kvrocks Helm chart for Kubernetes. Redis-compatible key-value
+      database on RocksDB (data on disk, not in RAM) with high availability through
+      Redis Sentinel failover, a write endpoint that follows the master, password
+      auth by default, Prometheus metrics and memory sized to the pod, on the official
+      apache/kvrocks image. Community chart by upstreamyard, not an official Apache
+      Kvrocks chart.
+    digest: d5117b13269ada7f4ffe73e383cece266361a781a1454d1730fda54d97a0e35d
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/kvrocks
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - kvrocks
+    - apache-kvrocks
+    - redis
+    - redis-compatible
+    - redis-sentinel
+    - rocksdb
+    - key-value
+    - database
+    - high-availability
+    - redis-alternative
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: kvrocks
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/apache/kvrocks
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/kvrocks-0.1.3/kvrocks-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -2717,6 +3016,58 @@ entries:
   - annotations:
       artifacthub.io/category: ai-machine-learning
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: localai
+          image: localai/localai:v4.12.1
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: LocalAI
+          url: https://github.com/mudler/LocalAI
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 4.12.1
+    created: "2026-10-31T13:55:42.873592838Z"
+    description: LocalAI Helm chart for Kubernetes. Self-hosted OpenAI-compatible
+      API for LLMs, embeddings, images, speech and agents on CPU or GPU (NVIDIA CUDA,
+      AMD ROCm, Intel, Vulkan), as a single server or in distributed mode with scalable
+      frontends and GPU workers on PostgreSQL and NATS. API key by default, admin
+      account created on install, non-root, Prometheus metrics. Community chart by
+      upstreamyard, not an official LocalAI chart.
+    digest: 4c67384132ed1f1802653f3b7c67ed74886776feb8485603aca3c34b27015df1
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/localai
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - localai
+    - local-ai
+    - llm
+    - openai-api
+    - self-hosted-ai
+    - llm-inference
+    - llama-cpp
+    - gpu
+    - embeddings
+    - ollama-alternative
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: localai
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/mudler/LocalAI
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/localai-0.1.2/localai-0.1.2.tgz
+    version: 0.1.2
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -2819,6 +3170,49 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/localai-0.1.0/localai-0.1.0.tgz
     version: 0.1.0
   logto:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: logto
+          image: svhd/logto:1.45.0
+      artifacthub.io/license: MPL-2.0
+      artifacthub.io/links: |
+        - name: Logto project
+          url: https://github.com/logto-io/logto
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.45.0
+    created: "2026-10-31T13:55:43.091850743Z"
+    description: Logto, the open-source identity and access management platform (OIDC,
+      SSO, multi-tenancy) for apps and SaaS. Community chart by upstreamyard, not
+      an official Logto chart.
+    digest: 5c02888c779810b00a1d6a7abc9d5da2a855e7bbcd6fc3d529266d460fced649
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - logto
+    - authentication
+    - identity
+    - oidc
+    - sso
+    - oauth2
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: logto
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/logto-io/logto
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/logto-0.1.4/logto-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/changes: |
         - kind: added
@@ -2993,6 +3387,61 @@ entries:
   - annotations:
       artifacthub.io/category: security
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: nemo-guardrails
+          image: upstreamyard/nemo-guardrails:0.24.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: NeMo Guardrails project
+          url: https://github.com/NVIDIA-NeMo/Guardrails
+        - name: Container image
+          url: https://github.com/upstreamyard/nemo-guardrails
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.24.1
+    created: "2026-10-31T13:55:43.288978815Z"
+    description: NeMo Guardrails Helm chart for Kubernetes. NVIDIA NeMo Guardrails
+      server, an OpenAI-compatible LLM guardrails API with input, output and dialog
+      rails, your configurations from values or ConfigMaps, a config check before
+      rollout, autoscaling, NetworkPolicy and OpenTelemetry. Community chart by upstreamyard,
+      not an official NVIDIA chart.
+    digest: 757526b0271083c1a872b8fee4aee9f5af5743ebb21277aa2ed5606c62563cdb
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/nemo-guardrails
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - nemo-guardrails
+    - nemoguardrails
+    - nvidia-nemo
+    - guardrails
+    - llm-guardrails
+    - llm-security
+    - ai-safety
+    - prompt-injection
+    - jailbreak-detection
+    - content-moderation
+    - openai-compatible
+    - llm
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: nemo-guardrails
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/nemo-guardrails
+    - https://github.com/NVIDIA-NeMo/Guardrails
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.3/nemo-guardrails-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/category: security
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -3155,6 +3604,49 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.0/nemo-guardrails-0.1.0.tgz
     version: 0.1.0
   parse-server:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: parse-server
+          image: parseplatform/parse-server:9.10.7
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Parse Server project
+          url: https://github.com/parse-community/parse-server
+        - name: Container image
+          url: https://hub.docker.com/r/parseplatform/parse-server
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 9.10.7
+    created: "2026-10-31T13:55:43.497866578Z"
+    description: Parse Server, the open-source backend for mobile, web and IoT apps.
+      Community chart by upstreamyard, not an official Parse Server chart.
+    digest: 0bb7f310ff6625b5c0df8b24c49b0f88e7dbe4076931002a6aa02cd2f639732e
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - parse
+    - parse-server
+    - backend
+    - baas
+    - mongodb
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: parse-server
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/parse-community/parse-server
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/parse-server-0.1.6/parse-server-0.1.6.tgz
+    version: 0.1.6
   - annotations:
       artifacthub.io/changes: |
         - kind: added
@@ -3684,6 +4176,49 @@ entries:
   postal:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: postal
+          image: ghcr.io/postalserver/postal:3.3.7
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Postal project
+          url: https://github.com/postalserver/postal
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.3.7
+    created: "2026-10-31T13:55:43.690304129Z"
+    description: Postal, the open-source mail delivery platform for sending and receiving
+      email (web interface and API, SMTP server, workers). Community chart by upstreamyard,
+      not an official Postal chart.
+    digest: 0b888da352387fe27ddc28652b29a3ed1d31c8af28f061680be57347149b6710
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - postal
+    - email
+    - mail
+    - smtp
+    - mail-server
+    - transactional-email
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: postal
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/postalserver/postal
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/postal-0.1.3/postal-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -3811,6 +4346,54 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/postal-0.1.0/postal-0.1.0.tgz
     version: 0.1.0
   saleor:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: saleor
+          image: ghcr.io/saleor/saleor:3.23.45
+        - name: saleor-dashboard
+          image: ghcr.io/saleor/saleor-dashboard:3.23.41
+      artifacthub.io/license: BSD-3-Clause
+      artifacthub.io/links: |
+        - name: Saleor project
+          url: https://github.com/saleor/saleor
+        - name: Saleor dashboard
+          url: https://github.com/saleor/saleor-dashboard
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.23.45
+    created: "2026-10-31T13:55:43.894643623Z"
+    description: Saleor, the headless GraphQL commerce platform (API, Celery worker
+      and beat, dashboard). Community chart by upstreamyard, not an official Saleor
+      chart.
+    digest: 8de4535806e2b1611a4835644ba144cffcc879895dd3d3d82055992275cfe328
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - saleor
+    - ecommerce
+    - commerce
+    - headless
+    - graphql
+    - shop
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: saleor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/saleor/saleor
+    - https://github.com/saleor/saleor-dashboard
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/saleor-0.1.7/saleor-0.1.7.tgz
+    version: 0.1.7
   - annotations:
       artifacthub.io/changes: |
         - kind: added
@@ -4146,6 +4729,52 @@ entries:
   shardingsphere-proxy:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: shardingsphere-proxy
+          image: upstreamyard/shardingsphere-proxy:5.5.3
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache ShardingSphere project
+          url: https://github.com/apache/shardingsphere
+        - name: Container image
+          url: https://github.com/upstreamyard/shardingsphere-proxy
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 5.5.3
+    created: "2026-10-31T13:55:44.09047361Z"
+    description: Apache ShardingSphere-Proxy, the database proxy for sharding, read/write
+      splitting, encryption and masking in front of MySQL and PostgreSQL. Community
+      chart by upstreamyard, not an official Apache ShardingSphere chart.
+    digest: 5657d14637e8d14966003b17c80a7bf711a491834b03cbde7f8725cab1f5068b
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - shardingsphere
+    - sharding
+    - database-proxy
+    - mysql
+    - postgresql
+    - read-write-splitting
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: shardingsphere-proxy
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/shardingsphere-proxy
+    - https://github.com/apache/shardingsphere
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/shardingsphere-proxy-0.1.3/shardingsphere-proxy-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -4282,6 +4911,51 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/shardingsphere-proxy-0.1.0/shardingsphere-proxy-0.1.0.tgz
     version: 0.1.0
   supertokens:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: supertokens-postgresql
+          image: supertokens/supertokens-postgresql:12.4.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: SuperTokens project
+          url: https://github.com/supertokens/supertokens-core
+        - name: Container image
+          url: https://hub.docker.com/r/supertokens/supertokens-postgresql
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 12.4.1
+    created: "2026-10-31T13:55:44.380555795Z"
+    description: SuperTokens core, the open-source authentication server (sessions,
+      email/password, passwordless, social login, MFA), with PostgreSQL. Community
+      chart by upstreamyard, not an official SuperTokens chart.
+    digest: e3e29063ffb1469ebc1f469bef186118191428c8712e267b2d9dbb5d7c6a092b
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - supertokens
+    - authentication
+    - auth
+    - session
+    - login
+    - postgresql
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: supertokens
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/supertokens/supertokens-core
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/supertokens-0.1.4/supertokens-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/changes: |
         - kind: added
@@ -4464,6 +5138,56 @@ entries:
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: tigerbeetle
+          image: ghcr.io/tigerbeetle/tigerbeetle:0.17.9
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: TigerBeetle
+          url: https://github.com/tigerbeetle/tigerbeetle
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.17.9
+    created: "2026-10-31T13:55:44.656173635Z"
+    description: TigerBeetle Helm chart for Kubernetes. Fault-tolerant 3 or 6 replica
+      TigerBeetle cluster (financial transactions database for double-entry accounting)
+      on the official image, with safe replica recovery, non-root, Prometheus metrics
+      and helm test. Community chart by upstreamyard, not an official TigerBeetle
+      chart.
+    digest: 3eb77a924d8c77cda599f36347d259a2a6929b414ecbb1c8b6c61abfc309447d
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/tigerbeetle
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - tigerbeetle
+    - tigerbeetle-cluster
+    - financial-database
+    - ledger
+    - double-entry-accounting
+    - accounting
+    - payments
+    - oltp
+    - database
+    - high-availability
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: tigerbeetle
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/tigerbeetle/tigerbeetle
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/tigerbeetle-0.1.3/tigerbeetle-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -4613,6 +5337,48 @@ entries:
   xxl-job:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: xxl-job-admin
+          image: xuxueli/xxl-job-admin:3.5.0
+      artifacthub.io/license: GPL-3.0
+      artifacthub.io/links: |
+        - name: XXL-JOB project
+          url: https://github.com/xuxueli/xxl-job
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.5.0
+    created: "2026-10-31T13:55:44.864466828Z"
+    description: XXL-JOB admin (scheduling center), the distributed job scheduler
+      for Java services. Sets up the MySQL schema and its own admin password. Community
+      chart by upstreamyard, not an official XXL-JOB chart.
+    digest: c75376100a17d0048df76598690d11547fbe0bf6d8cf116beb653242603ed7b8
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - xxl-job
+    - scheduler
+    - cron
+    - job-scheduler
+    - distributed
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: xxl-job
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/xuxueli/xxl-job
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.3/xxl-job-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Support contact in the README
       artifacthub.io/images: |
@@ -4736,4 +5502,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-31T13:53:17.942682804Z"
+generated: "2026-10-31T13:55:44.864645668Z"
