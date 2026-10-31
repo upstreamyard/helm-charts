@@ -1,8 +1,8 @@
 # LocalAI Helm chart: the LocalAI self-hosted OpenAI-compatible AI server on Kubernetes
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 4.12.1](https://img.shields.io/badge/AppVersion-4.12.1-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 4.12.1](https://img.shields.io/badge/AppVersion-4.12.1-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for **[LocalAI](https://github.com/mudler/LocalAI)**, the self-hosted, OpenAI-compatible API for LLMs, embeddings, reranking, image generation, speech-to-text, text-to-speech and agents: an open-source alternative to the OpenAI API and Ollama that runs GGUF models with llama.cpp and many other backends on **CPU or GPU** (NVIDIA CUDA 12 and 13, AMD ROCm, Intel, Vulkan, NVIDIA Jetson). It runs a **single server**, or LocalAI's **distributed mode**: stateless API frontends that place models on **GPU worker pods**, coordinated through PostgreSQL and NATS, with failover between workers and several frontends for high availability. It is **secure by default**: a generated API key, user accounts with an **admin account the chart creates on install**, invite-only registration, workers reachable only from the frontends, non-root pods with a read-only root filesystem that pass the `restricted` Pod Security level. Models install declaratively (gallery names, Hugging Face, Ollama and OCI references, or model YAML), and the chart includes Prometheus metrics, a ServiceMonitor and a `helm test` that runs a real chat completion.
 

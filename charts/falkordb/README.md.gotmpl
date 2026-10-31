@@ -2,7 +2,7 @@
 
 {{ template "chart.versionBadge" . }}{{ template "chart.appVersionBadge" . }}
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for **[FalkorDB](https://github.com/FalkorDB/FalkorDB)**, the low-latency graph database for knowledge graphs, GraphRAG and AI agent memory, queried with openCypher. It runs a single instance or a **highly available primary with replicas and Redis Sentinel**, which promotes a replica automatically when the primary fails. A **password is required by default**, graphs are kept with AOF and RDB persistence, and Prometheus metrics, a ServiceMonitor and `helm test` are included. It uses FalkorDB's official `falkordb/falkordb-server` image (FalkorDB **6.0**), runs it as non-root on a read-only root filesystem, and replaces the Bitnami Redis chart workaround for running FalkorDB on Kubernetes.
 
