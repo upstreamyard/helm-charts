@@ -1,8 +1,8 @@
 # TigerBeetle Helm chart: a fault-tolerant TigerBeetle cluster on Kubernetes
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 0.17.9](https://img.shields.io/badge/AppVersion-0.17.9-informational?style=flat-square)
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 0.17.9](https://img.shields.io/badge/AppVersion-0.17.9-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for **[TigerBeetle](https://github.com/tigerbeetle/tigerbeetle)**, the financial transactions database for double-entry accounting (ledgers, payments, balances). It runs a **replicated TigerBeetle cluster of 3 or 6 replicas** (or a single replica for development) on TigerBeetle's **official image** `ghcr.io/tigerbeetle/tigerbeetle`. It handles what makes TigerBeetle hard on Kubernetes: stable IP addresses for every replica, formatting data files once, **safe recovery of a lost replica with `tigerbeetle recover`**, io_uring and seccomp, and **rolling upgrades without downtime**. Replicas run as non-root on a read-only filesystem, with a PodDisruptionBudget, anti-affinity, optional **Prometheus metrics** and a `helm test`.
 
