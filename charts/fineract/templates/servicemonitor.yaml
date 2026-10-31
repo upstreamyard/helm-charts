@@ -1,0 +1,29 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+# Scrapes every Fineract pod (write, read and batch Services).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "fineract.fullname" . }}
+  labels:
+    {{- include "fineract.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "fineract.selectorLabels" . | nindent 6 }}
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: [write, read, batch]
+  endpoints:
+    - port: {{ include "fineract.portName" . }}
+      path: /fineract-provider/actuator/prometheus
+      scheme: {{ include "fineract.portName" . }}
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- if include "fineract.tlsEnabled" . }}
+      tlsConfig:
+        insecureSkipVerify: true
+      {{- end }}
+{{- end }}

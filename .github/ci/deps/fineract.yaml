@@ -1,0 +1,56 @@
+# Test services for the fineract chart in kind; CI starts them when the chart changes. Not for production.
+# PostgreSQL 18 with the databases Fineract needs before its first start, one pair per ci/*-values.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fineract-postgres-init
+  namespace: deps
+data:
+  01-fineract.sql: |
+    CREATE USER fineract WITH PASSWORD 'fineract-ci';
+    CREATE DATABASE fineract_tenants OWNER fineract;
+    CREATE DATABASE fineract_default OWNER fineract;
+    CREATE DATABASE scaled_tenants OWNER fineract;
+    CREATE DATABASE scaled_default OWNER fineract;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fineract-postgres
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: fineract-postgres }
+  template:
+    metadata:
+      labels: { app: fineract-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          env:
+            - { name: POSTGRES_PASSWORD, value: postgres-ci }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              # TCP, so it only succeeds once the init script has created the databases.
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "fineract", "-d", "scaled_default"]
+            periodSeconds: 2
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init
+          configMap:
+            name: fineract-postgres-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fineract-postgres
+  namespace: deps
+spec:
+  selector: { app: fineract-postgres }
+  ports:
+    - port: 5432

@@ -1,0 +1,229 @@
+# Default values for the Apache Fineract chart.
+
+# -- Override the chart name.
+nameOverride: ""
+# -- Override the full name of the release's resources.
+fullnameOverride: ""
+
+image:
+  # -- Fineract image. Built from the signed Apache release; see https://github.com/upstreamyard/fineract
+  repository: upstreamyard/fineract
+  # -- Image tag. Defaults to the chart's appVersion (the Fineract version).
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets for private registries, e.g. `[{name: my-registry}]`.
+imagePullSecrets: []
+
+database:
+  # -- `postgresql` or `mariadb` (MariaDB needs utf8mb4 and `--innodb-snapshot-isolation=OFF`, see the README).
+  type: postgresql
+  # -- Database host (required), e.g. `fineract-postgres.db.svc`.
+  host: ""
+  # -- Port. Empty: 5432 for PostgreSQL, 3306 for MariaDB.
+  port: ""
+  # -- Tenant store database. Must exist before the install.
+  tenantsDatabase: fineract_tenants
+  # -- Database of the default tenant. Must exist before the install.
+  defaultTenantDatabase: fineract_default
+  # -- Login for both databases. It must be able to create tables in them.
+  username: fineract
+  # -- Password. Use `existingSecret` in production.
+  password: ""
+  # -- Existing Secret with the database password.
+  existingSecret: ""
+  # -- Key of the password in `existingSecret`.
+  existingSecretKey: password
+  # -- JDBC connection parameters for both databases, e.g. `sslmode=require` (PostgreSQL) or `sslMode=verify-full` (MariaDB).
+  parameters: ""
+
+tenant:
+  # -- Identifier of the default tenant; clients send it in the `Fineract-Platform-TenantId` header.
+  identifier: default
+  # -- Time zone of the default tenant, stored on the first install (Fineract's own default is Asia/Kolkata).
+  timezone: UTC
+  # -- Master password that encrypts the tenant's database password (required). Set it once and never change it.
+  masterPassword: ""
+  # -- Existing Secret with the master password.
+  existingSecret: ""
+  # -- Key of the master password in `existingSecret`.
+  existingSecretKey: master-password
+
+admin:
+  # -- Password that replaces `mifos`/`password` on the first start. Empty: generated and kept in the chart's Secret (key `admin-password`). 12–50 characters with upper and lower case, a digit and a special character, no spaces, no character twice in a row.
+  password: ""
+  # -- Existing Secret with the admin password.
+  existingSecret: ""
+  # -- Key of the admin password in `existingSecret`.
+  existingSecretKey: admin-password
+
+tls:
+  # -- `generated`: HTTPS on 8443 with a self-signed certificate per pod. `secret`: HTTPS with the certificate in `tls.secretName` or from cert-manager, reloaded on renewal. `disabled`: HTTP on 8080, TLS ends at your ingress or load balancer.
+  mode: generated
+  # -- With `mode: secret`: a `kubernetes.io/tls` Secret (keys `tls.crt`, `tls.key`). Empty with `certManager.enabled`: `<fullname>-tls`.
+  secretName: ""
+  certManager:
+    # -- Create a cert-manager Certificate for the chart's Services (needs `mode: secret`).
+    enabled: false
+    issuerRef:
+      # -- Issuer or ClusterIssuer name.
+      name: ""
+      # -- `Issuer` or `ClusterIssuer`.
+      kind: Issuer
+      # -- Issuer API group.
+      group: cert-manager.io
+    # -- Extra DNS names, e.g. your public host name. The Service names are always included.
+    dnsNames: []
+    # -- Certificate lifetime, e.g. `2160h`. Empty: the issuer's default.
+    duration: ""
+    # -- Renew this long before expiry, e.g. `360h`. Empty: cert-manager's default.
+    renewBefore: ""
+
+# -- Write pods (or all-in-one pods while `batch.enabled` is false). More than 1 requires `batch.enabled` and shared document storage.
+replicaCount: 1
+
+batch:
+  # -- Run scheduled jobs (close of business, interest posting, …) in their own pod. Always exactly 1 pod, so jobs run once.
+  enabled: false
+  # -- Resources of the batch pod. Empty: `resources`.
+  resources: {}
+
+reader:
+  # -- Read-only pods behind the `<fullname>-read` Service: they answer GET requests and refuse writes. Need shared document storage.
+  enabled: false
+  # -- Number of read pods.
+  replicaCount: 2
+  # -- Resources of the read pods. Empty: `resources`.
+  resources: {}
+
+migrations:
+  # -- Run database migrations in a Job before every install and upgrade (Fineract's `liquibase-only` mode). If false, the write pods migrate on start.
+  enabled: true
+  # -- Seconds before the migration Job is stopped.
+  activeDeadlineSeconds: 3600
+  # -- Retries of the migration Job.
+  backoffLimit: 1
+  # -- Resources of the migration Job. Empty: `resources`.
+  resources: {}
+
+persistence:
+  # -- Volume for uploaded documents and images (`/var/lib/fineract`). Without it they are lost when a pod restarts. The PVC is kept on `helm uninstall`.
+  enabled: true
+  # -- Use an existing PVC.
+  existingClaim: ""
+  # -- Storage class. Empty: the cluster default.
+  storageClass: ""
+  # -- Access modes. Several write pods or read pods need `[ReadWriteMany]` (set it to match `existingClaim` too).
+  accessModes:
+    - ReadWriteOnce
+  # -- Volume size.
+  size: 10Gi
+
+# -- Resources of every Fineract pod. Right after the start Fineract uses about 1.5 GiB; the heap is 60% of the limit.
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+
+# -- Extra Java options (`JAVA_OPTS`), added after the image's own.
+javaOpts: ""
+
+logging:
+  # -- One JSON object per log line.
+  json: false
+  # -- Log level of `org.apache.fineract`.
+  level: INFO
+
+service:
+  # -- Service type of the write Service (and the read and batch Services).
+  type: ClusterIP
+  # -- Annotations for the Services.
+  annotations: {}
+
+ingress:
+  # -- Ingress for the write Service. With `tls.mode` other than `disabled`, tell your controller the backend speaks HTTPS (README).
+  enabled: false
+  # -- Ingress class.
+  className: ""
+  # -- Ingress annotations.
+  annotations: {}
+  # -- Hosts and paths, e.g. `[{host: fineract.example.com, paths: [{path: /fineract-provider, pathType: Prefix}]}]`.
+  hosts: []
+  # -- TLS settings of the Ingress.
+  tls: []
+
+metrics:
+  serviceMonitor:
+    # -- ServiceMonitor for the Prometheus Operator (all Fineract pods, `/fineract-provider/actuator/prometheus`).
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects.
+    labels: {}
+
+probes:
+  # -- Startup budget in 10 s steps. A first start without the migration Job creates all tables (minutes).
+  startupFailureThreshold: 60
+  # -- Liveness probe failures before a restart (10 s apart).
+  livenessFailureThreshold: 6
+  # -- Readiness probe failures before the pod leaves the Service (10 s apart).
+  readinessFailureThreshold: 3
+
+# -- Seconds a pod has to stop. Fineract waits up to 30 s for running requests.
+terminationGracePeriodSeconds: 60
+
+podDisruptionBudget:
+  # -- PodDisruptionBudget (`maxUnavailable: 1`) for the write and read pods when they have more than 1 replica.
+  enabled: true
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- ServiceAccount name. Empty: the full name.
+  name: ""
+  # -- ServiceAccount annotations.
+  annotations: {}
+
+# -- Pod security context.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Extra environment variables for all Fineract containers, e.g. other `FINERACT_*` settings.
+extraEnv: []
+# -- Extra `envFrom` sources for all Fineract containers.
+extraEnvFrom: []
+# -- Extra volumes, e.g. JDBC drivers or plugins for `/app/plugins`.
+extraVolumes: []
+# -- Extra volume mounts for all Fineract containers.
+extraVolumeMounts: []
+
+# -- Pod annotations.
+podAnnotations: {}
+# -- Pod labels.
+podLabels: {}
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity. Empty: write and read pods prefer different nodes.
+affinity: {}
+
+tests:
+  # -- Include the `helm test` pod (readiness and an authenticated API call).
+  enabled: true
