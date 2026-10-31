@@ -1,0 +1,31 @@
+{{- $components := list "write" }}
+{{- if .Values.reader.enabled }}{{ $components = append $components "read" }}{{ end }}
+{{- if .Values.batch.enabled }}{{ $components = append $components "batch" }}{{ end }}
+{{- range $i, $component := $components }}
+{{- if $i }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ ternary (include "fineract.fullname" $) (include "fineract.componentName" (list $ $component)) (eq $component "write") }}
+  labels:
+    {{- include "fineract.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+  {{- with $.Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $.Values.service.type }}
+  selector:
+    {{- include "fineract.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+  ports:
+    - name: {{ include "fineract.portName" $ }}
+      port: {{ include "fineract.port" $ }}
+      targetPort: {{ include "fineract.portName" $ }}
+      {{- if eq (include "fineract.portName" $) "https" }}
+      appProtocol: https
+      {{- end }}
+{{- end }}

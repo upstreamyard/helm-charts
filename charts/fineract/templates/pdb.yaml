@@ -1,0 +1,23 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- $pdbs := list }}
+{{- if gt (int .Values.replicaCount) 1 }}{{ $pdbs = append $pdbs "write" }}{{ end }}
+{{- if and .Values.reader.enabled (gt (int .Values.reader.replicaCount) 1) }}{{ $pdbs = append $pdbs "read" }}{{ end }}
+{{- range $i, $component := $pdbs }}
+{{- if $i }}
+---
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "fineract.componentName" (list $ $component) }}
+  labels:
+    {{- include "fineract.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "fineract.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+{{- end }}
+{{- end }}

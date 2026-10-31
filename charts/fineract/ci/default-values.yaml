@@ -1,0 +1,13 @@
+# One all-in-one Fineract pod on PostgreSQL 18 (.github/ci/deps/fineract.yaml), HTTPS with a
+# generated certificate, generated admin password, documents on a volume.
+database:
+  host: fineract-postgres.deps.svc
+  password: fineract-ci
+tenant:
+  masterPassword: ci-master-password
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    memory: 2Gi

@@ -1,0 +1,72 @@
+{{- if .Values.tests.enabled }}
+{{- $scheme := lower (include "fineract.scheme" .) }}
+{{- $port := include "fineract.port" . }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "fineract.fullname" . }}-test
+  labels:
+    {{- include "fineract.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      image: {{ include "fineract.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: ADMIN_PASSWORD
+          {{- include "fineract.secretRef" (list (include "fineract.fullname" .) .Values.admin.existingSecret .Values.admin.existingSecretKey "admin-password") | nindent 10 }}
+        - name: TENANT
+          value: {{ .Values.tenant.identifier | quote }}
+      command:
+        - sh
+        - -ec
+        - |
+          base={{ $scheme }}://{{ include "fineract.fullname" . }}:{{ $port }}/fineract-provider
+          call() { curl -sk -o /dev/null -w '%{http_code}' -u "mifos:$ADMIN_PASSWORD" -H "Fineract-Platform-TenantId: $TENANT" "$1"; }
+          curl -fsk -o /dev/null "$base/actuator/health/readiness"
+          echo "write Service ready"
+          # The admin password is set a few seconds after the pod becomes ready.
+          i=0
+          until [ "$(call "$base/api/v1/offices")" = 200 ]; do
+            i=$((i + 1)); [ "$i" -lt 60 ] || { echo "API login as mifos failed: HTTP $(call "$base/api/v1/offices")"; exit 1; }
+            sleep 5
+          done
+          echo "API: GET /offices as mifos with the admin password: 200"
+          {{- if .Values.reader.enabled }}
+          read={{ $scheme }}://{{ include "fineract.componentName" (list . "read") }}:{{ $port }}/fineract-provider
+          [ "$(call "$read/api/v1/offices")" = 200 ] || { echo "read Service: GET failed"; exit 1; }
+          echo "read Service: GET /offices: 200"
+          {{- end }}
+          {{- if .Values.batch.enabled }}
+          batch={{ $scheme }}://{{ include "fineract.componentName" (list . "batch") }}:{{ $port }}/fineract-provider
+          [ "$(call "$batch/api/v1/jobs")" = 200 ] || { echo "batch Service: jobs API failed"; exit 1; }
+          echo "batch Service: GET /jobs: 200"
+          {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}
+{{- end }}

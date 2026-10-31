@@ -1,0 +1,18 @@
+{{- /*
+Write pods: with batch.enabled=false they also run the scheduled jobs (role "all"), so there is
+exactly one of them and it is replaced with Recreate: two schedulers must never overlap. With a
+separate batch pod they roll, unless a ReadWriteOnce volume forbids two pods at once.
+*/}}
+{{- $shared := include "fineract.sharedDocuments" . }}
+{{- $writeRole := ternary "write" "all" .Values.batch.enabled }}
+{{- $writeStrategy := ternary "RollingUpdate" "Recreate" (and .Values.batch.enabled (or (not .Values.persistence.enabled) (eq $shared "true"))) }}
+{{- include "fineract.deployment" (list . "write" $writeRole .Values.replicaCount .Values.resources $writeStrategy .Values.persistence.enabled) }}
+{{- if .Values.reader.enabled }}
+---
+{{- include "fineract.deployment" (list . "read" "read" .Values.reader.replicaCount (default .Values.resources .Values.reader.resources) "RollingUpdate" (eq $shared "true")) }}
+{{- end }}
+{{- if .Values.batch.enabled }}
+---
+{{- /* Always one batch pod, replaced with Recreate, so scheduled jobs run once. */}}
+{{- include "fineract.deployment" (list . "batch" "batch" 1 (default .Values.resources .Values.batch.resources) "Recreate" (eq $shared "true")) }}
+{{- end }}

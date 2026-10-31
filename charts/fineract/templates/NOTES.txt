@@ -1,0 +1,36 @@
+{{- $scheme := lower (include "fineract.scheme" .) }}
+{{- $port := include "fineract.port" . }}
+Apache Fineract {{ include "fineract.version" . }} is starting. The API is at
+
+  {{ $scheme }}://{{ include "fineract.fullname" . }}.{{ .Release.Namespace }}.svc:{{ $port }}/fineract-provider/api/v1
+  {{- if .Values.reader.enabled }}
+  {{ $scheme }}://{{ include "fineract.componentName" (list . "read") }}.{{ .Release.Namespace }}.svc:{{ $port }}/fineract-provider/api/v1   (read-only: GET requests)
+  {{- end }}
+  {{- if .Values.batch.enabled }}
+  {{ $scheme }}://{{ include "fineract.componentName" (list . "batch") }}.{{ .Release.Namespace }}.svc:{{ $port }}/fineract-provider/api/v1   (scheduler and jobs API)
+  {{- end }}
+
+Log in as user "mifos" with header "Fineract-Platform-TenantId: {{ .Values.tenant.identifier }}". Admin password:
+{{- if .Values.admin.existingSecret }}
+  kubectl get secret -n {{ .Release.Namespace }} {{ .Values.admin.existingSecret }} -o jsonpath='{.data.{{ .Values.admin.existingSecretKey }}}' | base64 -d
+{{- else }}
+  kubectl get secret -n {{ .Release.Namespace }} {{ include "fineract.fullname" . }} -o jsonpath='{.data.admin-password}' | base64 -d
+{{- end }}
+
+Try it:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "fineract.fullname" . }} {{ $port }}:{{ $port }}
+  curl -k -u "mifos:<admin password>" -H 'Fineract-Platform-TenantId: {{ .Values.tenant.identifier }}' {{ $scheme }}://localhost:{{ $port }}/fineract-provider/api/v1/offices
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Keep the tenant master password safe. Fineract stores the tenant's database password encrypted with it
+and does not start with another one.
+{{- if eq .Values.tls.mode "generated" }}
+
+TLS: every pod serves a self-signed certificate that it generates at start. For clients outside the
+cluster, set tls.mode=secret (your certificate or cert-manager) or terminate TLS at your ingress.
+{{- end }}
+{{- if not .Values.persistence.enabled }}
+
+WARNING: persistence is off. Uploaded documents and images are lost when a pod restarts, unless you
+configured S3 storage in extraEnv.
+{{- end }}

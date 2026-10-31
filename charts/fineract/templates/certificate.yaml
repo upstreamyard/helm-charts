@@ -1,0 +1,33 @@
+{{- if .Values.tls.certManager.enabled }}
+{{- $ns := .Release.Namespace }}
+{{- $names := list (include "fineract.fullname" .) }}
+{{- if .Values.reader.enabled }}{{ $names = append $names (include "fineract.componentName" (list . "read")) }}{{ end }}
+{{- if .Values.batch.enabled }}{{ $names = append $names (include "fineract.componentName" (list . "batch")) }}{{ end }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "fineract.fullname" . }}
+  labels:
+    {{- include "fineract.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "fineract.tlsSecretName" . }}
+  issuerRef:
+    {{- toYaml .Values.tls.certManager.issuerRef | nindent 4 }}
+  commonName: {{ include "fineract.fullname" . }}.{{ $ns }}.svc
+  dnsNames:
+    {{- range $names }}
+    - {{ . }}
+    - {{ . }}.{{ $ns }}
+    - {{ . }}.{{ $ns }}.svc
+    - {{ . }}.{{ $ns }}.svc.cluster.local
+    {{- end }}
+    {{- range .Values.tls.certManager.dnsNames }}
+    - {{ . }}
+    {{- end }}
+  {{- with .Values.tls.certManager.duration }}
+  duration: {{ . }}
+  {{- end }}
+  {{- with .Values.tls.certManager.renewBefore }}
+  renewBefore: {{ . }}
+  {{- end }}
+{{- end }}

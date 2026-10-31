@@ -1,0 +1,27 @@
+# Two write pods, one read pod and one batch pod on their own databases, plain HTTP, admin
+# password from values. Documents are not persisted (kind has no ReadWriteMany storage).
+database:
+  host: fineract-postgres.deps.svc
+  password: fineract-ci
+  tenantsDatabase: scaled_tenants
+  defaultTenantDatabase: scaled_default
+tenant:
+  masterPassword: ci-master-password
+admin:
+  password: Ci-Adm1n#Pw-2026
+replicaCount: 2
+batch:
+  enabled: true
+reader:
+  enabled: true
+  replicaCount: 1
+persistence:
+  enabled: false
+tls:
+  mode: disabled
+resources:
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    memory: 2Gi
