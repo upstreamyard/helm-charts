@@ -2784,6 +2784,59 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/falkordb-0.1.0/falkordb-0.1.0.tgz
     version: 0.1.0
+  fineract:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: First release of the Apache Fineract chart (Fineract 1.16.1)
+      artifacthub.io/images: |
+        - name: fineract
+          image: upstreamyard/fineract:1.16.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache Fineract
+          url: https://github.com/apache/fineract
+        - name: Container image
+          url: https://github.com/upstreamyard/fineract
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.16.1
+    created: "2026-10-31T17:34:22.373884264Z"
+    description: Apache Fineract Helm chart for Kubernetes. Open-source core banking
+      platform (loans, savings, accounting) with database migrations in a Job, scalable
+      write, read and batch instances, generated admin password instead of mifos/password,
+      TLS with cert-manager, Prometheus metrics, PostgreSQL or MariaDB. Community
+      chart by upstreamyard, not an official Apache Fineract chart.
+    digest: 7affd8ada3b603c1fd9dbce701a71e72f7108cc82437149ee8575c431e537a57
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/fineract
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - fineract
+    - apache-fineract
+    - mifos
+    - core-banking
+    - banking
+    - microfinance
+    - fintech
+    - loans
+    - savings
+    - accounting
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: fineract
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/fineract
+    - https://github.com/apache/fineract
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/fineract-0.1.0/fineract-0.1.0.tgz
+    version: 0.1.0
   kvrocks:
   - annotations:
       artifacthub.io/category: database
@@ -5502,4 +5555,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-31T13:55:44.864645668Z"
+generated: "2026-10-31T17:34:22.374064024Z"
