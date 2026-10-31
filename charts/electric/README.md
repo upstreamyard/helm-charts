@@ -1,8 +1,8 @@
 # Electric Helm chart
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![AppVersion: 1.8.1](https://img.shields.io/badge/AppVersion-1.8.1-informational?style=flat-square)
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 1.8.1](https://img.shields.io/badge/AppVersion-1.8.1-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for the [Electric](https://github.com/electric-sql/electric) sync engine. Electric reads changes from PostgreSQL through logical replication and syncs subsets of your tables ("shapes") to web and mobile apps over HTTP, so each client keeps a live local copy. It uses Electric's official image [`electricsql/electric`](https://hub.docker.com/r/electricsql/electric).
 
