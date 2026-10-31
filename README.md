@@ -2,7 +2,7 @@
 
 # upstreamyard Helm charts
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm charts maintained by [upstreamyard](https://github.com/upstreamyard), for our own container images and for projects' official images.
 

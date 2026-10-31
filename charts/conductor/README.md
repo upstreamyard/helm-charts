@@ -1,8 +1,8 @@
 # Conductor Helm chart
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 3.33.0](https://img.shields.io/badge/AppVersion-3.33.0-informational?style=flat-square)
+![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 3.33.0](https://img.shields.io/badge/AppVersion-3.33.0-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues or custom changes, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
 
 Helm chart for [Conductor OSS](https://github.com/conductor-oss/conductor), the open-source workflow orchestration engine originally built at Netflix. It uses the [`upstreamyard/conductor`](https://github.com/upstreamyard/conductor) image, which contains the server and the UI.
 
