@@ -2,7 +2,7 @@ apiVersion: v2
 name: supertokens
 description: SuperTokens core, the open-source authentication server (sessions, email/password, passwordless, social login, MFA), with PostgreSQL. Community chart by upstreamyard, not an official SuperTokens chart.
 type: application
-version: 0.1.4
+version: 0.1.5
 appVersion: "12.4.1"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
