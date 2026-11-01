@@ -1,8 +1,8 @@
 # Fineract Helm chart: Apache Fineract core banking on Kubernetes
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![AppVersion: 1.16.1](https://img.shields.io/badge/AppVersion-1.16.1-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![AppVersion: 1.16.1](https://img.shields.io/badge/AppVersion-1.16.1-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
 Helm chart for **[Apache Fineract](https://github.com/apache/fineract)**, the open-source core banking platform for loans, savings, clients and accounting, used by banks, microfinance institutions and fintechs (Mifos). It runs **database migrations in a Job** before every install and upgrade, scales with Fineract's **write, read and batch instances** so that **scheduled jobs run exactly once**, and replaces the default `mifos`/`password` login with a **generated admin password**. TLS comes from a per-pod certificate, your own Secret or **cert-manager with reload on renewal**. It supports **PostgreSQL and MariaDB**, Prometheus metrics with a ServiceMonitor, and `helm test`. It runs **Fineract 1.16.1** through the [`upstreamyard/fineract`](https://github.com/upstreamyard/fineract) image, which is built from the signed Apache release.
 
