@@ -1398,6 +1398,50 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 2026.10.0
+    created: "2026-11-01T18:36:18.011662353Z"
+    description: Discourse, the open-source community forum. Community chart by upstreamyard,
+      not an official Discourse chart.
+    digest: 485dcecac030b8a82c2e0e471ff3cd026c46fad223c6fceaac6dd155ba8f795e
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - discourse
+    - forum
+    - community
+    - discussion
+    - chat
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: discourse
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/discourse
+    - https://github.com/discourse/discourse
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.6/discourse-0.1.6.tgz
+    version: 0.1.6
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: discourse
+          image: upstreamyard/discourse:2026.10.0
+      artifacthub.io/license: GPL-2.0-or-later
+      artifacthub.io/links: |
+        - name: Discourse project
+          url: https://github.com/discourse/discourse
+        - name: Container image
+          url: https://github.com/upstreamyard/discourse
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2026.10.0
     created: "2026-10-31T13:55:41.629999974Z"
     description: Discourse, the open-source community forum. Community chart by upstreamyard,
       not an official Discourse chart.
@@ -1643,6 +1687,58 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.0/discourse-0.1.0.tgz
     version: 0.1.0
   docling-serve:
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: docling-serve-cpu
+          image: ghcr.io/docling-project/docling-serve-cpu:v1.38.2
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Docling Serve
+          url: https://github.com/docling-project/docling-serve
+        - name: Container images
+          url: https://github.com/docling-project/docling-serve#container-images
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.38.2
+    created: "2026-11-01T18:36:18.166375052Z"
+    description: Docling Serve Helm chart for Kubernetes. Document conversion API
+      (PDF, DOCX, PPTX, HTML, images to Markdown and JSON) for RAG pipelines, with
+      API key auth by default, scalable RQ workers on Redis, KEDA queue autoscaling,
+      CPU and CUDA images and Prometheus metrics. Community chart by upstreamyard,
+      not an official Docling chart.
+    digest: c4f097434cd29809cb52092feb2df63cc79098f6f9992c36930b39bcf803017b
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/docling-serve
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - docling
+    - docling-serve
+    - document-conversion
+    - pdf
+    - pdf-to-markdown
+    - ocr
+    - rag
+    - document-parsing
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: docling-serve
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/docling-project/docling-serve
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/docling-serve-0.1.7/docling-serve-0.1.7.tgz
+    version: 0.1.7
   - annotations:
       artifacthub.io/category: ai-machine-learning
       artifacthub.io/changes: |
@@ -2006,6 +2102,55 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/docling-serve-0.1.0/docling-serve-0.1.0.tgz
     version: 0.1.0
   dolt:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Update dolt-sql-server to 2.6.2
+      artifacthub.io/images: |
+        - name: dolt-sql-server
+          image: dolthub/dolt-sql-server:2.6.2
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Dolt
+          url: https://github.com/dolthub/dolt
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2.6.2
+    created: "2026-11-01T18:36:18.321683992Z"
+    description: Dolt Helm chart for Kubernetes. The version-controlled, MySQL-compatible
+      SQL database (branch, merge, diff and clone your data like Git) with high availability
+      through primary/standby replication, failover, Prometheus metrics and generated
+      passwords. Community chart by upstreamyard, not an official Dolt chart.
+    digest: 14f7e0ddcdcd2fd6366cec9f91fdebb7de4851b80348bdb57cd6bf7fd61aab6b
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/dolt
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - dolt
+    - dolthub
+    - dolt-sql-server
+    - database
+    - sql
+    - mysql
+    - version-control
+    - git-for-data
+    - replication
+    - high-availability
+    kubeVersion: '>=1.27.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: dolt
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/dolthub/dolt
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/dolt-0.1.8/dolt-0.1.8.tgz
+    version: 0.1.8
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
@@ -2396,6 +2541,52 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/dolt-0.1.0/dolt-0.1.0.tgz
     version: 0.1.0
   electric:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: electric
+          image: electricsql/electric:1.8.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Electric project
+          url: https://github.com/electric-sql/electric
+        - name: Container image
+          url: https://hub.docker.com/r/electricsql/electric
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.1
+    created: "2026-11-01T18:36:18.476996119Z"
+    description: Electric sync engine, which syncs subsets of your PostgreSQL data
+      to web and mobile apps in real time over HTTP. Community chart by upstreamyard,
+      not an official ElectricSQL chart.
+    digest: e13cd5582f7a77ca50ee8be9f0dbb3ed2031c61dd7693d18c118e3b1a9efdac9
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - electric
+    - electricsql
+    - sync
+    - postgresql
+    - logical-replication
+    - realtime
+    - local-first
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: electric
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/electric-sql/electric
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/electric-0.1.4/electric-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -5644,6 +5835,48 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 3.5.0
+    created: "2026-11-01T18:36:18.638585709Z"
+    description: XXL-JOB admin (scheduling center), the distributed job scheduler
+      for Java services. Sets up the MySQL schema and its own admin password. Community
+      chart by upstreamyard, not an official XXL-JOB chart.
+    digest: 2106c737d769270fdbecb8e7112b4e4093c3a86e6dcb579d12b9059f16dde174
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - xxl-job
+    - scheduler
+    - cron
+    - job-scheduler
+    - distributed
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: xxl-job
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/xuxueli/xxl-job
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.4/xxl-job-0.1.4.tgz
+    version: 0.1.4
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: xxl-job-admin
+          image: xuxueli/xxl-job-admin:3.5.0
+      artifacthub.io/license: GPL-3.0
+      artifacthub.io/links: |
+        - name: XXL-JOB project
+          url: https://github.com/xuxueli/xxl-job
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.5.0
     created: "2026-10-31T13:55:44.864466828Z"
     description: XXL-JOB admin (scheduling center), the distributed job scheduler
       for Java services. Sets up the MySQL schema and its own admin password. Community
@@ -5794,4 +6027,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T18:33:09.544626369Z"
+generated: "2026-11-01T18:36:18.638738956Z"
