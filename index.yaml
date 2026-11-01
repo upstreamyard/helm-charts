@@ -2973,6 +2973,57 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 6.0.3
+    created: "2026-11-01T18:39:14.087156571Z"
+    description: FalkorDB Helm chart for Kubernetes. Graph database (openCypher, GraphRAG,
+      knowledge graphs for AI agents) on the official falkordb-server image, as a
+      single instance or highly available with replication and Redis Sentinel failover,
+      password auth by default, AOF persistence, non-root, Prometheus metrics and
+      helm test. Community chart by upstreamyard, not an official FalkorDB chart.
+      FalkorDB is licensed under SSPL-1.0.
+    digest: b6a5450b6ca0064b6ad1a512f56276c2b8b2f29d47599c6337d8839d3475ad5e
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/falkordb
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - falkordb
+    - graph-database
+    - graphdb
+    - cypher
+    - opencypher
+    - knowledge-graph
+    - graphrag
+    - redis-sentinel
+    - high-availability
+    - database
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: falkordb
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/FalkorDB/FalkorDB
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/falkordb-0.1.5/falkordb-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: falkordb-server
+          image: falkordb/falkordb-server:6.0.3
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: FalkorDB
+          url: https://github.com/FalkorDB/FalkorDB
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 6.0.3
     created: "2026-10-31T13:55:42.459804287Z"
     description: FalkorDB Helm chart for Kubernetes. Graph database (openCypher, GraphRAG,
       knowledge graphs for AI agents) on the official falkordb-server image, as a
@@ -3228,6 +3279,58 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 1.16.1
+    created: "2026-11-01T18:39:14.268285717Z"
+    description: Apache Fineract Helm chart for Kubernetes. Open-source core banking
+      platform (loans, savings, accounting) with database migrations in a Job, scalable
+      write, read and batch instances, generated admin password instead of mifos/password,
+      TLS with cert-manager, Prometheus metrics, PostgreSQL or MariaDB. Community
+      chart by upstreamyard, not an official Apache Fineract chart.
+    digest: f99c4bb938234f9e655cde4c5fe17fd383216783381e613bc66d01db23dbb303
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/fineract
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - fineract
+    - apache-fineract
+    - mifos
+    - core-banking
+    - banking
+    - microfinance
+    - fintech
+    - loans
+    - savings
+    - accounting
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: fineract
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/fineract
+    - https://github.com/apache/fineract
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/fineract-0.1.1/fineract-0.1.1.tgz
+    version: 0.1.1
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: First release of the Apache Fineract chart (Fineract 1.16.1)
+      artifacthub.io/images: |
+        - name: fineract
+          image: upstreamyard/fineract:1.16.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache Fineract
+          url: https://github.com/apache/fineract
+        - name: Container image
+          url: https://github.com/upstreamyard/fineract
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.16.1
     created: "2026-10-31T17:34:22.373884264Z"
     description: Apache Fineract Helm chart for Kubernetes. Open-source core banking
       platform (loans, savings, accounting) with database migrations in a Job, scalable
@@ -3262,6 +3365,63 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/fineract-0.1.0/fineract-0.1.0.tgz
     version: 0.1.0
   kvrocks:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: kvrocks
+          image: apache/kvrocks:2.17.0
+        - name: valkey
+          image: valkey/valkey:9.0.6-alpine
+        - name: haproxy
+          image: haproxy:3.2.25-alpine
+        - name: kvrocks-exporter
+          image: kvrocks/kvrocks-exporter:1.0.11
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache Kvrocks
+          url: https://github.com/apache/kvrocks
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2.17.0
+    created: "2026-11-01T18:39:14.482282948Z"
+    description: Apache Kvrocks Helm chart for Kubernetes. Redis-compatible key-value
+      database on RocksDB (data on disk, not in RAM) with high availability through
+      Redis Sentinel failover, a write endpoint that follows the master, password
+      auth by default, Prometheus metrics and memory sized to the pod, on the official
+      apache/kvrocks image. Community chart by upstreamyard, not an official Apache
+      Kvrocks chart.
+    digest: d60d6e729a0ee7ed99b6ed87dbf3c84b26d132791f53f2e46899cced45f8f6da
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/kvrocks
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - kvrocks
+    - apache-kvrocks
+    - redis
+    - redis-compatible
+    - redis-sentinel
+    - rocksdb
+    - key-value
+    - database
+    - high-availability
+    - redis-alternative
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: kvrocks
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/apache/kvrocks
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/kvrocks-0.1.4/kvrocks-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
@@ -5411,6 +5571,52 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 5.5.3
+    created: "2026-11-01T18:39:14.707439059Z"
+    description: Apache ShardingSphere-Proxy, the database proxy for sharding, read/write
+      splitting, encryption and masking in front of MySQL and PostgreSQL. Community
+      chart by upstreamyard, not an official Apache ShardingSphere chart.
+    digest: 45dea349fe1687547ab463e45859f1772a093b5c90e13b45fb1d74d7260c011f
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - shardingsphere
+    - sharding
+    - database-proxy
+    - mysql
+    - postgresql
+    - read-write-splitting
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: shardingsphere-proxy
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/shardingsphere-proxy
+    - https://github.com/apache/shardingsphere
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/shardingsphere-proxy-0.1.4/shardingsphere-proxy-0.1.4.tgz
+    version: 0.1.4
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: shardingsphere-proxy
+          image: upstreamyard/shardingsphere-proxy:5.5.3
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache ShardingSphere project
+          url: https://github.com/apache/shardingsphere
+        - name: Container image
+          url: https://github.com/upstreamyard/shardingsphere-proxy
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 5.5.3
     created: "2026-10-31T13:55:44.09047361Z"
     description: Apache ShardingSphere-Proxy, the database proxy for sharding, read/write
       splitting, encryption and masking in front of MySQL and PostgreSQL. Community
@@ -6259,4 +6465,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T18:38:07.707018045Z"
+generated: "2026-11-01T18:39:14.707766265Z"
