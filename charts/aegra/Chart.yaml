@@ -2,7 +2,7 @@ apiVersion: v2
 name: aegra
 description: Aegra, the open-source self-hosted alternative to LangGraph Platform. Community chart by upstreamyard, not an official Aegra chart.
 type: application
-version: 0.1.7
+version: 0.1.8
 appVersion: "0.11.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
