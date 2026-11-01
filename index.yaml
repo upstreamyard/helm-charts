@@ -21,6 +21,58 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 6.4.0
+    created: "2026-11-01T18:38:07.107887628Z"
+    description: Apache ActiveMQ Classic Helm chart for Kubernetes. Secure JMS, AMQP,
+      STOMP and MQTT message broker with high availability (JDBC or shared storage
+      master/slave), Prometheus metrics and ActiveMQ 6.3, 6.2 and 5.19 images. Community
+      chart by upstreamyard, not an official Apache ActiveMQ chart.
+    digest: ca07b000859c529135a5f5c3a85c5a88514f0cd2ac859c17c75efb7e9e32ed27
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/activemq
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - activemq
+    - activemq-classic
+    - apache-activemq
+    - jms
+    - message-broker
+    - messaging
+    - queue
+    - amqp
+    - stomp
+    - mqtt
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: activemq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/activemq
+    - https://github.com/apache/activemq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/activemq-0.1.5/activemq-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: activemq
+          image: upstreamyard/activemq:6.4.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Apache ActiveMQ
+          url: https://github.com/apache/activemq
+        - name: Container image
+          url: https://github.com/upstreamyard/activemq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 6.4.0
     created: "2026-10-31T13:53:16.599687817Z"
     description: Apache ActiveMQ Classic Helm chart for Kubernetes. Secure JMS, AMQP,
       STOMP and MQTT message broker with high availability (JDBC or shared storage
@@ -261,6 +313,50 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/activemq-0.1.0/activemq-0.1.0.tgz
     version: 0.1.0
   aegra:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: aegra
+          image: upstreamyard/aegra:0.11.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Aegra project
+          url: https://github.com/aegra/aegra
+        - name: Container image
+          url: https://github.com/upstreamyard/aegra
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.11.0
+    created: "2026-11-01T18:38:07.21929116Z"
+    description: Aegra, the open-source self-hosted alternative to LangGraph Platform.
+      Community chart by upstreamyard, not an official Aegra chart.
+    digest: 7898c2029856a1daf7704621c5bcd668b4f0825702e9dc6a5dc64cd869d09d92
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - aegra
+    - langgraph
+    - agents
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: aegra
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/aegra
+    - https://github.com/aegra/aegra
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/aegra-0.1.8/aegra-0.1.8.tgz
+    version: 0.1.8
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -830,6 +926,51 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 3.33.0
+    created: "2026-11-01T18:38:07.356435873Z"
+    description: Conductor OSS, the open-source workflow orchestration engine originally
+      built at Netflix, with UI. Community chart by upstreamyard, not an official
+      Conductor chart.
+    digest: 2f0d9152f5ff7f9c1a7a07bb79d8d32f14e365b5ce3ce225987c658161dc1106
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - conductor
+    - workflow
+    - orchestration
+    - microservices
+    - netflix
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: conductor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/conductor
+    - https://github.com/conductor-oss/conductor
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.5/conductor-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: conductor
+          image: upstreamyard/conductor:3.33.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Conductor project
+          url: https://github.com/conductor-oss/conductor
+        - name: Container image
+          url: https://github.com/upstreamyard/conductor
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.33.0
     created: "2026-10-31T13:53:17.33346825Z"
     description: Conductor OSS, the open-source workflow orchestration engine originally
       built at Netflix, with UI. Community chart by upstreamyard, not an official
@@ -1036,6 +1177,49 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.0/conductor-0.1.0.tgz
     version: 0.1.0
   cube:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: cube
+          image: cubejs/cube:v1.8.15
+        - name: cubestore
+          image: cubejs/cubestore:v1.8.15
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Cube project
+          url: https://github.com/cube-js/cube
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.15
+    created: "2026-11-01T18:38:07.517550347Z"
+    description: Cube, the open-source semantic layer and data API for BI and AI,
+      with Cube Store. Community chart by upstreamyard, not an official Cube chart.
+    digest: 0b201b63a9e28aae435b221e6435125538b6afa0ed09362961e3f0d43c96f820
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - cube
+    - semantic-layer
+    - analytics
+    - olap
+    - bi
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: cube
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/cube-js/cube
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/cube-0.1.8/cube-0.1.8.tgz
+    version: 0.1.8
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -4800,6 +4984,54 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 3.23.45
+    created: "2026-11-01T18:38:07.70670941Z"
+    description: Saleor, the headless GraphQL commerce platform (API, Celery worker
+      and beat, dashboard). Community chart by upstreamyard, not an official Saleor
+      chart.
+    digest: 561542e3cd37d4e2595482da36ee740647623a896e8506754639473cc4c52d14
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - saleor
+    - ecommerce
+    - commerce
+    - headless
+    - graphql
+    - shop
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: saleor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/saleor/saleor
+    - https://github.com/saleor/saleor-dashboard
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/saleor-0.1.8/saleor-0.1.8.tgz
+    version: 0.1.8
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: saleor
+          image: ghcr.io/saleor/saleor:3.23.45
+        - name: saleor-dashboard
+          image: ghcr.io/saleor/saleor-dashboard:3.23.41
+      artifacthub.io/license: BSD-3-Clause
+      artifacthub.io/links: |
+        - name: Saleor project
+          url: https://github.com/saleor/saleor
+        - name: Saleor dashboard
+          url: https://github.com/saleor/saleor-dashboard
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.23.45
     created: "2026-10-31T13:55:43.894643623Z"
     description: Saleor, the headless GraphQL commerce platform (API, Celery worker
       and beat, dashboard). Community chart by upstreamyard, not an official Saleor
@@ -6027,4 +6259,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T18:36:18.638738956Z"
+generated: "2026-11-01T18:38:07.707018045Z"
