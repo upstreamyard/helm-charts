@@ -1,8 +1,8 @@
 # Cube Helm chart
 
-![Version: 0.1.7](https://img.shields.io/badge/Version-0.1.7-informational?style=flat-square) ![AppVersion: 1.8.15](https://img.shields.io/badge/AppVersion-1.8.15-informational?style=flat-square)
+![Version: 0.1.8](https://img.shields.io/badge/Version-0.1.8-informational?style=flat-square) ![AppVersion: 1.8.15](https://img.shields.io/badge/AppVersion-1.8.15-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
 Helm chart for [Cube](https://github.com/cube-js/cube), the open-source semantic layer and data API for BI and AI. It runs Cube's production setup on Kubernetes with Cube's official images [`cubejs/cube`](https://hub.docker.com/r/cubejs/cube) and [`cubejs/cubestore`](https://hub.docker.com/r/cubejs/cubestore): API pods, a refresh worker, and a Cube Store cluster (router and workers) for pre-aggregations.
 

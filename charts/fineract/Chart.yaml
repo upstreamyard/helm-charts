@@ -2,7 +2,7 @@ apiVersion: v2
 name: fineract
 description: Apache Fineract Helm chart for Kubernetes. Open-source core banking platform (loans, savings, accounting) with database migrations in a Job, scalable write, read and batch instances, generated admin password instead of mifos/password, TLS with cert-manager, Prometheus metrics, PostgreSQL or MariaDB. Community chart by upstreamyard, not an official Apache Fineract chart.
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "1.16.1"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/fineract

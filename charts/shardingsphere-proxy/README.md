@@ -1,8 +1,8 @@
 # ShardingSphere-Proxy Helm chart
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 5.5.3](https://img.shields.io/badge/AppVersion-5.5.3-informational?style=flat-square)
+![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 5.5.3](https://img.shields.io/badge/AppVersion-5.5.3-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
 Helm chart for [Apache ShardingSphere-Proxy](https://github.com/apache/shardingsphere), the database proxy that adds sharding, read/write splitting, encryption and masking in front of MySQL and PostgreSQL. Applications connect to it like to a normal MySQL or PostgreSQL server. It uses the image [`upstreamyard/shardingsphere-proxy`](https://github.com/upstreamyard/shardingsphere-proxy), which includes the MySQL JDBC driver.
 

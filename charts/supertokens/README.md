@@ -1,8 +1,8 @@
 # SuperTokens Helm chart
 
-![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 12.4.1](https://img.shields.io/badge/AppVersion-12.4.1-informational?style=flat-square)
+![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![AppVersion: 12.4.1](https://img.shields.io/badge/AppVersion-12.4.1-informational?style=flat-square)
 
-> **Support:** For help with setup, production issues, or hardened and custom images, email [upstreamyard@proton.me](mailto:upstreamyard@proton.me).
+> Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
 Helm chart for the [SuperTokens](https://github.com/supertokens/supertokens-core) core, the open-source authentication server behind SuperTokens' backend SDKs: sessions, email/password, passwordless, social and enterprise login, MFA, roles and multi-tenancy. It uses SuperTokens' official image [`supertokens/supertokens-postgresql`](https://hub.docker.com/r/supertokens/supertokens-postgresql).
 

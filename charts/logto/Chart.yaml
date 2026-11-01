@@ -2,7 +2,7 @@ apiVersion: v2
 name: logto
 description: Logto, the open-source identity and access management platform (OIDC, SSO, multi-tenancy) for apps and SaaS. Community chart by upstreamyard, not an official Logto chart.
 type: application
-version: 0.1.4
+version: 0.1.5
 appVersion: "1.45.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
