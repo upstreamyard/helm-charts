@@ -2,7 +2,7 @@ apiVersion: v2
 name: saleor
 description: Saleor, the headless GraphQL commerce platform (API, Celery worker and beat, dashboard). Community chart by upstreamyard, not an official Saleor chart.
 type: application
-version: 0.1.7
+version: 0.1.8
 appVersion: "3.23.45"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
