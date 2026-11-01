@@ -2,7 +2,7 @@ apiVersion: v2
 name: dolt
 description: Dolt Helm chart for Kubernetes. The version-controlled, MySQL-compatible SQL database (branch, merge, diff and clone your data like Git) with high availability through primary/standby replication, failover, Prometheus metrics and generated passwords. Community chart by upstreamyard, not an official Dolt chart.
 type: application
-version: 0.1.7
+version: 0.1.8
 appVersion: "2.6.2"
 kubeVersion: ">=1.27.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/dolt
