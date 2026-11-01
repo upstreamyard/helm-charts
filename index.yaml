@@ -3725,6 +3725,49 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 9.10.7
+    created: "2026-11-01T18:33:08.834809564Z"
+    description: Parse Server, the open-source backend for mobile, web and IoT apps.
+      Community chart by upstreamyard, not an official Parse Server chart.
+    digest: 912d14df0006cb5c0cd6fe5cd503ea2eb54e967e808c4bdc1ff81ab573871837
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - parse
+    - parse-server
+    - backend
+    - baas
+    - mongodb
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: parse-server
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/parse-community/parse-server
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/parse-server-0.1.7/parse-server-0.1.7.tgz
+    version: 0.1.7
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: parse-server
+          image: parseplatform/parse-server:9.10.7
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Parse Server project
+          url: https://github.com/parse-community/parse-server
+        - name: Container image
+          url: https://hub.docker.com/r/parseplatform/parse-server
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 9.10.7
     created: "2026-10-31T13:55:43.497866578Z"
     description: Parse Server, the open-source backend for mobile, web and IoT apps.
       Community chart by upstreamyard, not an official Parse Server chart.
@@ -4024,6 +4067,60 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 0.4.39
+    created: "2026-11-01T18:33:09.063507725Z"
+    description: Plano Helm chart for Kubernetes. Plano (formerly archgw) is an AI
+      gateway and LLM proxy built on Envoy, with one OpenAI-compatible API for OpenAI,
+      Anthropic, Gemini, Amazon Bedrock, Azure OpenAI, Ollama and other providers,
+      plus model routing, guardrails and agent orchestration. Runs the official image
+      as non-root on a read-only filesystem without internet access at startup, keeps
+      provider API keys away from the Envoy admin API, scales out with PostgreSQL
+      conversation state and a Redis session cache, and ships Prometheus metrics,
+      NetworkPolicy and helm test. Community chart by upstreamyard, not an official
+      Plano chart.
+    digest: 3a0c3f00fd0a5a7bd50192e7271c966cb5633bf7d9b7a5261590e314d5205aca
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/plano
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - plano
+    - archgw
+    - ai-proxy
+    - ai-gateway
+    - llm-gateway
+    - llm-proxy
+    - llm-router
+    - openai-compatible
+    - envoy
+    - agents
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: plano
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/katanemo/plano
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/plano-0.1.5/plano-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/category: networking
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: plano
+          image: katanemo/plano:0.4.39
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Plano
+          url: https://github.com/katanemo/plano
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.4.39
     created: "2026-10-31T13:53:17.942458743Z"
     description: Plano Helm chart for Kubernetes. Plano (formerly archgw) is an AI
       gateway and LLM proxy built on Envoy, with one OpenAI-compatible API for OpenAI,
@@ -4276,6 +4373,49 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/plano-0.1.0/plano-0.1.0.tgz
     version: 0.1.0
   postal:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: postal
+          image: ghcr.io/postalserver/postal:3.3.7
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Postal project
+          url: https://github.com/postalserver/postal
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.3.7
+    created: "2026-11-01T18:33:09.190018131Z"
+    description: Postal, the open-source mail delivery platform for sending and receiving
+      email (web interface and API, SMTP server, workers). Community chart by upstreamyard,
+      not an official Postal chart.
+    digest: ec89c80b1d2abcc1039e9935c5306fda358e26ef3da9a68bedd560f50cf9b456
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - postal
+    - email
+    - mail
+    - smtp
+    - mail-server
+    - transactional-email
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: postal
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/postalserver/postal
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/postal-0.1.4/postal-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -5255,6 +5395,56 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 0.17.9
+    created: "2026-11-01T18:33:09.544460494Z"
+    description: TigerBeetle Helm chart for Kubernetes. Fault-tolerant 3 or 6 replica
+      TigerBeetle cluster (financial transactions database for double-entry accounting)
+      on the official image, with safe replica recovery, non-root, Prometheus metrics
+      and helm test. Community chart by upstreamyard, not an official TigerBeetle
+      chart.
+    digest: b55ce6f08c5bf30118d7211d34a22bbfbdebfaebec5b3f3754a2bc5fe7574279
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/tigerbeetle
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - tigerbeetle
+    - tigerbeetle-cluster
+    - financial-database
+    - ledger
+    - double-entry-accounting
+    - accounting
+    - payments
+    - oltp
+    - database
+    - high-availability
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: tigerbeetle
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/tigerbeetle/tigerbeetle
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/tigerbeetle-0.1.4/tigerbeetle-0.1.4.tgz
+    version: 0.1.4
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: tigerbeetle
+          image: ghcr.io/tigerbeetle/tigerbeetle:0.17.9
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: TigerBeetle
+          url: https://github.com/tigerbeetle/tigerbeetle
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.17.9
     created: "2026-10-31T13:55:44.656173635Z"
     description: TigerBeetle Helm chart for Kubernetes. Fault-tolerant 3 or 6 replica
       TigerBeetle cluster (financial transactions database for double-entry accounting)
@@ -5604,4 +5794,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T12:07:13.648355422Z"
+generated: "2026-11-01T18:33:09.544626369Z"
