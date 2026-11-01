@@ -725,6 +725,56 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 1.7.4
+    created: "2026-11-01T18:40:59.376764148Z"
+    description: AutoMQ Helm chart for Kubernetes. Kafka-compatible streaming with
+      messages stored in S3 (diskless Kafka) on the open-source AutoMQ edition, with
+      combined or separate KRaft controllers, scalable stateless brokers, SASL authentication
+      by default and Prometheus metrics. Replaces the Bitnami Kafka chart setup for
+      AutoMQ. Community chart by upstreamyard, not an official AutoMQ chart.
+    digest: 48cd0f5e0f3ae2be4ea053ed2e681cd4443fdbed9e944b0ae85c4f0df1ee21d9
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/automq
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - automq
+    - kafka
+    - apache-kafka
+    - diskless-kafka
+    - kafka-on-s3
+    - s3
+    - streaming
+    - message-broker
+    - kraft
+    - event-streaming
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: automq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/AutoMQ/automq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/automq-0.1.4/automq-0.1.4.tgz
+    version: 0.1.4
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: automq
+          image: automqinc/automq:1.7.4-kafka
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: AutoMQ
+          url: https://github.com/AutoMQ/automq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.7.4
     created: "2026-10-31T13:53:17.114488369Z"
     description: AutoMQ Helm chart for Kubernetes. Kafka-compatible streaming with
       messages stored in S3 (diskless Kafka) on the open-source AutoMQ edition, with
@@ -3668,6 +3718,58 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 4.12.1
+    created: "2026-11-01T18:40:59.523877085Z"
+    description: LocalAI Helm chart for Kubernetes. Self-hosted OpenAI-compatible
+      API for LLMs, embeddings, images, speech and agents on CPU or GPU (NVIDIA CUDA,
+      AMD ROCm, Intel, Vulkan), as a single server or in distributed mode with scalable
+      frontends and GPU workers on PostgreSQL and NATS. API key by default, admin
+      account created on install, non-root, Prometheus metrics. Community chart by
+      upstreamyard, not an official LocalAI chart.
+    digest: f33d3696a976b23dd32d48963ef9893ad26cea4c36105a64233030dbe0d589ce
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/localai
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - localai
+    - local-ai
+    - llm
+    - openai-api
+    - self-hosted-ai
+    - llm-inference
+    - llama-cpp
+    - gpu
+    - embeddings
+    - ollama-alternative
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: localai
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/mudler/LocalAI
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/localai-0.1.3/localai-0.1.3.tgz
+    version: 0.1.3
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: localai
+          image: localai/localai:v4.12.1
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: LocalAI
+          url: https://github.com/mudler/LocalAI
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 4.12.1
     created: "2026-10-31T13:55:42.873592838Z"
     description: LocalAI Helm chart for Kubernetes. Self-hosted OpenAI-compatible
       API for LLMs, embeddings, images, speech and agents on CPU or GPU (NVIDIA CUDA,
@@ -3807,6 +3909,49 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/localai-0.1.0/localai-0.1.0.tgz
     version: 0.1.0
   logto:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: logto
+          image: svhd/logto:1.45.0
+      artifacthub.io/license: MPL-2.0
+      artifacthub.io/links: |
+        - name: Logto project
+          url: https://github.com/logto-io/logto
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.45.0
+    created: "2026-11-01T18:40:59.755389937Z"
+    description: Logto, the open-source identity and access management platform (OIDC,
+      SSO, multi-tenancy) for apps and SaaS. Community chart by upstreamyard, not
+      an official Logto chart.
+    digest: 3a98b9a078496ab5b4d2f7398f36e376896c5848eec5b3a6e3a915aac609f4ca
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - logto
+    - authentication
+    - identity
+    - oidc
+    - sso
+    - oauth2
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: logto
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/logto-io/logto
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/logto-0.1.5/logto-0.1.5.tgz
+    version: 0.1.5
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -4021,6 +4166,61 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/logto-0.1.0/logto-0.1.0.tgz
     version: 0.1.0
   nemo-guardrails:
+  - annotations:
+      artifacthub.io/category: security
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: nemo-guardrails
+          image: upstreamyard/nemo-guardrails:0.24.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: NeMo Guardrails project
+          url: https://github.com/NVIDIA-NeMo/Guardrails
+        - name: Container image
+          url: https://github.com/upstreamyard/nemo-guardrails
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.24.1
+    created: "2026-11-01T18:40:59.920895753Z"
+    description: NeMo Guardrails Helm chart for Kubernetes. NVIDIA NeMo Guardrails
+      server, an OpenAI-compatible LLM guardrails API with input, output and dialog
+      rails, your configurations from values or ConfigMaps, a config check before
+      rollout, autoscaling, NetworkPolicy and OpenTelemetry. Community chart by upstreamyard,
+      not an official NVIDIA chart.
+    digest: ef78d721973f4c4ddf25a8dc79f844d275bab201400ae97d0b91df3eda07e6ae
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/nemo-guardrails
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - nemo-guardrails
+    - nemoguardrails
+    - nvidia-nemo
+    - guardrails
+    - llm-guardrails
+    - llm-security
+    - ai-safety
+    - prompt-injection
+    - jailbreak-detection
+    - content-moderation
+    - openai-compatible
+    - llm
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: nemo-guardrails
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/nemo-guardrails
+    - https://github.com/NVIDIA-NeMo/Guardrails
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/nemo-guardrails-0.1.4/nemo-guardrails-0.1.4.tgz
+    version: 0.1.4
   - annotations:
       artifacthub.io/category: security
       artifacthub.io/changes: |
@@ -5801,6 +6001,51 @@ entries:
         url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
     apiVersion: v2
     appVersion: 12.4.1
+    created: "2026-11-01T18:41:00.10874526Z"
+    description: SuperTokens core, the open-source authentication server (sessions,
+      email/password, passwordless, social login, MFA), with PostgreSQL. Community
+      chart by upstreamyard, not an official SuperTokens chart.
+    digest: f0fb5145282ce5f4f4ce2b9c7e95b4c333a374ed259d629291eec6420cecf4b7
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - supertokens
+    - authentication
+    - auth
+    - session
+    - login
+    - postgresql
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: supertokens
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/supertokens/supertokens-core
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/supertokens-0.1.5/supertokens-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Mention hardened and custom images in the support contact
+      artifacthub.io/images: |
+        - name: supertokens-postgresql
+          image: supertokens/supertokens-postgresql:12.4.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: SuperTokens project
+          url: https://github.com/supertokens/supertokens-core
+        - name: Container image
+          url: https://hub.docker.com/r/supertokens/supertokens-postgresql
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 12.4.1
     created: "2026-10-31T13:55:44.380555795Z"
     description: SuperTokens core, the open-source authentication server (sessions,
       email/password, passwordless, social login, MFA), with PostgreSQL. Community
@@ -6465,4 +6710,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T18:39:14.707766265Z"
+generated: "2026-11-01T18:41:00.109101333Z"
