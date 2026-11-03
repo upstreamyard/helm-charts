@@ -1,6 +1,6 @@
 # Saleor Helm chart
 
-![Version: 0.1.8](https://img.shields.io/badge/Version-0.1.8-informational?style=flat-square) ![AppVersion: 3.23.45](https://img.shields.io/badge/AppVersion-3.23.45-informational?style=flat-square)
+![Version: 0.1.9](https://img.shields.io/badge/Version-0.1.9-informational?style=flat-square) ![AppVersion: 3.23.45](https://img.shields.io/badge/AppVersion-3.23.45-informational?style=flat-square)
 
 > Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
@@ -161,7 +161,7 @@ dashboard:
 | dashboard.enabled | bool | `true` | Deploy the Saleor dashboard (the admin UI, a static web app). |
 | dashboard.image.pullPolicy | string | `"IfNotPresent"` | Image pull policy. |
 | dashboard.image.repository | string | `"ghcr.io/saleor/saleor-dashboard"` | Dashboard image repository. |
-| dashboard.image.tag | string | `"3.23.41"` | Dashboard image tag. Released separately from the API; keep its minor version equal to the API's. |
+| dashboard.image.tag | string | `"3.23.42"` | Dashboard image tag. Released separately from the API; keep its minor version equal to the API's. |
 | dashboard.ingress.annotations | object | `{}` | Ingress annotations. |
 | dashboard.ingress.className | string | `""` | Ingress class name. |
 | dashboard.ingress.enabled | bool | `false` | Create an Ingress for the dashboard. It is served under `/dashboard/`. |
