@@ -960,6 +960,51 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update conductor to 3.33.1
+      artifacthub.io/images: |
+        - name: conductor
+          image: upstreamyard/conductor:3.33.1
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Conductor project
+          url: https://github.com/conductor-oss/conductor
+        - name: Container image
+          url: https://github.com/upstreamyard/conductor
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.33.1
+    created: "2026-11-15T12:49:42.751303542Z"
+    description: Conductor OSS, the open-source workflow orchestration engine originally
+      built at Netflix, with UI. Community chart by upstreamyard, not an official
+      Conductor chart.
+    digest: bba1354363693961c7462a9cc597e21baa8af38952ab218ed770c67875ff5337
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - conductor
+    - workflow
+    - orchestration
+    - microservices
+    - netflix
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: conductor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/conductor
+    - https://github.com/conductor-oss/conductor
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.6/conductor-0.1.6.tgz
+    version: 0.1.6
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Mention hardened and custom images in the support contact
       artifacthub.io/images: |
         - name: conductor
@@ -1227,6 +1272,49 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/conductor-0.1.0/conductor-0.1.0.tgz
     version: 0.1.0
   cube:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Update cube to 1.8.26
+      artifacthub.io/images: |
+        - name: cube
+          image: cubejs/cube:v1.8.26
+        - name: cubestore
+          image: cubejs/cubestore:v1.8.26
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Cube project
+          url: https://github.com/cube-js/cube
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.8.26
+    created: "2026-11-15T12:49:43.027673951Z"
+    description: Cube, the open-source semantic layer and data API for BI and AI,
+      with Cube Store. Community chart by upstreamyard, not an official Cube chart.
+    digest: 9ea0a3296d91f9fd289c5989c27138d2fdfc46dfd622eca731c224dc0b9f3f55
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - cube
+    - semantic-layer
+    - analytics
+    - olap
+    - bi
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: cube
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/cube-js/cube
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/cube-0.1.12/cube-0.1.12.tgz
+    version: 0.1.12
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
@@ -2465,6 +2553,55 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/docling-serve-0.1.0/docling-serve-0.1.0.tgz
     version: 0.1.0
   dolt:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Update dolt-sql-server to 2.7.3
+      artifacthub.io/images: |
+        - name: dolt-sql-server
+          image: dolthub/dolt-sql-server:2.7.3
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Dolt
+          url: https://github.com/dolthub/dolt
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2.7.3
+    created: "2026-11-15T12:49:43.242976105Z"
+    description: Dolt Helm chart for Kubernetes. The version-controlled, MySQL-compatible
+      SQL database (branch, merge, diff and clone your data like Git) with high availability
+      through primary/standby replication, failover, Prometheus metrics and generated
+      passwords. Community chart by upstreamyard, not an official Dolt chart.
+    digest: 92a2d50d9453c1d8fbce5dd64dd8a1eb16a9e69e10539d3ee810414d172d5a3b
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/dolt
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - dolt
+    - dolthub
+    - dolt-sql-server
+    - database
+    - sql
+    - mysql
+    - version-control
+    - git-for-data
+    - replication
+    - high-availability
+    kubeVersion: '>=1.27.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: dolt
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/dolthub/dolt
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/dolt-0.1.10/dolt-0.1.10.tgz
+    version: 0.1.10
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
@@ -7115,4 +7252,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-15T12:48:54.04145087Z"
+generated: "2026-11-15T12:49:43.243101886Z"
