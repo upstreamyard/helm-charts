@@ -1833,6 +1833,50 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update discourse to 2026.10.1
+      artifacthub.io/images: |
+        - name: discourse
+          image: upstreamyard/discourse:2026.10.1
+      artifacthub.io/license: GPL-2.0-or-later
+      artifacthub.io/links: |
+        - name: Discourse project
+          url: https://github.com/discourse/discourse
+        - name: Container image
+          url: https://github.com/upstreamyard/discourse
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 2026.10.1
+    created: "2026-11-15T12:51:54.965552077Z"
+    description: Discourse, the open-source community forum. Community chart by upstreamyard,
+      not an official Discourse chart.
+    digest: b71c091109e7fa7b98cc4d406741c567ddfc9b7e28c55ec043dccaaf2e48c100
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - discourse
+    - forum
+    - community
+    - discussion
+    - chat
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: discourse
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/discourse
+    - https://github.com/discourse/discourse
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/discourse-0.1.7/discourse-0.1.7.tgz
+    version: 0.1.7
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Mention hardened and custom images in the support contact
       artifacthub.io/images: |
         - name: discourse
@@ -3320,6 +3364,57 @@ entries:
     - https://github.com/upstreamyard/helm-charts/releases/download/electric-0.1.0/electric-0.1.0.tgz
     version: 0.1.0
   falkordb:
+  - annotations:
+      artifacthub.io/category: database
+      artifacthub.io/changes: |
+        - kind: changed
+          description: Update falkordb-server to 6.0.4
+      artifacthub.io/images: |
+        - name: falkordb-server
+          image: falkordb/falkordb-server:6.0.4
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: FalkorDB
+          url: https://github.com/FalkorDB/FalkorDB
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 6.0.4
+    created: "2026-11-15T12:51:55.176686009Z"
+    description: FalkorDB Helm chart for Kubernetes. Graph database (openCypher, GraphRAG,
+      knowledge graphs for AI agents) on the official falkordb-server image, as a
+      single instance or highly available with replication and Redis Sentinel failover,
+      password auth by default, AOF persistence, non-root, Prometheus metrics and
+      helm test. Community chart by upstreamyard, not an official FalkorDB chart.
+      FalkorDB is licensed under SSPL-1.0.
+    digest: 16b73f35e3511a5f2ed4d6cbdf8ba7115c5382be1df3418e21b4952389f1b84e
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/falkordb
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - falkordb
+    - graph-database
+    - graphdb
+    - cypher
+    - opencypher
+    - knowledge-graph
+    - graphrag
+    - redis-sentinel
+    - high-availability
+    - database
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: falkordb
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/FalkorDB/FalkorDB
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/falkordb-0.1.6/falkordb-0.1.6.tgz
+    version: 0.1.6
   - annotations:
       artifacthub.io/category: database
       artifacthub.io/changes: |
@@ -5727,6 +5822,54 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update saleor-dashboard to 3.23.44
+      artifacthub.io/images: |
+        - name: saleor
+          image: ghcr.io/saleor/saleor:3.23.47
+        - name: saleor-dashboard
+          image: ghcr.io/saleor/saleor-dashboard:3.23.44
+      artifacthub.io/license: BSD-3-Clause
+      artifacthub.io/links: |
+        - name: Saleor project
+          url: https://github.com/saleor/saleor
+        - name: Saleor dashboard
+          url: https://github.com/saleor/saleor-dashboard
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 3.23.47
+    created: "2026-11-15T12:51:55.413365627Z"
+    description: Saleor, the headless GraphQL commerce platform (API, Celery worker
+      and beat, dashboard). Community chart by upstreamyard, not an official Saleor
+      chart.
+    digest: 9acbae90d5db398fb91362f5e2b4b0dcc4e29d48e1d3cde30fa9b7b1f945421a
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - saleor
+    - ecommerce
+    - commerce
+    - headless
+    - graphql
+    - shop
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: saleor
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/saleor/saleor
+    - https://github.com/saleor/saleor-dashboard
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/saleor-0.1.11/saleor-0.1.11.tgz
+    version: 0.1.11
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Update saleor to 3.23.47
       artifacthub.io/images: |
         - name: saleor
@@ -7252,4 +7395,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-15T12:49:43.243101886Z"
+generated: "2026-11-15T12:51:55.413876022Z"
