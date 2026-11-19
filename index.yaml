@@ -4393,6 +4393,58 @@ entries:
       artifacthub.io/category: ai-machine-learning
       artifacthub.io/changes: |
         - kind: changed
+          description: Update localai to 5.0.0
+      artifacthub.io/images: |
+        - name: localai
+          image: localai/localai:v5.0.0
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: LocalAI
+          url: https://github.com/mudler/LocalAI
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 5.0.0
+    created: "2026-11-19T14:53:26.929894385Z"
+    description: LocalAI Helm chart for Kubernetes. Self-hosted OpenAI-compatible
+      API for LLMs, embeddings, images, speech and agents on CPU or GPU (NVIDIA CUDA,
+      AMD ROCm, Intel, Vulkan), as a single server or in distributed mode with scalable
+      frontends and GPU workers on PostgreSQL and NATS. API key by default, admin
+      account created on install, non-root, Prometheus metrics. Community chart by
+      upstreamyard, not an official LocalAI chart.
+    digest: 9c1f3ac5a08af3105ba6aed6f8a36a39d853a848f74720a35a9e98e2d13f7817
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/localai
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - localai
+    - local-ai
+    - llm
+    - openai-api
+    - self-hosted-ai
+    - llm-inference
+    - llama-cpp
+    - gpu
+    - embeddings
+    - ollama-alternative
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: localai
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/mudler/LocalAI
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/localai-0.1.4/localai-0.1.4.tgz
+    version: 0.1.4
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: changed
           description: Mention hardened and custom images in the support contact
       artifacthub.io/images: |
         - name: localai
@@ -7813,4 +7865,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-19T14:52:20.190832346Z"
+generated: "2026-11-19T14:53:26.930114213Z"
