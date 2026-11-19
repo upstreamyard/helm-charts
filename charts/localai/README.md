@@ -1,6 +1,6 @@
 # LocalAI Helm chart: the LocalAI self-hosted OpenAI-compatible AI server on Kubernetes
 
-![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![AppVersion: 4.12.1](https://img.shields.io/badge/AppVersion-4.12.1-informational?style=flat-square)
+![Version: 0.1.4](https://img.shields.io/badge/Version-0.1.4-informational?style=flat-square) ![AppVersion: 5.0.0](https://img.shields.io/badge/AppVersion-5.0.0-informational?style=flat-square)
 
 > Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
@@ -150,7 +150,7 @@ worker:
 
 ## GPUs
 
-LocalAI publishes an image per hardware type for every release; `image.variant` (and `worker.image.variant` for workers) picks it, and the chart appends it to the tag (`v4.12.1-<variant>`):
+LocalAI publishes an image per hardware type for every release; `image.variant` (and `worker.image.variant` for workers) picks it, and the chart appends it to the tag (`v5.0.0-<variant>`):
 
 | Variant | Hardware | Platforms |
 |---|---|---|
@@ -179,7 +179,7 @@ tolerations:
     effect: NoSchedule
 ```
 
-- The GPU images were not tested by us (no GPU in our test cluster); the CPU image was. All tags in the table exist for 4.12.1.
+- The GPU images were not tested by us (no GPU in our test cluster); the CPU image was. All tags in the table exist for 5.0.0.
 - `shareProcessNamespace: true` makes the pod's pause process PID 1 (tested), the Kubernetes equivalent of Docker's `init: true`. LocalAI recommends it for NVIDIA workers, because `nvidia-smi` calls otherwise fail now and then, which blanks the free-VRAM figures.
 - In distributed mode only the workers need the GPU image; the frontends stay on the CPU image.
 
@@ -328,11 +328,11 @@ metrics:
 
 ## Known issues
 
-Found in LocalAI 4.12.1 while testing this chart:
+Found in LocalAI 5.0.0 while testing this chart:
 
 - **A model is unavailable for about a minute after a frontend stops in the middle of loading it** (e.g. when frontends and workers are upgraded together). The worker refuses the frontend's stop request (`The worker did not stop the load operation ... address mismatch for process ...: recorded "127.0.0.1:50051", expected "<worker DNS name>:50051"`), and requests for that model get `503 the load owner stopped renewing its lease` until the hold expires. The worker records its model processes under `127.0.0.1`, while frontends name the worker's advertised address. Upgrade frontends first (see [Upgrading](#upgrading)).
 - **A frontend that shuts down stops the models it used on the workers**, even when other frontends use them. In our test 1 in-flight request failed and the model was loaded again within a second.
-- **Backends are not pinned to the LocalAI version.** LocalAI's backend gallery uses images tagged `latest-...`, so a backend installed later can be newer than one installed earlier. Version tags exist (e.g. `quay.io/go-skynet/local-ai-backends:v4.12.1-cpu-llama-cpp`) for your own backend gallery (`LOCALAI_BACKEND_GALLERIES`).
+- **Backends are not pinned to the LocalAI version.** LocalAI's backend gallery uses images tagged `latest-...`, so a backend installed later can be newer than one installed earlier. Version tags exist (e.g. `quay.io/go-skynet/local-ai-backends:v5.0.0-cpu-llama-cpp`) for your own backend gallery (`LOCALAI_BACKEND_GALLERIES`).
 - **The worker exits if its backends directory doesn't exist** (`registering installed backends: open /var/lib/localai/backends: no such file or directory`); the chart creates it before the worker starts.
 - **Large models and `helm install`:** `models.install` runs before the HTTP server starts, and the admin account Job waits for the server. With large downloads, raise `startupProbe.failureThreshold` and pass `--timeout 30m` (or more) to `helm install`.
 - **Agents with several frontends** keep their collections per frontend unless they use the PostgreSQL vector engine (`LOCALAI_AGENT_POOL_VECTOR_ENGINE=postgres` and `LOCALAI_AGENT_POOL_DATABASE_URL` in `extraEnv`, on a separate database from `database.url`). Not tested by us.
