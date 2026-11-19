@@ -316,6 +316,50 @@ entries:
   - annotations:
       artifacthub.io/changes: |
         - kind: changed
+          description: Update aegra to 0.12.0
+      artifacthub.io/images: |
+        - name: aegra
+          image: upstreamyard/aegra:0.12.0
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: Aegra project
+          url: https://github.com/aegra/aegra
+        - name: Container image
+          url: https://github.com/upstreamyard/aegra
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 0.12.0
+    created: "2026-11-19T14:45:48.235065978Z"
+    description: Aegra, the open-source self-hosted alternative to LangGraph Platform.
+      Community chart by upstreamyard, not an official Aegra chart.
+    digest: 5eeb8c6e9b19ba62d015208f54dae6308e54b1088d3a039e1efa3bf4cf59ed49
+    home: https://github.com/upstreamyard/helm-charts
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - aegra
+    - langgraph
+    - agents
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: aegra
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/upstreamyard/aegra
+    - https://github.com/aegra/aegra
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/aegra-0.1.9/aegra-0.1.9.tgz
+    version: 0.1.9
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
           description: Mention hardened and custom images in the support contact
       artifacthub.io/images: |
         - name: aegra
@@ -7675,4 +7719,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-18T14:40:30.001445351Z"
+generated: "2026-11-19T14:45:48.235514607Z"
