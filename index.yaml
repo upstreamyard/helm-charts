@@ -755,6 +755,56 @@ entries:
       artifacthub.io/category: streaming-messaging
       artifacthub.io/changes: |
         - kind: changed
+          description: Update automq to 1.7.5
+      artifacthub.io/images: |
+        - name: automq
+          image: automqinc/automq:1.7.5-kafka
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: AutoMQ
+          url: https://github.com/AutoMQ/automq
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.7.5
+    created: "2026-11-19T14:52:20.190474854Z"
+    description: AutoMQ Helm chart for Kubernetes. Kafka-compatible streaming with
+      messages stored in S3 (diskless Kafka) on the open-source AutoMQ edition, with
+      combined or separate KRaft controllers, scalable stateless brokers, SASL authentication
+      by default and Prometheus metrics. Replaces the Bitnami Kafka chart setup for
+      AutoMQ. Community chart by upstreamyard, not an official AutoMQ chart.
+    digest: bb71327e3267b12b3d86ccb4f8c0f13d914093bea6d3bdffb08c5f29d4d53287
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/automq
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - automq
+    - kafka
+    - apache-kafka
+    - diskless-kafka
+    - kafka-on-s3
+    - s3
+    - streaming
+    - message-broker
+    - kraft
+    - event-streaming
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: automq
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/AutoMQ/automq
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/automq-0.1.5/automq-0.1.5.tgz
+    version: 0.1.5
+  - annotations:
+      artifacthub.io/category: streaming-messaging
+      artifacthub.io/changes: |
+        - kind: changed
           description: Mention hardened and custom images in the support contact
       artifacthub.io/images: |
         - name: automq
@@ -7763,4 +7813,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-19T14:47:32.86319974Z"
+generated: "2026-11-19T14:52:20.190832346Z"
