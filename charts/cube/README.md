@@ -1,6 +1,6 @@
 # Cube Helm chart
 
-![Version: 0.1.14](https://img.shields.io/badge/Version-0.1.14-informational?style=flat-square) ![AppVersion: 1.8.30](https://img.shields.io/badge/AppVersion-1.8.30-informational?style=flat-square)
+![Version: 0.1.15](https://img.shields.io/badge/Version-0.1.15-informational?style=flat-square) ![AppVersion: 1.8.31](https://img.shields.io/badge/AppVersion-1.8.31-informational?style=flat-square)
 
 > Have any questions, feedback or need help (e.g. setup, hardened images, etc.)? Reach out to [contact@upstreamyard.com](mailto:contact@upstreamyard.com)
 
