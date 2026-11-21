@@ -2,8 +2,8 @@ apiVersion: v2
 name: postal
 description: Postal, the open-source mail delivery platform for sending and receiving email (web interface and API, SMTP server, workers). Community chart by upstreamyard, not an official Postal chart.
 type: application
-version: 0.1.5
-appVersion: "3.4.0"
+version: 0.1.6
+appVersion: "3.5.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -25,7 +25,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: postal
-      image: ghcr.io/postalserver/postal:3.4.0
+      image: ghcr.io/postalserver/postal:3.5.0
   artifacthub.io/links: |
     - name: Postal project
       url: https://github.com/postalserver/postal
@@ -34,4 +34,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update postal to 3.4.0
+      description: Update postal to 3.5.0
