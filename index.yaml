@@ -2496,6 +2496,58 @@ entries:
       artifacthub.io/category: ai-machine-learning
       artifacthub.io/changes: |
         - kind: changed
+          description: Update docling-serve-cpu to 1.39.0
+      artifacthub.io/images: |
+        - name: docling-serve-cpu
+          image: ghcr.io/docling-project/docling-serve-cpu:v1.39.0
+      artifacthub.io/license: MIT
+      artifacthub.io/links: |
+        - name: Docling Serve
+          url: https://github.com/docling-project/docling-serve
+        - name: Container images
+          url: https://github.com/docling-project/docling-serve#container-images
+      artifacthub.io/prerelease: "false"
+      artifacthub.io/signKey: |
+        fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+        url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+    apiVersion: v2
+    appVersion: 1.39.0
+    created: "2026-11-23T16:36:45.216562001Z"
+    description: Docling Serve Helm chart for Kubernetes. Document conversion API
+      (PDF, DOCX, PPTX, HTML, images to Markdown and JSON) for RAG pipelines, with
+      API key auth by default, scalable RQ workers on Redis, KEDA queue autoscaling,
+      CPU and CUDA images and Prometheus metrics. Community chart by upstreamyard,
+      not an official Docling chart.
+    digest: 28419946f6f883dacc4cdbdcf99b9bce2c35b5001328245ee3784f48221d274a
+    home: https://github.com/upstreamyard/helm-charts/tree/main/charts/docling-serve
+    icon: https://upstreamyard.github.io/helm-charts/logo.png
+    keywords:
+    - docling
+    - docling-serve
+    - document-conversion
+    - pdf
+    - pdf-to-markdown
+    - ocr
+    - rag
+    - document-parsing
+    - llm
+    - ai
+    kubeVersion: '>=1.25.0-0'
+    maintainers:
+    - name: upstreamyard
+      url: https://github.com/upstreamyard
+    name: docling-serve
+    sources:
+    - https://github.com/upstreamyard/helm-charts
+    - https://github.com/docling-project/docling-serve
+    type: application
+    urls:
+    - https://github.com/upstreamyard/helm-charts/releases/download/docling-serve-0.1.8/docling-serve-0.1.8.tgz
+    version: 0.1.8
+  - annotations:
+      artifacthub.io/category: ai-machine-learning
+      artifacthub.io/changes: |
+        - kind: changed
           description: Mention hardened and custom images in the support contact
       artifacthub.io/images: |
         - name: docling-serve-cpu
@@ -8237,4 +8289,4 @@ entries:
     urls:
     - https://github.com/upstreamyard/helm-charts/releases/download/xxl-job-0.1.0/xxl-job-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-23T16:35:32.350524872Z"
+generated: "2026-11-23T16:36:45.216927973Z"
