@@ -1,0 +1,22 @@
+{{- if and (include "otari.usePvc" .) (not .Values.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "otari.claimName" . }}
+  labels:
+    {{- include "otari.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .Values.persistence.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

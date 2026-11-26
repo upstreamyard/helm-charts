@@ -1,0 +1,47 @@
+{{- $url := printf "http://%s.%s.svc:%v" (include "otari.fullname" .) .Release.Namespace .Values.service.port }}
+Otari {{ include "otari.version" . }} is starting. In the cluster, the OpenAI-compatible API and the dashboard are at
+
+  {{ $url }}/api/v1
+
+Master key (management API and first dashboard sign-in):
+{{- if .Values.secrets.existingSecret }}
+  kubectl get secret -n {{ .Release.Namespace }} {{ .Values.secrets.existingSecret }} -o jsonpath='{.data.master-key}' | base64 -d
+{{- else }}
+  kubectl get secret -n {{ .Release.Namespace }} {{ include "otari.fullname" . }} -o jsonpath='{.data.master-key}' | base64 -d
+{{- end }}
+
+Try it:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "otari.fullname" . }} 8000:{{ .Values.service.port }}
+  open http://localhost:8000/ and sign in with the master key, or create an API key:
+  curl -X POST http://localhost:8000/api/v1/keys -H "Authorization: Bearer $MASTER_KEY" -H 'Content-Type: application/json' -d '{"key_name": "my-app"}'
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if and (not .Values.secrets.existingSecret) (not .Values.secrets.secretKey) }}
+
+Back up the Secret {{ include "otari.fullname" . }}: its secret-key decrypts the provider credentials stored in the
+database. It is kept on helm uninstall. Tools that render with `helm template` (e.g. Argo CD) generate new keys on
+every render; use secrets.existingSecret with them.
+{{- end }}
+{{- if not (include "otari.postgres" .) }}
+
+SQLite: the database is a file on the chart's volume, for evaluation and single-node use. Use PostgreSQL
+(database.url) for production and for more than one replica.
+{{- end }}
+{{- if and (not .Values.persistence.enabled) (or (not (include "otari.postgres" .)) (eq .Values.files.backend "local")) }}
+
+WARNING: persistence is off. {{ if not (include "otari.postgres" .) }}The SQLite database and uploaded files are{{ else }}Uploaded files are{{ end }} lost when the pod restarts.
+{{- end }}
+{{- if and (include "otari.scaled" .) (not (or .Values.redis.url .Values.redis.existingSecret)) }}
+
+Rate limits are counted per pod: with N replicas, a limit admits up to N times as many requests. Set redis.url
+to share the count.
+{{- end }}
+{{- if and (or .Values.ingress.enabled .Values.httpRoute.enabled) (not .Values.forwardedAllowIps) }}
+
+Behind an ingress or Gateway, set forwardedAllowIps. Otherwise every request seems to come from the proxy: after
+ten failed sign-ins by anyone, every mistyped sign-in gets HTTP 429 for a minute, and logs show the proxy's address.
+{{- end }}
+{{- if and .Values.metrics.enabled (or .Values.ingress.enabled .Values.httpRoute.enabled) }}
+
+/metrics has no authentication and is served on the same port as the API, so your ingress or Gateway exposes it
+too. Block the path there.
+{{- end }}

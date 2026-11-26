@@ -1,0 +1,153 @@
+{{- $rwo := and (include "otari.usePvc" .) (not (has "ReadWriteMany" .Values.persistence.accessModes)) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "otari.fullname" . }}
+  labels:
+    {{- include "otari.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    {{- if $rwo }}
+    # A ReadWriteOnce volume (SQLite or local uploads) can't be used by two pods at once.
+    type: Recreate
+    {{- else }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "otari.serverSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "otari.serverSelectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secret: {{ toJson (list .Values.secrets .Values.database .Values.redis) | sha256sum }}
+        {{- if .Values.config }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "otari.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- /* Service links would set variables such as OTARI_PORT=tcp://... for a Service named
+      "otari", which Otari reads as its own settings. */}}
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: otari
+          image: {{ include "otari.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["otari", "serve", "--log-level", {{ .Values.logLevel | quote }}]
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            {{- include "otari.env" . | nindent 12 }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: /api/v1/health/liveness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: {{ .Values.probes.startupFailureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: {{ .Values.probes.livenessFailureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: {{ .Values.probes.readinessFailureThreshold }}
+          {{- if gt (int .Values.preStopSleepSeconds) 0 }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", {{ .Values.preStopSleepSeconds | quote }}]
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+            {{- if include "otari.hasConfig" . }}
+            - name: config
+              mountPath: /etc/otari
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: data
+          {{- if include "otari.usePvc" . }}
+          persistentVolumeClaim:
+            claimName: {{ include "otari.claimName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- if include "otari.hasConfig" . }}
+        - name: config
+          configMap:
+            name: {{ include "otari.configMapName" . }}
+            items:
+              - key: config.yml
+                path: config.yml
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        {{- if .Values.affinity }}
+        {{- toYaml .Values.affinity | nindent 8 }}
+        {{- else }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "otari.serverSelectorLabels" . | nindent 20 }}
+        {{- end }}

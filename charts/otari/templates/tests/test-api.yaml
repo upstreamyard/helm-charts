@@ -1,0 +1,68 @@
+{{- if .Values.tests.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "otari.fullname" . }}-test
+  labels:
+    {{- include "otari.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test
+    {{ include "otari.clientLabel" . }}: "true"
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      image: {{ include "otari.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        - name: BASE_URL
+          value: http://{{ include "otari.fullname" . }}:{{ .Values.service.port }}
+        - name: MASTER_KEY
+          {{- include "otari.secretRef" (list (include "otari.fullname" .) .Values.secrets.existingSecret "master-key" "master-key") | nindent 10 }}
+        - name: CHECK_METRICS
+          value: {{ .Values.metrics.enabled | quote }}
+      command:
+        - python
+        - -c
+        - |
+          import json, os, sys, urllib.error, urllib.request
+          base = os.environ["BASE_URL"]
+          def get(path, key=None):
+              req = urllib.request.Request(base + path)
+              if key:
+                  req.add_header("Authorization", "Bearer " + key)
+              try:
+                  with urllib.request.urlopen(req, timeout=10) as r:
+                      return r.status, r.read().decode()
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()
+          def check(name, ok):
+              print(("ok   " if ok else "FAIL ") + name)
+              if not ok:
+                  sys.exit(1)
+          status, body = get("/api/v1/health/readiness")
+          check("readiness: " + body, status == 200 and json.loads(body).get("database") == "connected")
+          check("management API with the master key", get("/api/v1/keys", os.environ["MASTER_KEY"])[0] == 200)
+          check("management API without a key is refused", get("/api/v1/keys")[0] == 401)
+          if os.environ["CHECK_METRICS"] == "true":
+              status, body = get("/metrics")
+              check("/metrics", status == 200 and "gateway_" in body)
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 128Mi
+{{- end }}

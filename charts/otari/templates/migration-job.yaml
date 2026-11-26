@@ -1,0 +1,83 @@
+{{- if include "otari.migrationJob" . }}
+{{- /*
+Runs `otari migrate` (Alembic) before every install and upgrade; the Otari pods start with
+OTARI_AUTO_MIGRATE=false, so several replicas never migrate at the same time.
+
+Helm hooks run before the release's normal resources exist, so the Job can't use the chart's
+Secret on the first install. A short-lived hook copy with only the database URL is created first
+(weight -10) and deleted together with the Job once the migration succeeded.
+*/}}
+{{- $hookSecret := printf "%s-migrate" (include "otari.fullname" .) }}
+{{- $hookData := include "otari.secretData" (list . true) | trim }}
+{{- if $hookData }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $hookSecret }}
+  labels:
+    {{- include "otari.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+type: Opaque
+data:
+  {{- $hookData | nindent 2 }}
+---
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "otari.fullname" . }}-migrate
+  labels:
+    {{- include "otari.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "otari.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- /* The chart's ServiceAccount does not exist yet during pre-install hooks. */}}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "otari.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["otari", "migrate"]
+          env:
+            {{- include "otari.databaseEnv" (list . $hookSecret) | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml (default .Values.resources .Values.migrations.resources) | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

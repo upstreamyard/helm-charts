@@ -1,0 +1,26 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "otari.fullname" . }}
+  labels:
+    {{- include "otari.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "otari.serverSelectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: http
+          protocol: TCP
+      {{- with .Values.networkPolicy.from }}
+      from:
+        {{- toYaml . | nindent 8 }}
+        # Pods with this label (e.g. the helm test pod) may always connect.
+        - podSelector:
+            matchLabels:
+              {{ include "otari.clientLabel" $ }}: "true"
+      {{- end }}
+{{- end }}
