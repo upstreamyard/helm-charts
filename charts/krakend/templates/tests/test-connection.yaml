@@ -1,0 +1,44 @@
+{{- $scheme := ternary "https" "http" .Values.tls.enabled }}
+{{- $base := printf "%s://%s:%v" $scheme (include "krakend.fullname" .) .Values.service.port }}
+{{- $health := "/__health" }}
+{{- if and .Values.readinessProbe .Values.readinessProbe.httpGet }}{{ $health = .Values.readinessProbe.httpGet.path }}{{ end }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "krakend.fullname" . }}-test
+  labels:
+    app.kubernetes.io/name: {{ include "krakend.name" . }}-test
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{ include "krakend.clientLabel" . }}: "true"
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: test
+      # The KrakenD image has BusyBox wget, so no extra image is pulled.
+      image: {{ include "krakend.image" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command: ["sh", "-ec"]
+      args:
+        - |
+          {{- if .Values.tls.enabled }}
+          # The certificate may not name the Service; this checks that HTTPS answers.
+          {{- end }}
+          echo "GET {{ $base }}{{ $health }}"
+          wget -q -O - {{ if .Values.tls.enabled }}--no-check-certificate {{ end }}"{{ $base }}{{ $health }}" | grep -q '"status":"ok"'
+          {{- with .Values.tests.path }}
+          echo "GET {{ $base }}{{ . }}"
+          wget -q -O /dev/null {{ if $.Values.tls.enabled }}--no-check-certificate {{ end }}"{{ $base }}{{ . }}"
+          {{- end }}
+          {{- if .Values.metrics.enabled }}
+          echo "GET http://{{ include "krakend.fullname" . }}:{{ .Values.metrics.port }}/metrics"
+          wget -q -O - "http://{{ include "krakend.fullname" . }}:{{ .Values.metrics.port }}/metrics" | grep -q '^target_info'
+          {{- end }}
+          echo OK
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}

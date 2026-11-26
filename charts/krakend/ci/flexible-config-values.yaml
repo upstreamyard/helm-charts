@@ -1,0 +1,37 @@
+# Used by chart-testing (ct install) in CI: flexible configuration with settings, partials,
+# a sub-template and a value read from a Secret with env. helm test requests an endpoint
+# generated from the settings.
+flexibleConfig:
+  enabled: true
+  template: |
+    {
+      "version": 4,
+      "name": "{{ env "GATEWAY_NAME" }}",
+      "timeout": "3s",
+      "extra_config": {{ include "router.json" }},
+      "endpoints": [
+        {{- range $i, $e := .backends.endpoints }}
+        {{- if $i }},{{ end }}
+        {{ template "endpoint.tmpl" (dict "e" $e "host" $.backends.host) }}
+        {{- end }}
+      ]
+    }
+  settings:
+    backends:
+      host: http://127.0.0.1:8080
+      endpoints:
+        - path: /v1/status
+          backend: /__health
+        - path: /v1/health
+          backend: /__health
+  partials:
+    router.json: |
+      {"router": {"hide_version_header": true, "logger_skip_paths": ["/__health"]}}
+  templates:
+    endpoint.tmpl: |
+      {{ define "endpoint.tmpl" }}{"endpoint": "{{ .e.path }}", "backend": [{"host": ["{{ .host }}"], "url_pattern": "{{ .e.backend }}"}]}{{ end }}
+secretEnv:
+  GATEWAY_NAME: ci-gateway
+replicaCount: 1
+tests:
+  path: /v1/status
