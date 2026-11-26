@@ -1,0 +1,28 @@
+# Two replicas on PostgreSQL with the migration Job, Redis rate limits, uploads in S3 and metrics.
+replicaCount: 2
+database:
+  url: postgresql://otari:otari-ci@otari-postgres.deps:5432/otari_scaled
+redis:
+  url: redis://redis.deps:6379/3
+files:
+  backend: s3
+  s3:
+    bucket: otari-ci
+    endpointUrl: http://otari-s3.deps:8333
+    region: us-east-1
+extraEnv:
+  - name: AWS_ACCESS_KEY_ID
+    value: otari-ci
+  - name: AWS_SECRET_ACCESS_KEY
+    value: otari-ci-secret
+metrics:
+  enabled: true
+config:
+  default_pricing: true
+  rate_limit_rpm: 600
+resources:
+  requests:
+    cpu: 50m
+    memory: 512Mi
+  limits:
+    memory: 1536Mi

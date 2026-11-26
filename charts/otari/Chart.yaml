@@ -1,0 +1,42 @@
+apiVersion: v2
+name: otari
+description: Otari Helm chart for Kubernetes. Mozilla.ai's open-source, self-hosted AI gateway and LLM proxy (one OpenAI-compatible endpoint for 40+ providers, virtual API keys, budgets, rate limits, usage tracking) on the official image, with PostgreSQL migrations, multiple replicas, Redis rate limits, S3 file storage, Prometheus metrics and generated secrets. Community chart by upstreamyard, not an official Otari chart.
+type: application
+version: 0.1.0
+appVersion: "0.58.0"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/upstreamyard/helm-charts/tree/main/charts/otari
+icon: https://upstreamyard.github.io/helm-charts/logo.png
+sources:
+  - https://github.com/upstreamyard/helm-charts
+  - https://github.com/mozilla-ai/otari
+keywords:
+  - otari
+  - mozilla-ai
+  - ai-gateway
+  - llm-gateway
+  - llm-proxy
+  - openai-compatible
+  - virtual-keys
+  - llm-budgets
+  - rate-limiting
+  - llm-cost-tracking
+maintainers:
+  - name: upstreamyard
+    url: https://github.com/upstreamyard
+annotations:
+  artifacthub.io/category: networking
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/images: |
+    - name: otari
+      image: mzdotai/otari:0.58.0
+  artifacthub.io/links: |
+    - name: Otari
+      url: https://github.com/mozilla-ai/otari
+  artifacthub.io/signKey: |
+    fingerprint: 9B416F989B7E6C65F7F3BFAE7689688B20EC7813
+    url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
+  artifacthub.io/changes: |
+    - kind: added
+      description: First release of the Otari chart

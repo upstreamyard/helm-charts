@@ -1,0 +1,96 @@
+# Test services for the otari chart in kind; CI starts them when the chart changes. Not for production.
+# PostgreSQL 18 with one database per ci/*-values.yaml, and SeaweedFS as an S3 store for uploads.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otari-postgres-init
+  namespace: deps
+data:
+  01-otari.sql: |
+    CREATE USER otari WITH PASSWORD 'otari-ci';
+    CREATE DATABASE otari_postgresql OWNER otari;
+    CREATE DATABASE otari_scaled OWNER otari;
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otari-postgres
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: otari-postgres }
+  template:
+    metadata:
+      labels: { app: otari-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          env:
+            - { name: POSTGRES_PASSWORD, value: postgres-ci }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              # TCP, so it only succeeds once the init script has created the databases.
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "otari", "-d", "otari_scaled"]
+            periodSeconds: 2
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init
+          configMap:
+            name: otari-postgres-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otari-postgres
+  namespace: deps
+spec:
+  selector: { app: otari-postgres }
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otari-s3
+  namespace: deps
+spec:
+  selector:
+    matchLabels: { app: otari-s3 }
+  template:
+    metadata:
+      labels: { app: otari-s3 }
+    spec:
+      containers:
+        - name: seaweedfs
+          image: chrislusf/seaweedfs:4.47
+          args: ["mini", "-dir=/data", "-admin.ui=false", "-webdav=false", "-s3.port.iceberg=0", "-s3.port.lance=0"]
+          env:
+            - { name: AWS_ACCESS_KEY_ID, value: otari-ci }
+            - { name: AWS_SECRET_ACCESS_KEY, value: otari-ci-secret }
+            - { name: S3_BUCKET, value: otari-ci }
+          ports:
+            - containerPort: 8333
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8333 }
+            periodSeconds: 2
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otari-s3
+  namespace: deps
+spec:
+  selector: { app: otari-s3 }
+  ports:
+    - port: 8333

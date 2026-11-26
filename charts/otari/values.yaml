@@ -1,0 +1,245 @@
+# Default values for the Otari chart.
+
+# -- Override the chart name.
+nameOverride: ""
+# -- Override the full name of the release's resources.
+fullnameOverride: ""
+
+image:
+  # -- Otari image (the official image, published by Mozilla.ai for amd64 and arm64).
+  repository: docker.io/mzdotai/otari
+  # -- Image tag. Defaults to the chart's appVersion (the Otari version).
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Pull secrets for private registries, e.g. `[{name: my-registry}]`.
+imagePullSecrets: []
+
+# -- Number of Otari pods. More than 1 needs `database.url` (PostgreSQL) and `files.backend: s3` (or a `ReadWriteMany` volume). Ignored when `autoscaling.enabled`.
+replicaCount: 1
+
+secrets:
+  # -- Master key for the management API and the first dashboard sign-in. Empty: generated on the first install and kept in the chart's Secret (key `master-key`).
+  masterKey: ""
+  # -- Fernet key(s) that encrypt provider credentials stored in the database, comma-separated (the first encrypts). Empty: generated and kept. Back it up: without it, stored provider keys can't be decrypted.
+  secretKey: ""
+  # -- Key that names the provider account holding a copy of an attached file, at least 32 characters. Empty: generated and kept.
+  providerAccountPepper: ""
+  # -- Key for the end-user identifier sent to providers, at least 32 characters. Empty: generated and kept. Changing it resets provider-side abuse history per user.
+  providerUserIdentifierKey: ""
+  # -- Existing Secret with the keys `master-key`, `secret-key` and optionally `provider-account-pepper` and `provider-user-identifier-key`. Overrides the four values above. Use it with Argo CD and other tools that render with `helm template`.
+  existingSecret: ""
+
+database:
+  # -- PostgreSQL URL, e.g. `postgresql://otari:password@postgres.db.svc:5432/otari`. Empty: SQLite on the chart's volume (one replica, for evaluation).
+  url: ""
+  # -- Existing Secret with the PostgreSQL URL.
+  existingSecret: ""
+  # -- Key of the URL in `existingSecret`.
+  existingSecretKey: database-url
+
+migrations:
+  # -- With PostgreSQL: run `otari migrate` in a Job before every install and upgrade, and start the pods with `OTARI_AUTO_MIGRATE=false`. If false, every pod migrates on start. With SQLite the pod always migrates on start.
+  enabled: true
+  # -- Seconds before the migration Job is stopped.
+  activeDeadlineSeconds: 600
+  # -- Retries of the migration Job.
+  backoffLimit: 1
+  # -- Resources of the migration Job. Empty: `resources`.
+  resources: {}
+
+redis:
+  # -- Redis URL for rate limits shared by all replicas, e.g. `redis://redis.cache.svc:6379/0`. Empty: every pod counts its own requests, so N replicas admit N times a limit.
+  url: ""
+  # -- Existing Secret with the Redis URL.
+  existingSecret: ""
+  # -- Key of the URL in `existingSecret`.
+  existingSecretKey: redis-url
+
+files:
+  # -- Where uploaded files are stored: `local` (the chart's volume at `/data/files`) or `s3` (AWS S3 or any S3-compatible store). Several replicas need `s3`.
+  backend: local
+  s3:
+    # -- Bucket (required for `backend: s3`). It must exist.
+    bucket: ""
+    # -- Endpoint of an S3-compatible store, e.g. `http://seaweedfs.storage.svc:8333`. Empty: AWS S3.
+    endpointUrl: ""
+    # -- Region, e.g. `eu-central-1`.
+    region: ""
+    # -- Existing Secret with the access key pair. Empty: the AWS default chain (e.g. IRSA via `serviceAccount.annotations`). Bedrock providers without their own credentials use the same pair.
+    existingSecret: ""
+    # -- Key of the access key ID in `existingSecret`.
+    accessKeyIdKey: access-key-id
+    # -- Key of the secret access key in `existingSecret`.
+    secretAccessKeyKey: secret-access-key
+
+# -- Address users reach Otari at, without a trailing slash, e.g. `https://ai.example.com`. Used in sign-in redirects and mail links.
+publicBaseUrl: ""
+
+# -- Proxy addresses or networks (comma-separated) whose `X-Forwarded-For` Otari trusts. Set it behind an ingress or Gateway, or every request seems to come from the proxy: all users then share one sign-in failure limit and one sign-up throttle, and logs show the proxy's address. `*` is safe only together with `networkPolicy` (see the README).
+forwardedAllowIps: ""
+
+# -- Create a first API key on first start and print it to the log. Off by default, so no key lands in your log system; create keys with the master key instead.
+bootstrapApiKey: false
+
+# -- Log level: DEBUG, INFO, WARNING, ERROR or CRITICAL.
+logLevel: INFO
+
+# -- Otari configuration (`config.yml`) as YAML, e.g. `hosted_providers`, `default_pricing`, `budgets`. Mounted at `/etc/otari/config.yml`. Reference secrets as `${VAR}` and provide them with `extraEnv` or `extraEnvFrom`. Don't set `database_url` here; use `database`.
+config: {}
+
+# -- Existing ConfigMap with a `config.yml` key, instead of `config`.
+existingConfigMap: ""
+
+metrics:
+  # -- Serve Prometheus metrics at `/metrics` on the HTTP port. The endpoint has no authentication, so keep it off public ingresses (see the README).
+  enabled: false
+  serviceMonitor:
+    # -- Create a ServiceMonitor (Prometheus Operator). Needs `metrics.enabled`.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the `release` label your Prometheus selects.
+    labels: {}
+
+# -- Extra environment variables, e.g. provider keys referenced in `config` or any `OTARI_<SETTING>`.
+extraEnv: []
+# -- Extra environment from ConfigMaps or Secrets, e.g. `[{secretRef: {name: otari-provider-keys}}]`.
+extraEnvFrom: []
+# -- Extra volumes, e.g. a country file (`client_country_database`) or a CA bundle.
+extraVolumes: []
+# -- Extra volume mounts for the Otari container.
+extraVolumeMounts: []
+
+persistence:
+  # -- Volume at `/data` for the SQLite database and `local` file uploads. Only mounted when one of them is in use; otherwise `/data` is an emptyDir. The PVC is kept on `helm uninstall`.
+  enabled: true
+  # -- Use an existing PVC.
+  existingClaim: ""
+  # -- Storage class. Empty: the cluster default.
+  storageClass: ""
+  # -- Access modes. Several replicas with `files.backend: local` need `[ReadWriteMany]`.
+  accessModes:
+    - ReadWriteOnce
+  # -- Volume size.
+  size: 2Gi
+  # -- PVC annotations.
+  annotations: {}
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port (API, dashboard and `/metrics`).
+  port: 8000
+  # -- Service annotations.
+  annotations: {}
+
+ingress:
+  # -- Create an Ingress.
+  enabled: false
+  # -- Ingress class, e.g. `nginx`.
+  className: ""
+  # -- Ingress annotations. Streaming responses need a long read timeout, e.g. `nginx.ingress.kubernetes.io/proxy-read-timeout: "600"`.
+  annotations: {}
+  # -- Hosts and paths.
+  hosts:
+    - host: otari.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- TLS settings, e.g. `[{secretName: otari-tls, hosts: [otari.example.com]}]`.
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute.
+  enabled: false
+  # -- Route annotations.
+  annotations: {}
+  # -- Gateways the route attaches to, e.g. `[{name: public, namespace: gateway}]`.
+  parentRefs: []
+  # -- Host names, e.g. `[otari.example.com]`.
+  hostnames: []
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler on CPU. Needs PostgreSQL and `files.backend: s3`, like `replicaCount` > 1.
+  enabled: false
+  # -- Minimum replicas.
+  minReplicas: 2
+  # -- Maximum replicas.
+  maxReplicas: 6
+  # -- Target average CPU utilisation in percent.
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (`maxUnavailable: 1`) when more than one replica runs.
+  enabled: true
+
+networkPolicy:
+  # -- Create a NetworkPolicy that only lets `networkPolicy.from` reach Otari's port. Outgoing traffic (to providers) is not restricted.
+  enabled: false
+  # -- Allowed sources (NetworkPolicy `from` entries), e.g. your ingress controller's namespace. Empty: any pod and address. Pods with the label `<full name>-client: "true"` are always allowed.
+  from: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Name. Empty: the full name.
+  name: ""
+  # -- Annotations, e.g. a cloud IAM role for S3 or Bedrock.
+  annotations: {}
+  # -- Mount the ServiceAccount token into the Otari pods. Otari itself doesn't need it.
+  automountServiceAccountToken: false
+
+# -- Pod annotations.
+podAnnotations: {}
+# -- Pod labels.
+podLabels: {}
+
+# -- Pod security context. The image runs as user `otari` (UID 1000).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+# -- Resources. Otari uses about 550 MiB when idle.
+resources:
+  requests:
+    cpu: 100m
+    memory: 768Mi
+  limits:
+    memory: 1536Mi
+
+# -- Seconds a stopping pod has to finish running requests. Otari waits for open streams, so a stream that takes longer is cut off.
+terminationGracePeriodSeconds: 120
+# -- Seconds a stopping pod keeps serving before shutdown, so the Service and ingress stop sending it new requests first.
+preStopSleepSeconds: 10
+
+probes:
+  # -- Startup probe failures (every 5 s) before the pod is restarted. Covers SQLite migrations on the first start.
+  startupFailureThreshold: 60
+  # -- Liveness probe failures (every 10 s) before the pod is restarted.
+  livenessFailureThreshold: 6
+  # -- Readiness probe failures (every 10 s) before the pod stops getting requests. Readiness includes the database.
+  readinessFailureThreshold: 3
+
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity. Empty: spread replicas across nodes where possible.
+affinity: {}
+
+tests:
+  # -- Render the `helm test` pod (readiness, management API with the master key, and `/metrics` when on).
+  enabled: true

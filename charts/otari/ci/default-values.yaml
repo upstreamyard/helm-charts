@@ -1,0 +1,3 @@
+# SQLite on the chart's volume, generated keys.
+persistence:
+  size: 1Gi
