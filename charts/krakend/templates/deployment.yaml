@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "krakend.fullname" . }}
+  labels:
+    {{- include "krakend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  {{- with .Values.updateStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "krakend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # KrakenD reads its configuration only at startup; a change restarts the pods.
+        checksum/config: {{ include "krakend.configChecksum" . }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "krakend.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "krakend.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.lint.enabled }}
+      initContainers:
+        # Refuses unknown or misspelled keys, which KrakenD itself ignores at runtime.
+        - name: lint
+          image: {{ include "krakend.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["krakend"]
+          args: ["check", "--lint-no-network", "--test-gin-routes", "-c", "/etc/krakend/{{ include "krakend.configFile" . }}"]
+          env:
+            {{- include "krakend.env" . | nindent 12 }}
+          {{- with (include "krakend.envFrom" . | trim) }}
+          envFrom:
+            {{- . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.lint.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "krakend.volumeMounts" . | nindent 12 }}
+      {{- end }}
+      containers:
+        - name: krakend
+          image: {{ include "krakend.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["krakend"]
+          args: ["run", "-c", "/etc/krakend/{{ include "krakend.configFile" . }}"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+            {{- end }}
+          env:
+            {{- include "krakend.env" . | nindent 12 }}
+          {{- with (include "krakend.envFrom" . | trim) }}
+          envFrom:
+            {{- . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- include "krakend.probe" (list $ .) | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- include "krakend.probe" (list $ .) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.shutdownDelaySeconds }}
+          lifecycle:
+            preStop:
+              # Keep serving until the pod is out of the Service endpoints; KrakenD refuses
+              # new connections as soon as it gets SIGTERM.
+              exec:
+                command: ["sleep", "{{ .Values.shutdownDelaySeconds }}"]
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "krakend.volumeMounts" . | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ default (include "krakend.fullname" .) .Values.existingConfigMap }}
+        {{- with (include "krakend.settingsConfigMap" .) }}
+        - name: settings
+          configMap:
+            name: {{ . }}
+        {{- end }}
+        {{- with (include "krakend.partialsConfigMap" .) }}
+        - name: partials
+          configMap:
+            name: {{ . }}
+        {{- end }}
+        {{- with (include "krakend.templatesConfigMap" .) }}
+        - name: templates
+          configMap:
+            name: {{ . }}
+        {{- end }}
+        {{- if .Values.tls.enabled }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.existingSecret }}
+        {{- end }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ .Values.tmpSizeLimit }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- if .Values.topologySpreadConstraints }}
+        {{- toYaml .Values.topologySpreadConstraints | nindent 8 }}
+        {{- else }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "krakend.selectorLabels" . | nindent 14 }}
+        {{- end }}

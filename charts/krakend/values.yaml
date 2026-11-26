@@ -1,0 +1,251 @@
+# -- Number of KrakenD pods. KrakenD is stateless, so any number works; 2 keeps the gateway up while a pod restarts. Rate limits (`qos/ratelimit/*`) count per pod: a limit of 100 req/s allows up to 100 req/s on each pod. Ignored when `autoscaling.enabled` is true.
+replicaCount: 2
+
+image:
+  # -- Image repository. Defaults to KrakenD's official image on Docker Hub.
+  repository: krakend
+  # -- Image tag. Defaults to the chart's appVersion. The chart supports KrakenD 3.x (configuration `"version": 4`).
+  tag: ""
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling from a private registry.
+imagePullSecrets: []
+# -- Override the chart name in resource names.
+nameOverride: ""
+# -- Override the full resource name.
+fullnameOverride: ""
+
+# -- Port KrakenD listens on (set with `KRAKEND_PORT`, which also wins over a `port` in your configuration). The Service uses the same port.
+port: 8080
+
+# -- KrakenD configuration, written to `krakend.json` (see KrakenD's configuration reference: https://www.krakend.io/docs/configuration/structure/). Your `config` is merged with this default: maps merge (so `extra_config.router` keeps `hide_version_header` unless you override it), lists such as `endpoints` replace. Ignored when `flexibleConfig.enabled` or `existingConfigMap` is set. Don't set `port` here; use `port`.
+# @default -- `version: 4`, no endpoints, version header hidden, health checks not logged
+config:
+  version: 4
+  name: KrakenD API Gateway
+  timeout: 3s
+  extra_config:
+    router:
+      hide_version_header: true
+      logger_skip_paths:
+        - /__health
+  endpoints: []
+
+flexibleConfig:
+  # -- Use KrakenD's flexible configuration: `template` is a Go template (`krakend.tmpl`) rendered at startup with `settings`, `partials`, `templates` and environment variables (`{{ env "NAME" }}`). Use it to keep secrets out of the configuration and to split big configurations into files. Replaces `config`.
+  enabled: false
+  # -- The main template, written to `krakend.tmpl`. Required unless `existingConfigMap` holds it.
+  template: ""
+  # -- Settings files: each key becomes `<key>.json`, available in templates as `{{ .<key>.<field> }}`.
+  settings: {}
+  # -- Partials: files inserted as-is with `{{ include "<file>" }}`. Key = file name.
+  partials: {}
+  # -- Sub-templates: Go templates you call with `{{ template "<name>" . }}`. Key = file name (e.g. `endpoint.tmpl`).
+  templates: {}
+  # -- Existing ConfigMap with settings files (`<name>.json`). Replaces `settings`.
+  existingSettingsConfigMap: ""
+  # -- Existing ConfigMap with partials. Replaces `partials`.
+  existingPartialsConfigMap: ""
+  # -- Existing ConfigMap with sub-templates. Replaces `templates`.
+  existingTemplatesConfigMap: ""
+
+# -- Name of an existing ConfigMap with your configuration (`krakend.json`, or the `krakend.tmpl` template with `flexibleConfig.enabled`). Replaces `config` and `flexibleConfig.template`. KrakenD reads it at startup: restart the pods after changing it.
+existingConfigMap: ""
+# -- Key in `existingConfigMap` that holds the configuration. Default: `krakend.json`, or `krakend.tmpl` with `flexibleConfig.enabled`.
+existingConfigMapKey: ""
+
+lint:
+  # -- Lint the configuration in an init container before KrakenD starts: `krakend check` against the schema built into the image (no network needed) and a test of the routes. KrakenD ignores unknown or misspelled keys at runtime (a misspelled `qos/ratelimit/router` silently means no rate limit); the lint refuses them, so a broken configuration never replaces running pods.
+  enabled: true
+  # -- Resources of the lint init container.
+  resources: {}
+
+# -- Environment variables stored in a Secret created by the chart, e.g. `JWT_SECRET` for `{{ env "JWT_SECRET" }}` in `flexibleConfig.template`, or `KRAKEND_*` overrides. For production use `existingSecret`.
+secretEnv: {}
+
+# -- Name of an existing Secret whose keys all become environment variables.
+existingSecret: ""
+
+# -- Extra environment variables, e.g. `KRAKEND_TIMEOUT` or `OTEL_PROPAGATORS`.
+extraEnv: []
+# - name: OTEL_PROPAGATORS
+#   value: tracecontext,baggage
+
+# -- Extra environment variables from Secrets or ConfigMaps.
+extraEnvFrom: []
+
+# -- Extra volumes, e.g. a JWK file for `auth/validator` (`jwk_local_path`) or a CA bundle.
+extraVolumes: []
+# -- Extra volume mounts for the KrakenD container (and the lint init container).
+extraVolumeMounts: []
+
+# -- Send KrakenD's anonymous usage statistics to `usage.krakend.io`. KrakenD does this by default, 5 seconds after start; the chart turns it off (`USAGE_DISABLE=1`) so the gateway makes no outbound calls of its own.
+usageStats: false
+
+tls:
+  # -- Serve HTTPS on `port` with the certificate in `tls.existingSecret` (type `kubernetes.io/tls`). The chart adds `tls.keys` to `config` and switches the probes to HTTPS. KrakenD then serves HTTPS only. With `flexibleConfig` or `existingConfigMap`, add the `tls` block yourself (the certificate is mounted at `/etc/krakend/tls/tls.crt` and `tls.key`).
+  enabled: false
+  # -- Secret with `tls.crt` and `tls.key`, e.g. from cert-manager.
+  existingSecret: ""
+
+metrics:
+  # -- Expose Prometheus metrics on `metrics.port` (`/metrics`). With `config`, the chart adds a `telemetry/opentelemetry` Prometheus exporter (unless you configure one). With `flexibleConfig` or `existingConfigMap`, add the exporter yourself on this port.
+  enabled: false
+  # -- Port of the Prometheus exporter.
+  port: 9090
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor.
+    enabled: false
+    # -- Scrape interval.
+    interval: 30s
+    # -- Extra labels, e.g. the label your Prometheus selects ServiceMonitors by.
+    labels: {}
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port.
+  port: 8080
+  # -- Node port when `type` is `NodePort` or `LoadBalancer`.
+  nodePort: null
+  # -- Service annotations, e.g. for a cloud load balancer.
+  annotations: {}
+  # -- `externalTrafficPolicy` for `LoadBalancer` or `NodePort` (`Local` keeps the client IP).
+  externalTrafficPolicy: ""
+
+ingress:
+  # -- Create an Ingress.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Ingress annotations. With `tls.enabled`, tell your controller to talk HTTPS to the pods (ingress-nginx: `nginx.ingress.kubernetes.io/backend-protocol: HTTPS`).
+  annotations: {}
+  # -- Ingress hosts and paths.
+  hosts:
+    - host: api.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- Ingress TLS configuration.
+  tls: []
+
+httpRoute:
+  # -- Create a Gateway API HTTPRoute.
+  enabled: false
+  # -- Gateways the route attaches to.
+  parentRefs: []
+  # - name: my-gateway
+  #   namespace: gateway-system
+  # -- Host names of the route.
+  hostnames: []
+  # -- Route rules. Empty: everything to KrakenD.
+  rules: []
+  # -- HTTPRoute annotations.
+  annotations: {}
+
+autoscaling:
+  # -- Create a HorizontalPodAutoscaler on CPU.
+  enabled: false
+  # -- Minimum replicas.
+  minReplicas: 2
+  # -- Maximum replicas.
+  maxReplicas: 10
+  # -- Target average CPU utilization in percent.
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  # -- Create a PodDisruptionBudget (only with more than one replica).
+  enabled: true
+  # -- Pods that may be down at once during voluntary disruptions such as node drains.
+  maxUnavailable: 1
+
+networkPolicy:
+  # -- Create a NetworkPolicy for incoming traffic: `port` from `networkPolicy.from`, the metrics port from `networkPolicy.metricsFrom`. Outgoing traffic (to your backends) is not restricted.
+  enabled: false
+  # -- Sources allowed to reach the gateway (NetworkPolicy `from` entries). Empty: any pod and address. Pods with the label `<full name>-client: "true"` are always allowed.
+  from: []
+  # -- Sources allowed to reach the metrics port. Empty: any pod and address.
+  metricsFrom: []
+
+serviceAccount:
+  # -- Create a ServiceAccount.
+  create: true
+  # -- Mount the ServiceAccount token. KrakenD does not use the Kubernetes API.
+  automount: false
+  # -- ServiceAccount annotations.
+  annotations: {}
+  # -- ServiceAccount name. Generated from the full name if empty.
+  name: ""
+
+# -- Seconds a stopping pod keeps serving before KrakenD gets SIGTERM, so it leaves the Service endpoints first. KrakenD refuses new connections as soon as it gets SIGTERM and then finishes running requests.
+shutdownDelaySeconds: 10
+# -- Seconds Kubernetes waits after the pod is asked to stop. Must be larger than `shutdownDelaySeconds` plus your longest request (`timeout` in `config`).
+terminationGracePeriodSeconds: 30
+
+# -- Rolling update strategy of the Deployment.
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 25%
+    maxUnavailable: 0
+
+# -- Readiness probe. Uses KrakenD's health endpoint; change `path` if you set `health_path` in your configuration. The scheme follows `tls.enabled`.
+readinessProbe:
+  httpGet:
+    path: /__health
+    port: http
+  periodSeconds: 5
+  failureThreshold: 2
+# -- Liveness probe.
+livenessProbe:
+  httpGet:
+    path: /__health
+    port: http
+  periodSeconds: 10
+  failureThreshold: 3
+
+# -- Resources for the KrakenD container. Idle memory is about 16 MiB (measured with KrakenD 3.0.5); add memory for large responses and many concurrent requests.
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+# -- Pod security context. KrakenD's image starts as root and switches to its `krakend` user (UID 1000); the chart starts it as UID 1000 directly.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# -- Size limit of the writable `/tmp` volume. Flexible configuration writes the rendered configuration there.
+tmpSizeLimit: 64Mi
+
+tests:
+  # -- Extra path that `helm test` requests through the gateway and expects HTTP 200 from, e.g. one of your endpoints. Empty: only the health endpoint.
+  path: ""
+
+# -- Extra pod annotations.
+podAnnotations: {}
+# -- Extra pod labels.
+podLabels: {}
+# -- Priority class name.
+priorityClassName: ""
+# -- Node selector.
+nodeSelector: {}
+# -- Tolerations.
+tolerations: []
+# -- Affinity rules.
+affinity: {}
+# -- Topology spread constraints. Empty: the chart spreads pods across nodes when possible (`ScheduleAnyway`).
+topologySpreadConstraints: []

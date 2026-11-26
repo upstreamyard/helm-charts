@@ -1,0 +1,42 @@
+{{- $scheme := ternary "https" "http" .Values.tls.enabled -}}
+KrakenD {{ .Chart.AppVersion }} is deployed as "{{ include "krakend.fullname" . }}" ({{ if .Values.autoscaling.enabled }}{{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }}{{ else }}{{ .Values.replicaCount }}{{ end }} replica(s)).
+
+Gateway URL inside the cluster:
+
+  {{ $scheme }}://{{ include "krakend.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics:
+
+  http://{{ include "krakend.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.metrics.port }}/metrics
+{{- end }}
+
+Try it:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "krakend.fullname" . }} {{ .Values.service.port }}
+  curl {{ if .Values.tls.enabled }}-k {{ end }}{{ $scheme }}://localhost:{{ .Values.service.port }}/__health
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if and (include "krakend.inlineConfig" .) (not .Values.config.endpoints) }}
+
+NOTE: the configuration has no endpoints yet. Add them under config.endpoints.
+{{- end }}
+{{- if and (include "krakend.inlineConfig" .) .Values.config.echo_endpoint }}
+
+WARNING: echo_endpoint is on. /__echo/ returns every request, including headers
+such as Authorization and cookies, to anyone who can reach the gateway. Use it
+for debugging only.
+{{- end }}
+{{- if and (include "krakend.inlineConfig" .) .Values.config.debug_endpoint }}
+
+WARNING: debug_endpoint is on. /__debug/ logs full requests. Use it for
+debugging only.
+{{- end }}
+{{- if and .Values.networkPolicy.enabled .Values.networkPolicy.from }}
+
+Clients outside networkPolicy.from need the label {{ include "krakend.clientLabel" . }}=true.
+{{- end }}
+{{- if .Values.existingConfigMap }}
+
+KrakenD reads ConfigMap "{{ .Values.existingConfigMap }}" at startup. After changing it, run:
+  kubectl -n {{ .Release.Namespace }} rollout restart deployment/{{ include "krakend.fullname" . }}
+{{- end }}

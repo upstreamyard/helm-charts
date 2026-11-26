@@ -1,0 +1,20 @@
+# Used by chart-testing (ct install) in CI: inline configuration with one endpoint, Prometheus
+# metrics and a NetworkPolicy. The endpoint's backend is KrakenD's own health endpoint, so no
+# backend service is needed; helm test requests it through the gateway.
+config:
+  endpoints:
+    - endpoint: /demo
+      method: GET
+      backend:
+        - host: ["http://127.0.0.1:8080"]
+          url_pattern: /__health
+metrics:
+  enabled: true
+networkPolicy:
+  enabled: true
+  from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: none
+tests:
+  path: /demo
