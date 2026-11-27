@@ -2,8 +2,8 @@ apiVersion: v2
 name: nemo-guardrails
 description: NeMo Guardrails Helm chart for Kubernetes. NVIDIA NeMo Guardrails server, an OpenAI-compatible LLM guardrails API with input, output and dialog rails, your configurations from values or ConfigMaps, a config check before rollout, autoscaling, NetworkPolicy and OpenTelemetry. Community chart by upstreamyard, not an official NVIDIA chart.
 type: application
-version: 0.1.4
-appVersion: "0.24.1"
+version: 0.1.5
+appVersion: "0.25.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts/tree/main/charts/nemo-guardrails
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -33,7 +33,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: nemo-guardrails
-      image: upstreamyard/nemo-guardrails:0.24.1
+      image: upstreamyard/nemo-guardrails:0.25.0
   artifacthub.io/links: |
     - name: NeMo Guardrails project
       url: https://github.com/NVIDIA-NeMo/Guardrails
@@ -44,4 +44,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Mention hardened and custom images in the support contact
+      description: Update nemo-guardrails to 0.25.0
