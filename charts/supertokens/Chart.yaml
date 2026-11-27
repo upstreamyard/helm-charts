@@ -2,8 +2,8 @@ apiVersion: v2
 name: supertokens
 description: SuperTokens core, the open-source authentication server (sessions, email/password, passwordless, social login, MFA), with PostgreSQL. Community chart by upstreamyard, not an official SuperTokens chart.
 type: application
-version: 0.1.6
-appVersion: "12.5.0"
+version: 0.1.7
+appVersion: "12.5.1"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/upstreamyard/helm-charts
 icon: https://upstreamyard.github.io/helm-charts/logo.png
@@ -25,7 +25,7 @@ annotations:
   artifacthub.io/prerelease: "false"
   artifacthub.io/images: |
     - name: supertokens-postgresql
-      image: supertokens/supertokens-postgresql:12.5.0
+      image: supertokens/supertokens-postgresql:12.5.1
   artifacthub.io/links: |
     - name: SuperTokens project
       url: https://github.com/supertokens/supertokens-core
@@ -36,4 +36,4 @@ annotations:
     url: https://upstreamyard.github.io/helm-charts/pgp_keys.asc
   artifacthub.io/changes: |
     - kind: changed
-      description: Update supertokens-postgresql to 12.5.0
+      description: Update supertokens-postgresql to 12.5.1
